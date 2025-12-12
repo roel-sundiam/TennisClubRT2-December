@@ -1,6 +1,6 @@
 [build]
   base = "frontend"
-  publish = "dist/tennis-club-frontend"
+  publish = "dist/tennis-club-frontend/browser"
   command = "npm run build"
 
 [build.environment]
