@@ -32,9 +32,9 @@ services:
       - key: RATE_LIMIT_MAX_REQUESTS
         value: "500"
       - key: VAPID_PUBLIC_KEY
-        value: "BJbkAXA92DdoDfGnxAt8ExE5rGeQpeIvd1bzGoGjSv0_j3KUkrxkAfufqr1SXnUHfzbuUSgUDKz8DBT2tU_nLuY"
+        value: "BBluTR8EydcsXoNfGUHFxBGfqT3-F270DY__4kqHU1aKTYtbV64CrozeE-qYNh7Wd7ycAx7MWibImNxHQX2lodU"
       - key: VAPID_PRIVATE_KEY
-        value: "ea2VB_4DdetNSNUZsQUjrZZ1OkmxNJCWyTTCgQcroUM"
+        value: "bV4FuQB6MDEo6UME7W19XjqIbtcyMehykzSL4jIRde0"
       - key: VAPID_EMAIL
         value: "mailto:admin@tennisclubrt2.com"
     healthCheckPath: /health
