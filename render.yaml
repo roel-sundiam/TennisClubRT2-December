@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: tennis-club-rt2-backend
+    name: tennis-club-december-backend
     runtime: node
     env: node
     plan: starter
@@ -12,9 +12,7 @@ services:
       - key: PORT
         value: 10000
       - key: MONGODB_URI
-        fromDatabase:
-          name: tennis-club-rt2-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: WEATHER_API_KEY
@@ -22,9 +20,9 @@ services:
       - key: PEAK_HOURS
         value: "5,18,19,21"
       - key: PEAK_HOUR_FEE
-        value: "100"
+        value: "150"
       - key: OFF_PEAK_FEE_PER_MEMBER
-        value: "20"
+        value: "100"
       - key: INITIAL_COIN_BALANCE
         value: "100"
       - key: COIN_RATE_PER_PAGE
@@ -32,7 +30,7 @@ services:
       - key: RATE_LIMIT_WINDOW_MS
         value: "900000"
       - key: RATE_LIMIT_MAX_REQUESTS
-        value: "100"
+        value: "500"
       - key: VAPID_PUBLIC_KEY
         value: "BJbkAXA92DdoDfGnxAt8ExE5rGeQpeIvd1bzGoGjSv0_j3KUkrxkAfufqr1SXnUHfzbuUSgUDKz8DBT2tU_nLuY"
       - key: VAPID_PRIVATE_KEY
@@ -41,9 +39,3 @@ services:
         value: "mailto:admin@tennisclubrt2.com"
     healthCheckPath: /health
     autoDeploy: true
-
-databases:
-  - name: tennis-club-rt2-db
-    databaseName: tennis-club-rt2
-    user: tennis-club-rt2-user
-    plan: starter
