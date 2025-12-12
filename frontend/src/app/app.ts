@@ -1,6 +1,5 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { PageVisitTrackerService } from './services/page-visit-tracker.service';
 import { AnalyticsService } from './services/analytics.service';
 import { PWANotificationService } from './services/pwa-notification.service';
 import { WebSocketService } from './services/websocket.service';
@@ -18,7 +17,6 @@ export class App implements OnInit {
   protected readonly title = signal('Rich Town 2 Tennis Club');
 
   constructor(
-    private pageVisitTracker: PageVisitTrackerService,
     private analyticsService: AnalyticsService,
     private pwaNotificationService: PWANotificationService,
     private webSocketService: WebSocketService,

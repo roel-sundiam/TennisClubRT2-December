@@ -2,7 +2,6 @@ import { Response } from 'express';
 import { query } from 'express-validator';
 import User from '../models/User';
 import Reservation from '../models/Reservation';
-import CoinTransaction from '../models/CoinTransaction';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 
@@ -109,22 +108,8 @@ export const getMemberProfile = asyncHandler(async (req: AuthenticatedRequest, r
     Reservation.countDocuments({ userId: id }),
     // Completed reservations
     Reservation.countDocuments({ userId: id, status: 'completed' }),
-    // Total coins earned
-    CoinTransaction.aggregate([
-      {
-        $match: {
-          userId: id,
-          type: { $in: ['earned', 'bonus', 'refunded'] },
-          status: 'completed'
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalEarned: { $sum: '$amount' }
-        }
-      }
-    ]),
+    // Total coins earned - DEPRECATED: Coin system removed
+    Promise.resolve([{ _id: null, totalEarned: 0 }]),
     // Recent activity (last 5 reservations)
     Reservation.find({ userId: id })
       .sort({ createdAt: -1 })
@@ -186,12 +171,8 @@ export const getMemberActivity = asyncHandler(async (req: AuthenticatedRequest, 
       .limit(limit)
       .select('date timeSlot status createdAt'),
     
-    // Recent coin transactions
-    CoinTransaction.find({ userId: id })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .select('type amount description createdAt')
+    // Recent coin transactions - DEPRECATED: Coin system removed
+    Promise.resolve([])
   ]);
 
   // Combine and sort activities by date
@@ -200,11 +181,6 @@ export const getMemberActivity = asyncHandler(async (req: AuthenticatedRequest, 
       type: 'reservation',
       date: reservation.createdAt,
       data: reservation
-    })),
-    ...activities[1].map(transaction => ({
-      type: 'transaction',
-      date: transaction.createdAt,
-      data: transaction
     }))
   ].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, limit);
 

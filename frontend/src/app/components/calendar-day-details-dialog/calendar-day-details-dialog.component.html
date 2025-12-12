@@ -69,7 +69,8 @@
            [class.confirmed]="reservation.status === 'confirmed'"
            [class.pending]="reservation.status === 'pending'"
            [class.blocked]="reservation.status === 'blocked'"
-           [class.cancelled]="reservation.status === 'cancelled'">
+           [class.cancelled]="reservation.status === 'cancelled'"
+           [attr.data-payment-status]="reservation.paymentStatus || 'not_applicable'">
 
         <div class="reservation-header">
           <div class="time-info">
@@ -82,23 +83,31 @@
           </span>
         </div>
 
-        <div class="reservation-details">
-          <div class="detail-row">
+        <div class="reservation-details" *ngIf="reservation.status !== 'cancelled'">
+          <div class="detail-row" *ngIf="reservation.status !== 'blocked'">
             <mat-icon>person</mat-icon>
             <span class="detail-label">Reserved by:</span>
             <span class="detail-value">{{ getReserverName(reservation) }}</span>
           </div>
 
-          <div class="detail-row" *ngIf="reservation.players && reservation.players.length > 0">
+          <div class="detail-row" *ngIf="reservation.players && reservation.players.length > 0 && reservation.status !== 'blocked'">
             <mat-icon>groups</mat-icon>
             <span class="detail-label">Players:</span>
-            <span class="detail-value">{{ reservation.players.length }} player(s)</span>
+            <span class="detail-value">{{ getPlayerNames(reservation.players) }}</span>
           </div>
 
-          <div class="detail-row" *ngIf="reservation.totalFee">
+          <div class="detail-row" *ngIf="reservation.totalFee && reservation.status !== 'blocked'">
             <mat-icon>payments</mat-icon>
             <span class="detail-label">Total Fee:</span>
             <span class="detail-value">₱{{ reservation.totalFee }}</span>
+          </div>
+
+          <div class="detail-row" *ngIf="reservation.paymentStatus && reservation.status !== 'blocked'">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <span class="detail-label">Payment:</span>
+            <span class="payment-status-badge" [ngClass]="'payment-' + reservation.paymentStatus">
+              {{ getPaymentStatusLabel(reservation.paymentStatus) }}
+            </span>
           </div>
 
           <div class="detail-row" *ngIf="reservation.blockReason">

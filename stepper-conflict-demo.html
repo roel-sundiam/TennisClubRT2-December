@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stepper Conflict Detection - Tennis Club</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e0 100%);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e40af;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .intro {
+            text-align: center;
+            color: #4b5563;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .booked-slots-info {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .booked-slots-info h3 {
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+        }
+
+        .booked-slots {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .booked-slot {
+            background: #dc2626;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 2rem;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .demo-section h2 {
+            color: #1f2937;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .demo-section .description {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* Stepper Styles */
+        .stepper-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .stepper-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            background: #f9fafb;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .stepper-row.has-conflict {
+            border-color: #fca5a5;
+            background: #fef2f2;
+        }
+
+        .stepper-row.available {
+            border-color: #86efac;
+            background: #f0fdf4;
+        }
+
+        .stepper-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .stepper-label {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 1rem;
+        }
+
+        .stepper-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .stepper-btn {
+            width: 56px;
+            height: 56px;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            background: white;
+            color: #3b82f6;
+            font-size: 1.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stepper-btn:hover:not(:disabled) {
+            background: #3b82f6;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .stepper-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: #d1d5db;
+            color: #9ca3af;
+        }
+
+        .stepper-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e40af;
+            min-width: 150px;
+            text-align: center;
+            padding: 0.5rem 1rem;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #dbeafe;
+        }
+
+        .stepper-value.small {
+            font-size: 1.8rem;
+            min-width: 120px;
+        }
+
+        /* Availability Badges */
+        .availability-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .availability-badge.available {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #86efac;
+        }
+
+        .availability-badge.available::before {
+            content: '✓';
+            font-size: 1.2rem;
+        }
+
+        .availability-badge.conflict {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .availability-badge.conflict::before {
+            content: '✗';
+            font-size: 1.2rem;
+        }
+
+        .availability-badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fbbf24;
+        }
+
+        .availability-badge.warning::before {
+            content: '⚠';
+            font-size: 1.2rem;
+        }
+
+        /* Warning Messages */
+        .conflict-warning {
+            padding: 1rem;
+            background: #fef2f2;
+            border: 2px solid #fca5a5;
+            border-radius: 8px;
+            color: #991b1b;
+            font-size: 0.9rem;
+            margin-top: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .conflict-warning strong {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .conflict-warning .suggestion {
+            color: #059669;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        /* Auto-skip Message */
+        .auto-skip-message {
+            padding: 1rem;
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            color: #1e40af;
+            font-size: 0.9rem;
+            margin-top: 0.75rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Time Preview */
+        .time-preview {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border-radius: 12px;
+            text-align: center;
+            font-size: 1.3rem;
+            color: #1e40af;
+            font-weight: 600;
+        }
+
+        .time-preview.conflict {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #991b1b;
+        }
+
+        .time-preview.available {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            color: #065f46;
+        }
+
+        /* Next Available Button */
+        .next-available-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .next-available-btn:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .next-available-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stepper-value {
+                font-size: 2rem;
+                min-width: 120px;
+            }
+
+            .stepper-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎾 Stepper Conflict Detection Demo</h1>
+        <p class="intro">
+            <strong>Scenario:</strong> You're booking a court on a busy day. Some time slots are already taken.
+            <br>Try adjusting the times below to see how each approach handles conflicts!
+        </p>
+
+        <div class="booked-slots-info">
+            <h3>⚠️ Already Booked Time Slots (Simulated)</h3>
+            <div class="booked-slots">
+                <span class="booked-slot">10:00-11:00</span>
+                <span class="booked-slot">14:00-15:00</span>
+                <span class="booked-slot">15:00-16:00</span>
+                <span class="booked-slot">18:00-19:00</span>
+            </div>
+        </div>
+
+        <div class="demo-grid">
+            <!-- APPROACH 1: Disabled Buttons -->
+            <div class="demo-section">
+                <h2>1️⃣ Disabled Buttons (Preventive)</h2>
+                <div class="description">
+                    <strong>How it works:</strong> Stepper buttons become disabled when clicking them would create a conflict.
+                    You can never select an invalid time.
+                    <br><br>
+                    <strong>Try it:</strong> Set start to 13:00 and try to increase it past booked slots.
+                </div>
+
+                <div class="stepper-container">
+                    <div class="stepper-row" id="disabled-container-1">
+                        <div class="stepper-header">
+                            <span class="stepper-label">Start Time</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <button class="stepper-btn" id="disabled-dec-start" onclick="adjustDisabled('start', -1)">−</button>
+                            <div class="stepper-value" id="disabled-start">13:00</div>
+                            <button class="stepper-btn" id="disabled-inc-start" onclick="adjustDisabled('start', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stepper-row" id="disabled-container-2">
+                        <div class="stepper-header">
+                            <span class="stepper-label">Duration</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <button class="stepper-btn" id="disabled-dec-dur" onclick="adjustDisabled('duration', -1)">−</button>
+                            <div class="stepper-value small" id="disabled-duration">1 hr</div>
+                            <button class="stepper-btn" id="disabled-inc-dur" onclick="adjustDisabled('duration', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stepper-row">
+                        <div class="stepper-header">
+                            <span class="stepper-label">End Time</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <div class="stepper-value" id="disabled-end">14:00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="time-preview" id="disabled-preview">
+                    ✓ 13:00 - 14:00 (Available)
+                </div>
+            </div>
+
+            <!-- APPROACH 2: Warning Messages -->
+            <div class="demo-section">
+                <h2>2️⃣ Warning Messages (Informative)</h2>
+                <div class="description">
+                    <strong>How it works:</strong> You can select any time, but warnings appear when there's a conflict.
+                    Includes suggestions for alternatives.
+                    <br><br>
+                    <strong>Try it:</strong> Set start to 14:00 to see the conflict warning.
+                </div>
+
+                <div class="stepper-container">
+                    <div class="stepper-row">
+                        <div class="stepper-header">
+                            <span class="stepper-label">Start Time</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <button class="stepper-btn" onclick="adjustWarning('start', -1)">−</button>
+                            <div class="stepper-value" id="warning-start">13:00</div>
+                            <button class="stepper-btn" onclick="adjustWarning('start', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stepper-row">
+                        <div class="stepper-header">
+                            <span class="stepper-label">Duration</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <button class="stepper-btn" onclick="adjustWarning('duration', -1)">−</button>
+                            <div class="stepper-value small" id="warning-duration">2 hrs</div>
+                            <button class="stepper-btn" onclick="adjustWarning('duration', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stepper-row">
+                        <div class="stepper-header">
+                            <span class="stepper-label">End Time</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <div class="stepper-value" id="warning-end">15:00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="warning-message"></div>
+
+                <div class="time-preview" id="warning-preview">
+                    13:00 - 15:00
+                </div>
+            </div>
+
+            <!-- APPROACH 3: Auto-Skip -->
+            <div class="demo-section">
+                <h2>3️⃣ Auto-Skip (Smart)</h2>
+                <div class="description">
+                    <strong>How it works:</strong> When you hit a booked slot, it automatically jumps to the next available time.
+                    Fast and intelligent.
+                    <br><br>
+                    <strong>Try it:</strong> Keep clicking + and watch it skip over booked slots.
+                </div>
+
+                <div class="stepper-container">
+                    <div class="stepper-row">
+                        <div class="stepper-header">
+                            <span class="stepper-label">Start Time</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <button class="stepper-btn" onclick="adjustAutoSkip('start', -1)">−</button>
+                            <div class="stepper-value" id="autoskip-start">13:00</div>
+                            <button class="stepper-btn" onclick="adjustAutoSkip('start', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stepper-row">
+                        <div class="stepper-header">
+                            <span class="stepper-label">Duration</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <button class="stepper-btn" onclick="adjustAutoSkip('duration', -1)">−</button>
+                            <div class="stepper-value small" id="autoskip-duration">1 hr</div>
+                            <button class="stepper-btn" onclick="adjustAutoSkip('duration', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stepper-row">
+                        <div class="stepper-header">
+                            <span class="stepper-label">End Time</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <div class="stepper-value" id="autoskip-end">14:00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="autoskip-message"></div>
+
+                <div class="time-preview" id="autoskip-preview">
+                    13:00 - 14:00
+                </div>
+            </div>
+
+            <!-- APPROACH 4: Visual Indicators -->
+            <div class="demo-section">
+                <h2>4️⃣ Visual Indicators (Status Badges)</h2>
+                <div class="description">
+                    <strong>How it works:</strong> Shows real-time availability status with colored badges.
+                    Clear visual feedback at every step.
+                    <br><br>
+                    <strong>Try it:</strong> Adjust times and watch the status badges update.
+                </div>
+
+                <div class="stepper-container">
+                    <div class="stepper-row" id="visual-row-1">
+                        <div class="stepper-header">
+                            <span class="stepper-label">Start Time</span>
+                            <span class="availability-badge available" id="visual-badge-start">Available</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <button class="stepper-btn" onclick="adjustVisual('start', -1)">−</button>
+                            <div class="stepper-value" id="visual-start">13:00</div>
+                            <button class="stepper-btn" onclick="adjustVisual('start', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stepper-row" id="visual-row-2">
+                        <div class="stepper-header">
+                            <span class="stepper-label">Duration</span>
+                            <span class="availability-badge available" id="visual-badge-duration">Available</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <button class="stepper-btn" onclick="adjustVisual('duration', -1)">−</button>
+                            <div class="stepper-value small" id="visual-duration">1 hr</div>
+                            <button class="stepper-btn" onclick="adjustVisual('duration', 1)">+</button>
+                        </div>
+                    </div>
+
+                    <div class="stepper-row" id="visual-row-3">
+                        <div class="stepper-header">
+                            <span class="stepper-label">End Time</span>
+                            <span class="availability-badge available" id="visual-badge-end">Available</span>
+                        </div>
+                        <div class="stepper-controls">
+                            <div class="stepper-value" id="visual-end">14:00</div>
+                        </div>
+                    </div>
+
+                    <button class="next-available-btn" id="visual-next-btn" onclick="findNextAvailable()" style="display: none;">
+                        Find Next Available Time →
+                    </button>
+                </div>
+
+                <div class="time-preview available" id="visual-preview">
+                    ✓ 13:00 - 14:00 (Available)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated booked slots
+        const bookedSlots = [
+            { start: 10, end: 11 },
+            { start: 14, end: 15 },
+            { start: 15, end: 16 },
+            { start: 18, end: 19 }
+        ];
+
+        function isTimeBooked(hour) {
+            return bookedSlots.some(slot => hour >= slot.start && hour < slot.end);
+        }
+
+        function isRangeBooked(startHour, endHour) {
+            for (let h = startHour; h < endHour; h++) {
+                if (isTimeBooked(h)) return true;
+            }
+            return false;
+        }
+
+        function formatTime(hour) {
+            return `${String(hour).padStart(2, '0')}:00`;
+        }
+
+        // APPROACH 1: Disabled Buttons
+        let disabled = { start: 13, duration: 1 };
+
+        function updateDisabledButtons() {
+            const end = disabled.start + disabled.duration;
+
+            // Check if current selection is valid
+            const hasConflict = isRangeBooked(disabled.start, end);
+
+            // Update disabled state of buttons
+            const canDecStart = disabled.start > 5;
+            const canIncStart = disabled.start < 21 && !isTimeBooked(disabled.start + 1);
+            const canDecDur = disabled.duration > 1;
+            const canIncDur = disabled.duration < 4 && end < 22 && !isTimeBooked(end);
+
+            document.getElementById('disabled-dec-start').disabled = !canDecStart;
+            document.getElementById('disabled-inc-start').disabled = !canIncStart;
+            document.getElementById('disabled-dec-dur').disabled = !canDecDur;
+            document.getElementById('disabled-inc-dur').disabled = !canIncDur;
+
+            // Update display
+            document.getElementById('disabled-start').textContent = formatTime(disabled.start);
+            document.getElementById('disabled-duration').textContent = `${disabled.duration} hr${disabled.duration > 1 ? 's' : ''}`;
+            document.getElementById('disabled-end').textContent = formatTime(end);
+
+            const preview = document.getElementById('disabled-preview');
+            if (hasConflict) {
+                preview.className = 'time-preview conflict';
+                preview.textContent = `✗ ${formatTime(disabled.start)} - ${formatTime(end)} (Conflict!)`;
+            } else {
+                preview.className = 'time-preview available';
+                preview.textContent = `✓ ${formatTime(disabled.start)} - ${formatTime(end)} (Available)`;
+            }
+        }
+
+        function adjustDisabled(type, delta) {
+            if (type === 'start') {
+                disabled.start = Math.max(5, Math.min(21, disabled.start + delta));
+            } else {
+                disabled.duration = Math.max(1, Math.min(4, disabled.duration + delta));
+            }
+            updateDisabledButtons();
+        }
+
+        // APPROACH 2: Warning Messages
+        let warning = { start: 13, duration: 2 };
+
+        function updateWarningDisplay() {
+            const end = warning.start + warning.duration;
+
+            document.getElementById('warning-start').textContent = formatTime(warning.start);
+            document.getElementById('warning-duration').textContent = `${warning.duration} hr${warning.duration > 1 ? 's' : ''}`;
+            document.getElementById('warning-end').textContent = formatTime(end);
+
+            const hasConflict = isRangeBooked(warning.start, end);
+            const messageDiv = document.getElementById('warning-message');
+            const preview = document.getElementById('warning-preview');
+
+            if (hasConflict) {
+                // Find which slot is conflicting
+                const conflictSlot = bookedSlots.find(slot =>
+                    (warning.start >= slot.start && warning.start < slot.end) ||
+                    (end > slot.start && end <= slot.end) ||
+                    (warning.start < slot.start && end > slot.end)
+                );
+
+                messageDiv.innerHTML = `
+                    <div class="conflict-warning">
+                        <strong>⚠️ Time Not Available</strong>
+                        ${formatTime(conflictSlot.start)} - ${formatTime(conflictSlot.end)} is already booked
+                        <div class="suggestion">💡 Try: ${formatTime(conflictSlot.end)} onwards</div>
+                    </div>
+                `;
+
+                preview.className = 'time-preview conflict';
+                preview.textContent = `✗ ${formatTime(warning.start)} - ${formatTime(end)} (Conflict)`;
+            } else {
+                messageDiv.innerHTML = '';
+                preview.className = 'time-preview available';
+                preview.textContent = `✓ ${formatTime(warning.start)} - ${formatTime(end)} (Available)`;
+            }
+        }
+
+        function adjustWarning(type, delta) {
+            if (type === 'start') {
+                warning.start = Math.max(5, Math.min(21, warning.start + delta));
+            } else {
+                warning.duration = Math.max(1, Math.min(4, warning.duration + delta));
+            }
+            updateWarningDisplay();
+        }
+
+        // APPROACH 3: Auto-Skip
+        let autoskip = { start: 13, duration: 1 };
+
+        function findNextAvailableTime(fromHour, duration) {
+            for (let h = fromHour; h <= 22 - duration; h++) {
+                if (!isRangeBooked(h, h + duration)) {
+                    return h;
+                }
+            }
+            return fromHour; // No available time found
+        }
+
+        function updateAutoSkipDisplay() {
+            const end = autoskip.start + autoskip.duration;
+
+            document.getElementById('autoskip-start').textContent = formatTime(autoskip.start);
+            document.getElementById('autoskip-duration').textContent = `${autoskip.duration} hr${autoskip.duration > 1 ? 's' : ''}`;
+            document.getElementById('autoskip-end').textContent = formatTime(end);
+
+            const messageDiv = document.getElementById('autoskip-message');
+            const preview = document.getElementById('autoskip-preview');
+
+            const hasConflict = isRangeBooked(autoskip.start, end);
+
+            if (hasConflict) {
+                preview.className = 'time-preview conflict';
+                preview.textContent = `${formatTime(autoskip.start)} - ${formatTime(end)}`;
+            } else {
+                messageDiv.innerHTML = '';
+                preview.className = 'time-preview available';
+                preview.textContent = `✓ ${formatTime(autoskip.start)} - ${formatTime(end)} (Available)`;
+            }
+        }
+
+        function adjustAutoSkip(type, delta) {
+            if (type === 'start') {
+                let newStart = autoskip.start + delta;
+                newStart = Math.max(5, Math.min(21, newStart));
+
+                // Check if new time would conflict
+                if (delta > 0 && isRangeBooked(newStart, newStart + autoskip.duration)) {
+                    // Auto-skip to next available
+                    const nextAvailable = findNextAvailableTime(newStart, autoskip.duration);
+                    if (nextAvailable !== newStart) {
+                        autoskip.start = nextAvailable;
+                        const messageDiv = document.getElementById('autoskip-message');
+                        messageDiv.innerHTML = `
+                            <div class="auto-skip-message">
+                                ⚡ Skipped booked slots → Jumped to ${formatTime(nextAvailable)}
+                            </div>
+                        `;
+                        setTimeout(() => {
+                            messageDiv.innerHTML = '';
+                        }, 3000);
+                    } else {
+                        autoskip.start = newStart;
+                    }
+                } else {
+                    autoskip.start = newStart;
+                }
+            } else {
+                let newDuration = autoskip.duration + delta;
+                newDuration = Math.max(1, Math.min(4, newDuration));
+
+                // Check if new duration would conflict
+                if (delta > 0 && isRangeBooked(autoskip.start, autoskip.start + newDuration)) {
+                    // Don't allow increasing duration into booked slot
+                    return;
+                }
+                autoskip.duration = newDuration;
+            }
+            updateAutoSkipDisplay();
+        }
+
+        // APPROACH 4: Visual Indicators
+        let visual = { start: 13, duration: 1 };
+
+        function updateVisualDisplay() {
+            const end = visual.start + visual.duration;
+
+            document.getElementById('visual-start').textContent = formatTime(visual.start);
+            document.getElementById('visual-duration').textContent = `${visual.duration} hr${visual.duration > 1 ? 's' : ''}`;
+            document.getElementById('visual-end').textContent = formatTime(end);
+
+            const hasConflict = isRangeBooked(visual.start, end);
+            const startBooked = isTimeBooked(visual.start);
+            const endBooked = isTimeBooked(end - 1);
+
+            // Update badges
+            const badgeStart = document.getElementById('visual-badge-start');
+            const badgeDuration = document.getElementById('visual-badge-duration');
+            const badgeEnd = document.getElementById('visual-badge-end');
+
+            if (startBooked) {
+                badgeStart.className = 'availability-badge conflict';
+                badgeStart.textContent = 'Start Time Booked';
+            } else {
+                badgeStart.className = 'availability-badge available';
+                badgeStart.textContent = 'Available';
+            }
+
+            if (hasConflict) {
+                badgeDuration.className = 'availability-badge conflict';
+                badgeDuration.textContent = 'Conflicts with Booking';
+            } else {
+                badgeDuration.className = 'availability-badge available';
+                badgeDuration.textContent = 'Available';
+            }
+
+            if (endBooked) {
+                badgeEnd.className = 'availability-badge warning';
+                badgeEnd.textContent = 'End Time Booked';
+            } else {
+                badgeEnd.className = 'availability-badge available';
+                badgeEnd.textContent = 'Available';
+            }
+
+            // Update row styling
+            document.getElementById('visual-row-1').className = startBooked ? 'stepper-row has-conflict' : 'stepper-row available';
+            document.getElementById('visual-row-2').className = hasConflict ? 'stepper-row has-conflict' : 'stepper-row available';
+            document.getElementById('visual-row-3').className = endBooked ? 'stepper-row has-conflict' : 'stepper-row available';
+
+            // Update preview
+            const preview = document.getElementById('visual-preview');
+            if (hasConflict) {
+                preview.className = 'time-preview conflict';
+                preview.textContent = `✗ ${formatTime(visual.start)} - ${formatTime(end)} (Conflict)`;
+                document.getElementById('visual-next-btn').style.display = 'block';
+            } else {
+                preview.className = 'time-preview available';
+                preview.textContent = `✓ ${formatTime(visual.start)} - ${formatTime(end)} (Available)`;
+                document.getElementById('visual-next-btn').style.display = 'none';
+            }
+        }
+
+        function adjustVisual(type, delta) {
+            if (type === 'start') {
+                visual.start = Math.max(5, Math.min(21, visual.start + delta));
+            } else {
+                visual.duration = Math.max(1, Math.min(4, visual.duration + delta));
+            }
+            updateVisualDisplay();
+        }
+
+        function findNextAvailable() {
+            const nextTime = findNextAvailableTime(visual.start + 1, visual.duration);
+            visual.start = nextTime;
+            updateVisualDisplay();
+        }
+
+        // Initialize all displays
+        updateDisabledButtons();
+        updateWarningDisplay();
+        updateAutoSkipDisplay();
+        updateVisualDisplay();
+    </script>
+</body>
+</html>

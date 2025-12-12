@@ -5,6 +5,12 @@ import User, { IUserDocument } from '../models/User';
 export interface AuthenticatedRequest extends Request {
   user?: IUserDocument;
   userId?: string;
+  // Impersonation context
+  impersonation?: {
+    isImpersonating: boolean;
+    adminUser?: IUserDocument;
+    adminId?: string;
+  };
 }
 
 export const authenticateToken = async (
@@ -39,8 +45,15 @@ export const authenticateToken = async (
       return;
     }
 
-    const decoded = jwt.verify(token, jwtSecret) as { userId: string };
-    
+    const decoded = jwt.verify(token, jwtSecret) as {
+      userId: string;
+      impersonation?: {
+        adminId: string;
+        impersonatedUserId: string;
+        startedAt: number;
+      };
+    };
+
     const user = await User.findById(decoded.userId).select('+password');
     if (!user) {
       res.status(401).json({
@@ -68,6 +81,28 @@ export const authenticateToken = async (
 
     req.user = user;
     req.userId = user._id.toString();
+
+    // Handle impersonation context
+    if (decoded.impersonation) {
+      const adminUser = await User.findById(decoded.impersonation.adminId);
+
+      if (!adminUser || !['admin', 'superadmin'].includes(adminUser.role)) {
+        res.status(401).json({
+          success: false,
+          error: 'Invalid impersonation - admin not found or unauthorized'
+        });
+        return;
+      }
+
+      req.impersonation = {
+        isImpersonating: true,
+        adminUser,
+        adminId: adminUser._id.toString()
+      };
+
+      console.log(`👥 Impersonation: ${adminUser.username} viewing as ${user.username}`);
+    }
+
     next();
   } catch (error) {
     console.log('🔐 Auth middleware - Error occurred:', error);
@@ -164,4 +199,17 @@ export const requireMembershipFees = (
   }
 
   next();
+};
+
+export const preventImpersonationFor = (actions: string[]) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (req.impersonation?.isImpersonating) {
+      res.status(403).json({
+        success: false,
+        error: `Action not allowed during impersonation: ${actions.join(', ')}`
+      });
+      return;
+    }
+    next();
+  };
 };

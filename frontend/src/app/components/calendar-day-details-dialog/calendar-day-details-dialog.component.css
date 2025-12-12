@@ -146,7 +146,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .reservation-card::before {
@@ -460,4 +460,72 @@
     font-size: 0.8rem;
     padding: 5px 10px;
   }
+}
+
+/* ============================================
+   PAYMENT STATUS BADGE AND BORDERS
+   ============================================ */
+
+/* Payment Status Badge */
+.payment-status-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+}
+
+.payment-status-badge.payment-paid {
+  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+  color: white;
+}
+
+.payment-status-badge.payment-pending {
+  background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%);
+  color: white;
+}
+
+.payment-status-badge.payment-overdue {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  color: white;
+  animation: pulseOverdueBadge 2s ease-in-out infinite;
+}
+
+.payment-status-badge.payment-not_applicable {
+  background: #e0e0e0;
+  color: #666;
+}
+
+/* Payment status borders on reservation cards */
+.reservation-card[data-payment-status="paid"] {
+  border-left-width: 8px !important;
+  border-left-color: #4caf50 !important;
+}
+
+.reservation-card[data-payment-status="pending"] {
+  border-left-width: 8px !important;
+  border-left-color: #ff9800 !important;
+}
+
+.reservation-card[data-payment-status="overdue"] {
+  border-left-width: 8px !important;
+  border-left-color: #dc2626 !important;
+  animation: pulseCardBorder 2s ease-in-out infinite;
+}
+
+/* Pulsing animations for overdue status */
+@keyframes pulseOverdueBadge {
+  0%, 100% {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+  }
+}
+
+@keyframes pulseCardBorder {
+  0%, 100% { border-left-color: #dc2626; }
+  50% { border-left-color: #ef4444; }
 }

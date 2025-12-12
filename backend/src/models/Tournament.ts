@@ -3,22 +3,22 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ITournamentMatch {
   matchType: 'singles' | 'doubles'; // Match type
   // Singles fields
-  player1?: string; // User ID (singles)
-  player2?: string; // User ID (singles)
-  player1Name?: string; // Non-member name (singles)
-  player2Name?: string; // Non-member name (singles)
+  player1?: string; // Player ID (singles)
+  player2?: string; // Player ID (singles)
+  player1Name?: string; // Non-registered player name (singles)
+  player2Name?: string; // Non-registered player name (singles)
   // Doubles fields
-  team1Player1?: string; // User ID (doubles team 1, player 1)
-  team1Player2?: string; // User ID (doubles team 1, player 2)
-  team2Player1?: string; // User ID (doubles team 2, player 1)
-  team2Player2?: string; // User ID (doubles team 2, player 2)
-  team1Player1Name?: string; // Non-member name (doubles team 1, player 1)
-  team1Player2Name?: string; // Non-member name (doubles team 1, player 2)
-  team2Player1Name?: string; // Non-member name (doubles team 2, player 1)
-  team2Player2Name?: string; // Non-member name (doubles team 2, player 2)
+  team1Player1?: string; // Player ID (doubles team 1, player 1)
+  team1Player2?: string; // Player ID (doubles team 1, player 2)
+  team2Player1?: string; // Player ID (doubles team 2, player 1)
+  team2Player2?: string; // Player ID (doubles team 2, player 2)
+  team1Player1Name?: string; // Non-registered player name (doubles team 1, player 1)
+  team1Player2Name?: string; // Non-registered player name (doubles team 1, player 2)
+  team2Player1Name?: string; // Non-registered player name (doubles team 2, player 1)
+  team2Player2Name?: string; // Non-registered player name (doubles team 2, player 2)
   // Common fields
   score: string; // "8-6", "10-8"
-  winner: string; // User ID (singles) or "team1"/"team2" (doubles)
+  winner: string; // Player ID (singles) or "team1"/"team2" (doubles)
   round: string; // "Round 1", "Quarterfinal", "Semifinal", "Final"
   player1Games?: number; // Calculated from score (singles)
   player2Games?: number; // Calculated from score (singles)
@@ -48,11 +48,11 @@ const tournamentMatchSchema = new Schema<ITournamentMatch>({
   // Singles fields
   player1: {
     type: String,
-    ref: 'User'
+    ref: 'Player'
   },
   player2: {
     type: String,
-    ref: 'User'
+    ref: 'Player'
   },
   player1Name: {
     type: String,
@@ -65,19 +65,19 @@ const tournamentMatchSchema = new Schema<ITournamentMatch>({
   // Doubles fields
   team1Player1: {
     type: String,
-    ref: 'User'
+    ref: 'Player'
   },
   team1Player2: {
     type: String,
-    ref: 'User'
+    ref: 'Player'
   },
   team2Player1: {
     type: String,
-    ref: 'User'
+    ref: 'Player'
   },
   team2Player2: {
     type: String,
-    ref: 'User'
+    ref: 'Player'
   },
   team1Player1Name: {
     type: String,
@@ -174,7 +174,7 @@ const tournamentSchema = new Schema<ITournament>({
       values: ['draft', 'completed'],
       message: 'Status must be draft or completed'
     },
-    default: 'draft',
+    default: 'completed',
     index: true
   },
   totalMatches: {

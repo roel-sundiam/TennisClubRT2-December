@@ -146,7 +146,6 @@ interface MembershipPayment {
                     <mat-option value="cash">Cash</mat-option>
                     <mat-option value="bank_transfer">Bank Transfer</mat-option>
                     <mat-option value="gcash">GCash</mat-option>
-                    <mat-option value="coins">Coins</mat-option>
                   </mat-select>
                   <mat-error *ngIf="paymentForm.get('paymentMethod')?.hasError('required')">
                     Please select a payment method
@@ -800,8 +799,7 @@ export class AdminMembershipPaymentsComponent implements OnInit {
     const methodMap: { [key: string]: string } = {
       'cash': 'Cash',
       'bank_transfer': 'Bank Transfer',
-      'gcash': 'GCash',
-      'coins': 'Coins'
+      'gcash': 'GCash'
     };
     return methodMap[method] || method;
   }

@@ -23,6 +23,8 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { PlayerManagementDialogComponent } from '../player-management-dialog/player-management-dialog.component';
+import { MedalAssignmentDialogComponent } from '../medal-assignment-dialog/medal-assignment-dialog.component';
 
 interface Tournament {
   _id: string;
@@ -63,12 +65,13 @@ interface TournamentMatch {
   pointsProcessed: boolean;
 }
 
-interface Member {
+interface Player {
   _id: string;
-  username: string;
   fullName: string;
-  email: string;
-  role: string;
+  email?: string;
+  seedPoints?: number;
+  isActive?: boolean;
+  medals?: ('gold' | 'silver' | 'bronze')[];
 }
 
 @Component({
@@ -100,7 +103,7 @@ interface Member {
 })
 export class TournamentManagementComponent implements OnInit {
   tournaments: Tournament[] = [];
-  members: Member[] = [];
+  players: Player[] = [];
   loading = false;
   showCreateForm = false;
   editingTournament: Tournament | null = null;
@@ -120,7 +123,7 @@ export class TournamentManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
-    this.loadMembers();
+    this.loadPlayers();
     this.loadTournaments();
   }
 
@@ -137,28 +140,61 @@ export class TournamentManagementComponent implements OnInit {
   }
 
   createMatchFormGroup(): FormGroup {
-    return this.fb.group({
+    const group = this.fb.group({
       matchType: ['singles', Validators.required],
       // Singles fields
       player1: [''],
       player2: [''],
-      player1Name: [''],  // For non-member name
-      player2Name: [''],  // For non-member name
       // Doubles fields
       team1Player1: [''],
       team1Player2: [''],
       team2Player1: [''],
       team2Player2: [''],
-      team1Player1Name: [''],  // For non-member name
-      team1Player2Name: [''],  // For non-member name
-      team2Player1Name: [''],  // For non-member name
-      team2Player2Name: [''],  // For non-member name
       // Common fields
       score: ['8-6', [Validators.required, Validators.pattern(/^\d+\s*-\s*\d+$/)]],
       winner: ['', Validators.required],
       round: ['Elimination', Validators.required],
       pointsProcessed: [false]
     });
+
+    // Add conditional validators based on match type
+    group.get('matchType')?.valueChanges.subscribe(matchType => {
+      if (matchType === 'singles') {
+        // Singles: require player1 and player2
+        group.get('player1')?.setValidators([Validators.required]);
+        group.get('player2')?.setValidators([Validators.required]);
+        // Doubles: clear validators
+        group.get('team1Player1')?.clearValidators();
+        group.get('team1Player2')?.clearValidators();
+        group.get('team2Player1')?.clearValidators();
+        group.get('team2Player2')?.clearValidators();
+      } else {
+        // Doubles: require all 4 team players
+        group.get('team1Player1')?.setValidators([Validators.required]);
+        group.get('team1Player2')?.setValidators([Validators.required]);
+        group.get('team2Player1')?.setValidators([Validators.required]);
+        group.get('team2Player2')?.setValidators([Validators.required]);
+        // Singles: clear validators
+        group.get('player1')?.clearValidators();
+        group.get('player2')?.clearValidators();
+      }
+
+      // Update validity for all player fields
+      group.get('player1')?.updateValueAndValidity();
+      group.get('player2')?.updateValueAndValidity();
+      group.get('team1Player1')?.updateValueAndValidity();
+      group.get('team1Player2')?.updateValueAndValidity();
+      group.get('team2Player1')?.updateValueAndValidity();
+      group.get('team2Player2')?.updateValueAndValidity();
+    });
+
+    // Trigger initial validation for singles (default)
+    group.get('player1')?.setValidators([Validators.required]);
+    group.get('player2')?.setValidators([Validators.required]);
+    group.get('player1')?.updateValueAndValidity();
+    group.get('player2')?.updateValueAndValidity();
+
+    return group;
   }
 
   addMatch(): void {
@@ -169,21 +205,19 @@ export class TournamentManagementComponent implements OnInit {
     this.matches.removeAt(index);
   }
 
-  loadMembers(): void {
+  loadPlayers(): void {
     this.loading = true;
-    this.http.get<any>(`${environment.apiUrl}/members?limit=100`)
+    this.http.get<any>(`${environment.apiUrl}/players?limit=1000`)
       .subscribe({
         next: (response) => {
           if (response.success) {
-            this.members = response.data.filter((m: Member) =>
-              m.role === 'member' || m.role === 'admin' || m.role === 'superadmin'
-            );
+            this.players = response.data.filter((p: Player) => p.isActive !== false);
           }
           this.loading = false;
         },
         error: (error) => {
-          console.error('Error loading members:', error);
-          this.snackBar.open('Failed to load members', 'Close', { duration: 3000 });
+          console.error('Error loading players:', error);
+          this.snackBar.open('Failed to load players', 'Close', { duration: 3000 });
           this.loading = false;
         }
       });
@@ -235,18 +269,12 @@ export class TournamentManagementComponent implements OnInit {
       const matchGroup = this.createMatchFormGroup();
       matchGroup.patchValue({
         matchType: match.matchType,
-        player1: match.player1 || '',
-        player2: match.player2 || '',
-        player1Name: match.player1Name || '',
-        player2Name: match.player2Name || '',
-        team1Player1: match.team1Player1 || '',
-        team1Player2: match.team1Player2 || '',
-        team2Player1: match.team2Player1 || '',
-        team2Player2: match.team2Player2 || '',
-        team1Player1Name: match.team1Player1Name || '',
-        team1Player2Name: match.team1Player2Name || '',
-        team2Player1Name: match.team2Player1Name || '',
-        team2Player2Name: match.team2Player2Name || '',
+        player1: this.extractId(match.player1),
+        player2: this.extractId(match.player2),
+        team1Player1: this.extractId(match.team1Player1),
+        team1Player2: this.extractId(match.team1Player2),
+        team2Player1: this.extractId(match.team2Player1),
+        team2Player2: this.extractId(match.team2Player2),
         score: match.score,
         winner: match.winner,
         round: match.round,
@@ -267,14 +295,6 @@ export class TournamentManagementComponent implements OnInit {
     if (typeof value === 'string') return value;
     if (typeof value === 'object' && value._id) return value._id;
     return '';
-  }
-
-  // Helper function to check if a value has content (handles both strings and objects)
-  private hasValue(value: any): boolean {
-    if (!value) return false;
-    if (typeof value === 'string') return value.trim() !== '';
-    if (typeof value === 'object') return true; // Populated object
-    return false;
   }
 
   createTournament(): void {
@@ -302,37 +322,23 @@ export class TournamentManagementComponent implements OnInit {
         };
 
         if (matchType === 'singles') {
-          // Validate singles fields - must have either member ID or name for each player
-          const hasPlayer1 = this.hasValue(match.player1) || this.hasValue(match.player1Name);
-          const hasPlayer2 = this.hasValue(match.player2) || this.hasValue(match.player2Name);
-
-          if (!hasPlayer1 || !hasPlayer2) {
-            throw new Error(`Match ${index + 1}: Please provide both players (select member or enter name)`);
+          // Validate singles fields - all players must be selected
+          if (!match.player1 || !match.player2) {
+            throw new Error(`Match ${index + 1}: Please select both players from the registry`);
           }
 
           cleanedMatch.player1 = this.extractId(match.player1);
           cleanedMatch.player2 = this.extractId(match.player2);
-          cleanedMatch.player1Name = match.player1Name || '';
-          cleanedMatch.player2Name = match.player2Name || '';
         } else {
-          // Validate doubles fields - must have either member ID or name for each player
-          const hasT1P1 = this.hasValue(match.team1Player1) || this.hasValue(match.team1Player1Name);
-          const hasT1P2 = this.hasValue(match.team1Player2) || this.hasValue(match.team1Player2Name);
-          const hasT2P1 = this.hasValue(match.team2Player1) || this.hasValue(match.team2Player1Name);
-          const hasT2P2 = this.hasValue(match.team2Player2) || this.hasValue(match.team2Player2Name);
-
-          if (!hasT1P1 || !hasT1P2 || !hasT2P1 || !hasT2P2) {
-            throw new Error(`Match ${index + 1}: Please provide all 4 players (select member or enter name)`);
+          // Validate doubles fields - all 4 players must be selected
+          if (!match.team1Player1 || !match.team1Player2 || !match.team2Player1 || !match.team2Player2) {
+            throw new Error(`Match ${index + 1}: Please select all 4 players from the registry`);
           }
 
           cleanedMatch.team1Player1 = this.extractId(match.team1Player1);
           cleanedMatch.team1Player2 = this.extractId(match.team1Player2);
           cleanedMatch.team2Player1 = this.extractId(match.team2Player1);
           cleanedMatch.team2Player2 = this.extractId(match.team2Player2);
-          cleanedMatch.team1Player1Name = match.team1Player1Name || '';
-          cleanedMatch.team1Player2Name = match.team1Player2Name || '';
-          cleanedMatch.team2Player1Name = match.team2Player1Name || '';
-          cleanedMatch.team2Player2Name = match.team2Player2Name || '';
         }
 
         return cleanedMatch;
@@ -469,38 +475,9 @@ export class TournamentManagementComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 
-  getMemberName(memberId: string): string {
-    const member = this.members.find(m => m._id === memberId);
-    return member ? member.fullName : 'Unknown';
-  }
-
-  hasPlayer(match: any, memberField: string, nameField: string): boolean {
-    const memberId = match.get(memberField)?.value;
-    const name = match.get(nameField)?.value;
-    return (memberId && typeof memberId === 'string' && memberId.trim() !== '') ||
-           (name && typeof name === 'string' && name.trim() !== '');
-  }
-
-  getPlayerDisplayName(match: any, memberField: string, nameField: string): string {
-    const memberValue = match.get(memberField)?.value;
-    const nameValue = match.get(nameField)?.value;
-
-    // Check if custom name is provided
-    if (nameValue && typeof nameValue === 'string' && nameValue.trim()) {
-      return nameValue.trim();
-    }
-
-    // Check if memberValue is a populated object (from backend)
-    if (memberValue && typeof memberValue === 'object' && memberValue.fullName) {
-      return memberValue.fullName;
-    }
-
-    // Check if memberValue is a string ID
-    if (memberValue && typeof memberValue === 'string' && memberValue.trim()) {
-      return this.getMemberName(memberValue);
-    }
-
-    return '';
+  getPlayerName(playerId: string): string {
+    const player = this.players.find(p => p._id === playerId);
+    return player ? player.fullName : 'Unknown';
   }
 
   getMatchPreview(match: any): string {
@@ -509,20 +486,20 @@ export class TournamentManagementComponent implements OnInit {
     const matchType = match.get('matchType')?.value || 'singles';
 
     if (matchType === 'doubles') {
-      const t1p1Display = this.getPlayerDisplayName(match, 'team1Player1', 'team1Player1Name');
-      const t1p2Display = this.getPlayerDisplayName(match, 'team1Player2', 'team1Player2Name');
-      const t2p1Display = this.getPlayerDisplayName(match, 'team2Player1', 'team2Player1Name');
-      const t2p2Display = this.getPlayerDisplayName(match, 'team2Player2', 'team2Player2Name');
+      const t1p1 = match.get('team1Player1')?.value;
+      const t1p2 = match.get('team1Player2')?.value;
+      const t2p1 = match.get('team2Player1')?.value;
+      const t2p2 = match.get('team2Player2')?.value;
 
-      if (t1p1Display && t1p2Display && t2p1Display && t2p2Display) {
-        return `${t1p1Display}/${t1p2Display} vs ${t2p1Display}/${t2p2Display}`;
+      if (t1p1 && t1p2 && t2p1 && t2p2) {
+        return `${this.getPlayerName(t1p1)}/${this.getPlayerName(t1p2)} vs ${this.getPlayerName(t2p1)}/${this.getPlayerName(t2p2)}`;
       }
     } else {
-      const p1Display = this.getPlayerDisplayName(match, 'player1', 'player1Name');
-      const p2Display = this.getPlayerDisplayName(match, 'player2', 'player2Name');
+      const p1 = match.get('player1')?.value;
+      const p2 = match.get('player2')?.value;
 
-      if (p1Display && p2Display) {
-        return `${p1Display} vs ${p2Display}`;
+      if (p1 && p2) {
+        return `${this.getPlayerName(p1)} vs ${this.getPlayerName(p2)}`;
       }
     }
 
@@ -533,9 +510,45 @@ export class TournamentManagementComponent implements OnInit {
     return new Date(dateString).toLocaleDateString();
   }
 
-  hasUnprocessedMatches(tournament: Tournament): boolean {
-    // Button is enabled if there are matches AND at least one is not processed
-    return tournament.matches.length > 0 &&
-           tournament.matches.some(match => !match.pointsProcessed);
+  getMatchesByRound(matches: TournamentMatch[]): Record<string, number> {
+    const roundCounts: Record<string, number> = {};
+
+    matches.forEach(match => {
+      const round = match.round || 'Unknown';
+      roundCounts[round] = (roundCounts[round] || 0) + 1;
+    });
+
+    return roundCounts;
+  }
+
+  openPlayerManagement(): void {
+    const dialogRef = this.dialog.open(PlayerManagementDialogComponent, {
+      width: '900px',
+      maxHeight: '90vh',
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Reload players list after dialog closes
+        this.loadPlayers();
+      }
+    });
+  }
+
+  openMedalAssignment(): void {
+    const dialogRef = this.dialog.open(MedalAssignmentDialogComponent, {
+      width: '600px',
+      maxHeight: '90vh',
+      disableClose: false,
+      data: { players: this.players }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadPlayers();
+        this.snackBar.open('Player medal updated successfully', 'Close', { duration: 3000 });
+      }
+    });
   }
 }

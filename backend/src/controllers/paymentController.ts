@@ -72,7 +72,8 @@ async function updateFinancialReportCourtReceipts(): Promise<void> {
       {
         $match: {
           status: 'record',
-          recordedAt: { $exists: true, $ne: null }
+          recordedAt: { $exists: true, $ne: null },
+          paymentType: { $ne: 'membership_fee' }
         }
       },
       {
@@ -1268,7 +1269,7 @@ export const updatePayment = asyncHandler(async (req: AuthenticatedRequest, res:
   console.log('💰 User:', req.user?.username, '(', req.user?.role, ')');
   
   const { id } = req.params;
-  const { paymentMethod, transactionId, referenceNumber, customAmount } = req.body;
+  const { paymentMethod, transactionId, referenceNumber, customAmount, status, paymentDate, notes } = req.body;
 
   console.log('💰 UPDATE PAYMENT REQUEST:', {
     paymentId: id,
@@ -1276,6 +1277,9 @@ export const updatePayment = asyncHandler(async (req: AuthenticatedRequest, res:
     transactionId,
     referenceNumber,
     customAmount,
+    status,
+    paymentDate,
+    notes,
     userRole: req.user?.role,
     username: req.user?.username
   });
@@ -1308,31 +1312,105 @@ export const updatePayment = asyncHandler(async (req: AuthenticatedRequest, res:
 
   // Payment status update restrictions based on user role
   const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
-  
-  if (payment.status !== 'pending') {
-    // Non-admins can only update pending payments
-    if (!isAdmin) {
+
+  // Admins cannot edit payments that have been recorded in financial reports
+  if (payment.status === 'record') {
+    return res.status(400).json({
+      success: false,
+      error: 'Recorded payments cannot be edited. Use unrecord feature first.'
+    });
+  }
+
+  // Non-admins can only update pending payments (and not change status)
+  if (!isAdmin && payment.status !== 'pending') {
+    return res.status(400).json({
+      success: false,
+      error: 'Only pending payments can be updated'
+    });
+  }
+
+  // Clean up duplicate notes to prevent exceeding 500 char limit
+  if (payment.notes) {
+    const lines = payment.notes.split('\n');
+    const uniqueLines = [...new Set(lines)]; // Remove duplicates
+    payment.notes = uniqueLines.join('\n');
+    console.log('💰 Cleaned up notes:', { originalLines: lines.length, uniqueLines: uniqueLines.length });
+  }
+
+  // Handle status transitions (admin only)
+  if (status && isAdmin) {
+    console.log('💰 Processing status change:', { currentStatus: payment.status, newStatus: status, isAdmin });
+
+    const validStatuses = ['pending', 'completed', 'failed', 'refunded'];
+    if (!validStatuses.includes(status)) {
+      console.log('💰 ERROR: Invalid status value:', status);
       return res.status(400).json({
         success: false,
-        error: 'Only pending payments can be updated'
+        error: 'Invalid status value'
       });
     }
-    
-    // Admins cannot edit payments that have been recorded in financial reports
-    if (payment.status === 'record') {
+
+    if (status === 'record') {
+      console.log('💰 ERROR: Cannot change to record status via update');
       return res.status(400).json({
         success: false,
-        error: 'Recorded payments cannot be edited. Use unrecord feature first.'
+        error: 'Use record endpoint to mark payment as recorded'
       });
     }
-    
-    // Allow admins to edit completed and failed payments
-    if (!['completed', 'failed'].includes(payment.status)) {
-      return res.status(400).json({
-        success: false,
-        error: `Cannot edit ${payment.status} payments`
-      });
+
+    if (payment.status !== status) {
+      console.log('💰 Updating status from', payment.status, 'to', status);
+      const statusNote = `Status changed from ${payment.status} to ${status} by ${req.user?.username}`;
+
+      // Check if this exact note already exists
+      const existingNotes = payment.notes || '';
+      if (!existingNotes.includes(statusNote)) {
+        payment.notes = payment.notes ? `${payment.notes}\n${statusNote}` : statusNote;
+      }
+
+      payment.status = status;
+      payment.markModified('status'); // Explicitly mark status as modified
+
+      if (status === 'completed' && !payment.paymentDate) {
+        payment.paymentDate = new Date();
+        payment.markModified('paymentDate'); // Explicitly mark as modified
+        console.log('💰 Auto-set paymentDate for completed payment');
+      }
+    } else {
+      console.log('💰 Status unchanged (already', status, ')');
     }
+  } else if (status && !isAdmin) {
+    console.log('💰 WARNING: Non-admin attempted to change status');
+  }
+
+  // Handle payment date updates (admin only)
+  if (paymentDate && isAdmin) {
+    const newDate = new Date(paymentDate);
+
+    if (['completed', 'record'].includes(payment.status)) {
+      if (newDate > new Date()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Payment date cannot be in the future for completed payments'
+        });
+      }
+    }
+
+    const dateNote = `Payment date changed from ${payment.paymentDate?.toISOString() || 'unset'} to ${newDate.toISOString()} by ${req.user?.username}`;
+
+    // Check if this note already exists
+    const existingNotes = payment.notes || '';
+    if (!existingNotes.includes(dateNote)) {
+      payment.notes = payment.notes ? `${payment.notes}\n${dateNote}` : dateNote;
+    }
+
+    payment.paymentDate = newDate;
+  }
+
+  // Handle admin notes
+  if (notes && isAdmin) {
+    const adminNote = `Admin note by ${req.user?.username}: ${notes}`;
+    payment.notes = payment.notes ? `${payment.notes}\n${adminNote}` : adminNote;
   }
 
   // Update payment details
@@ -1351,18 +1429,25 @@ export const updatePayment = asyncHandler(async (req: AuthenticatedRequest, res:
   // Handle custom amount (now available to all users)
   if (customAmount) {
     const newAmount = parseFloat(customAmount);
-    if (newAmount > 0) {
+    if (newAmount > 0 && payment.amount !== newAmount) {
+      // Only add note if amount is actually changing
       payment.amount = newAmount;
       // Add or update notes about custom amount
       const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
-      const amountNote = isAdmin 
+      const amountNote = isAdmin
         ? `Admin override: Custom amount ₱${newAmount.toFixed(2)} set by ${req.user?.username || 'admin'}`
         : `Custom amount ₱${newAmount.toFixed(2)} set by ${req.user?.username || 'user'}`;
-      if (payment.notes) {
-        payment.notes += `\n${amountNote}`;
-      } else {
-        payment.notes = amountNote;
+
+      // Only add note if it's not a duplicate of the last note
+      const existingNotes = payment.notes || '';
+      if (!existingNotes.includes(amountNote)) {
+        if (payment.notes) {
+          payment.notes += `\n${amountNote}`;
+        } else {
+          payment.notes = amountNote;
+        }
       }
+
       // Update metadata (create if it doesn't exist)
       if (!payment.metadata) {
         payment.metadata = {
@@ -1372,6 +1457,14 @@ export const updatePayment = asyncHandler(async (req: AuthenticatedRequest, res:
       payment.metadata.isAdminOverride = true;
       payment.metadata.originalFee = newAmount;
     }
+  }
+
+  // Truncate notes if they exceed 500 characters
+  if (payment.notes && payment.notes.length > 500) {
+    console.log('💰 WARNING: Notes exceed 500 characters, truncating...');
+    // Keep the last 450 characters and add a note about truncation
+    payment.notes = '...(truncated)\n' + payment.notes.substring(payment.notes.length - 450);
+    console.log('💰 Notes truncated to:', payment.notes.length, 'characters');
   }
 
   try {
@@ -1419,9 +1512,13 @@ export const updatePayment = asyncHandler(async (req: AuthenticatedRequest, res:
     paymentId: id,
     finalAmount: payment.amount,
     finalMethod: payment.paymentMethod,
+    finalStatus: payment.status,
     hasMetadata: !!payment.metadata,
     isAdminOverride: payment.metadata?.isAdminOverride
   });
+
+  console.log('💰 Payment object status before response:', payment.status);
+  console.log('💰 Payment toJSON status:', payment.toJSON().status);
 
   return res.status(200).json({
     success: true,
@@ -1544,12 +1641,25 @@ export const getMyPayments = asyncHandler(async (req: AuthenticatedRequest, res:
   try {
     const payments = await Payment.find(filter)
       .populate('userId', 'username fullName email')
-      .populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay')
+      .populate({
+        path: 'reservationId',
+        select: 'userId date timeSlot endTimeSlot duration players status totalFee',
+        options: { virtuals: true }
+      })
       .populate('pollId', 'title openPlayEvent.eventDate openPlayEvent.startTime openPlayEvent.endTime')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(); // Use lean() to get plain objects instead of mongoose documents
+
+    // Manually add timeSlotDisplay virtual for reservations
+    payments.forEach((payment: any) => {
+      if (payment.reservationId) {
+        const startHour = payment.reservationId.timeSlot;
+        const endHour = payment.reservationId.endTimeSlot || (startHour + 1);
+        payment.reservationId.timeSlotDisplay = `${startHour}:00 - ${endHour}:00`;
+      }
+    });
 
     console.log('🔍 Payments returned for user:', payments.map(p => ({
       id: p._id,
@@ -2133,7 +2243,7 @@ export const createPaymentValidation = [
     .isMongoId()
     .withMessage('Invalid reservation ID'),
   body('paymentMethod')
-    .isIn(['cash', 'bank_transfer', 'gcash', 'coins'])
+    .isIn(['cash', 'bank_transfer', 'gcash'])
     .withMessage('Invalid payment method'),
   body('amount')
     .if((value, { req }) => req.body.isManualPayment === true)
@@ -2238,7 +2348,7 @@ export const payOnBehalf = asyncHandler(async (req: AuthenticatedRequest, res: R
   }
 
   // Validate payment method
-  const validPaymentMethods = ['cash', 'bank_transfer', 'gcash', 'coins'];
+  const validPaymentMethods = ['cash', 'bank_transfer', 'gcash'];
   if (!validPaymentMethods.includes(paymentMethod)) {
     return res.status(400).json({
       success: false,
@@ -2422,7 +2532,7 @@ export const payOnBehalfValidation = [
   body('paymentMethod')
     .notEmpty()
     .withMessage('Payment method is required')
-    .isIn(['cash', 'bank_transfer', 'gcash', 'coins'])
+    .isIn(['cash', 'bank_transfer', 'gcash'])
     .withMessage('Invalid payment method'),
   body('transactionId')
     .optional()
@@ -2699,7 +2809,7 @@ export const validateMembershipFeePayment = [
   body('paymentMethod')
     .notEmpty()
     .withMessage('Payment method is required')
-    .isIn(['cash', 'bank_transfer', 'gcash', 'coins'])
+    .isIn(['cash', 'bank_transfer', 'gcash'])
     .withMessage('Invalid payment method'),
   body('paymentDate')
     .optional()

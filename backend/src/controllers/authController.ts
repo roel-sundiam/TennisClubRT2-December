@@ -41,8 +41,7 @@ export const register = asyncHandler(async (req: AuthenticatedRequest, res: Resp
     gender,
     phone,
     dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-    isApproved: false, // Requires admin approval
-    coinBalance: parseInt(process.env.FREE_COINS_NEW_USER || '100')
+    isApproved: false // Requires admin approval
   });
 
   await user.save();

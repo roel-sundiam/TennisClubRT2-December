@@ -10,7 +10,6 @@ export interface User {
   fullName: string;
   email: string;
   role: 'member' | 'admin' | 'superadmin';
-  coinBalance: number;
   seedPoints?: number;
   matchesWon?: number;
   matchesPlayed?: number;
@@ -42,6 +41,13 @@ export interface ChangePasswordRequest {
   confirmPassword: string;
 }
 
+export interface ImpersonationState {
+  isImpersonating: boolean;
+  adminUser: User | null;
+  impersonatedUser: User | null;
+  startedAt: Date | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -51,11 +57,18 @@ export class AuthService {
   private tokenSubject = new BehaviorSubject<string | null>(null);
   private isLoadingSubject = new BehaviorSubject<boolean>(true);
   private intendedRouteSubject = new BehaviorSubject<string | null>(null);
+  private impersonationSubject = new BehaviorSubject<ImpersonationState>({
+    isImpersonating: false,
+    adminUser: null,
+    impersonatedUser: null,
+    startedAt: null
+  });
 
   public currentUser$ = this.currentUserSubject.asObservable();
   public token$ = this.tokenSubject.asObservable();
   public isLoading$ = this.isLoadingSubject.asObservable();
   public intendedRoute$ = this.intendedRouteSubject.asObservable();
+  public impersonation$ = this.impersonationSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -85,6 +98,9 @@ export class AuthService {
         this.clearAuthState();
       }
     }
+
+    // Restore impersonation state if exists
+    this.restoreImpersonationState();
 
     // Set loading to false after initialization
     setTimeout(() => {
@@ -148,10 +164,17 @@ export class AuthService {
     localStorage.removeItem('user');
     localStorage.removeItem('tokenExpiration');
     localStorage.removeItem('loginTime');
+    localStorage.removeItem('impersonation');
     // Note: intendedRoute is NOT cleared here - handled separately
     this.tokenSubject.next(null);
     this.currentUserSubject.next(null);
     this.isLoadingSubject.next(false);
+    this.impersonationSubject.next({
+      isImpersonating: false,
+      adminUser: null,
+      impersonatedUser: null,
+      startedAt: null
+    });
   }
 
   get currentUser(): User | null {
@@ -187,25 +210,6 @@ export class AuthService {
 
   isSuperAdmin(): boolean {
     return this.currentUser?.role === 'superadmin';
-  }
-
-  /**
-   * Update the coin balance in the current user state
-   */
-  updateCoinBalance(newBalance: number): void {
-    const currentUser = this.currentUser;
-    if (currentUser && currentUser.coinBalance !== newBalance) { // Only update if balance actually changed
-      const updatedUser = { ...currentUser, coinBalance: newBalance };
-      this.currentUserSubject.next(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-    }
-  }
-
-  /**
-   * Get current user's coin balance
-   */
-  getCoinBalance(): number {
-    return this.currentUser?.coinBalance || 0;
   }
 
   /**
@@ -350,5 +354,112 @@ export class AuthService {
   isTokenExpiringSoon(thresholdMs: number): boolean {
     const remaining = this.getRemainingSessionTime();
     return remaining > 0 && remaining <= thresholdMs;
+  }
+
+  /**
+   * Get current impersonation state
+   */
+  get isImpersonating(): boolean {
+    return this.impersonationSubject.value.isImpersonating;
+  }
+
+  /**
+   * Get real user (admin if impersonating, current user otherwise)
+   */
+  get realUser(): User | null {
+    const impersonation = this.impersonationSubject.value;
+    return impersonation.isImpersonating ? impersonation.adminUser : this.currentUser;
+  }
+
+  /**
+   * Start impersonating a user
+   */
+  startImpersonation(userId: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/impersonation/start/${userId}`, {})
+      .pipe(
+        tap((response: any) => {
+          const { token, user, adminUser, expiresIn } = response.data;
+
+          // Calculate token expiration
+          const expirationTimestamp = this.calculateExpirationTimestamp(expiresIn);
+
+          // Update localStorage
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
+          localStorage.setItem('tokenExpiration', expirationTimestamp.toString());
+          localStorage.setItem('impersonation', JSON.stringify({
+            adminUser,
+            impersonatedUser: user,
+            startedAt: new Date().toISOString()
+          }));
+
+          // Update subjects
+          this.tokenSubject.next(token);
+          this.currentUserSubject.next(user);
+          this.impersonationSubject.next({
+            isImpersonating: true,
+            adminUser,
+            impersonatedUser: user,
+            startedAt: new Date()
+          });
+
+          console.log(`👥 Impersonation started: ${adminUser.username} → ${user.username}`);
+        })
+      );
+  }
+
+  /**
+   * Stop impersonating and return to admin account
+   */
+  stopImpersonation(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/impersonation/stop`, {})
+      .pipe(
+        tap((response: any) => {
+          const { token, user, expiresIn } = response.data;
+
+          // Calculate token expiration
+          const expirationTimestamp = this.calculateExpirationTimestamp(expiresIn);
+
+          // Clear impersonation and restore admin
+          localStorage.removeItem('impersonation');
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
+          localStorage.setItem('tokenExpiration', expirationTimestamp.toString());
+
+          // Update subjects
+          this.tokenSubject.next(token);
+          this.currentUserSubject.next(user);
+          this.impersonationSubject.next({
+            isImpersonating: false,
+            adminUser: null,
+            impersonatedUser: null,
+            startedAt: null
+          });
+
+          console.log(`👥 Impersonation ended, returned to ${user.username}`);
+        })
+      );
+  }
+
+  /**
+   * Restore impersonation state from localStorage
+   */
+  private restoreImpersonationState(): void {
+    const impersonationString = localStorage.getItem('impersonation');
+    if (impersonationString) {
+      try {
+        const { adminUser, impersonatedUser, startedAt } = JSON.parse(impersonationString);
+        this.impersonationSubject.next({
+          isImpersonating: true,
+          adminUser,
+          impersonatedUser,
+          startedAt: new Date(startedAt)
+        });
+        console.log(`👥 Restored impersonation state: ${adminUser.username} → ${impersonatedUser.username}`);
+      } catch (error) {
+        console.error('Error restoring impersonation state:', error);
+        localStorage.removeItem('impersonation');
+      }
+    }
   }
 }

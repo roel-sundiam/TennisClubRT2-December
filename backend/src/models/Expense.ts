@@ -42,7 +42,8 @@ const ExpenseSchema = new Schema<IExpenseDocument>({
       'Purchase - Lights',
       'Water System Project Expense',
       'Tournament Expense',
-      'Financial Donation'
+      'Financial Donation',
+      'App Service Fee'
     ]
   },
   createdBy: {

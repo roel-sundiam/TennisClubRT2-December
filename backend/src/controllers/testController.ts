@@ -8,7 +8,6 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import Reservation from '../models/Reservation';
 import Payment from '../models/Payment';
-import CoinTransaction from '../models/CoinTransaction';
 import CreditTransaction from '../models/CreditTransaction';
 import Poll from '../models/Poll';
 import Suggestion from '../models/Suggestion';
@@ -130,10 +129,6 @@ export const cleanupTestData = async (req: Request, res: Response): Promise<void
     const paymentsDeleted = await Payment.deleteMany({});
     console.log(`🗑️  Deleted ${paymentsDeleted.deletedCount} payments`);
 
-    // Delete all coin transactions
-    const coinTxDeleted = await CoinTransaction.deleteMany({});
-    console.log(`🗑️  Deleted ${coinTxDeleted.deletedCount} coin transactions`);
-
     // Delete all credit transactions
     const creditTxDeleted = await CreditTransaction.deleteMany({});
     console.log(`🗑️  Deleted ${creditTxDeleted.deletedCount} credit transactions`);
@@ -146,12 +141,6 @@ export const cleanupTestData = async (req: Request, res: Response): Promise<void
     const suggestionsDeleted = await Suggestion.deleteMany({});
     console.log(`🗑️  Deleted ${suggestionsDeleted.deletedCount} suggestions`);
 
-    // Reset coin balances for test users
-    await User.updateOne({ username: 'RoelSundiam' }, { coinBalance: 0 });
-    await User.updateOne({ username: 'testmember' }, { coinBalance: 100 });
-    await User.updateOne({ username: 'admin' }, { coinBalance: 500 });
-    await User.updateOne({ username: 'superadmin' }, { coinBalance: 1000 });
-
     console.log('✅ Test database cleaned successfully');
 
     res.status(200).json({
@@ -160,7 +149,6 @@ export const cleanupTestData = async (req: Request, res: Response): Promise<void
       data: {
         reservationsDeleted: reservationsDeleted.deletedCount,
         paymentsDeleted: paymentsDeleted.deletedCount,
-        coinTransactionsDeleted: coinTxDeleted.deletedCount,
         creditTransactionsDeleted: creditTxDeleted.deletedCount,
         pollsDeleted: pollsDeleted.deletedCount,
         suggestionsDeleted: suggestionsDeleted.deletedCount

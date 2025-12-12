@@ -257,24 +257,32 @@ interface MemberResponse {
                         <button mat-icon-button (click)="viewMemberDetails(member)" matTooltip="View Details">
                           <mat-icon>visibility</mat-icon>
                         </button>
-                        <button 
-                          mat-icon-button 
-                          color="primary" 
+                        <button
+                          mat-icon-button
+                          color="primary"
                           (click)="toggleApproval(member)"
                           [matTooltip]="member.isApproved ? 'Revoke Approval' : 'Approve Member'">
                           <mat-icon>{{member.isApproved ? 'block' : 'check'}}</mat-icon>
                         </button>
-                        <button 
-                          mat-icon-button 
-                          color="accent" 
+                        <button
+                          mat-icon-button
+                          color="accent"
+                          (click)="impersonateUser(member)"
+                          matTooltip="Impersonate User (Login as them)"
+                          [disabled]="member.role === 'admin' || member.role === 'superadmin'">
+                          <mat-icon>supervisor_account</mat-icon>
+                        </button>
+                        <button
+                          mat-icon-button
+                          color="accent"
                           (click)="resetPassword(member)"
                           matTooltip="Reset Password to RT2Tennis"
                           [disabled]="updating === member._id">
                           <mat-icon>lock_reset</mat-icon>
                         </button>
-                        <button 
-                          mat-icon-button 
-                          color="warn" 
+                        <button
+                          mat-icon-button
+                          color="warn"
                           (click)="deactivateMember(member)"
                           matTooltip="Deactivate Member">
                           <mat-icon>delete</mat-icon>
@@ -515,6 +523,56 @@ export class AdminMemberManagementComponent implements OnInit {
               this.snackBar.open('Failed to reset password', 'Close', { duration: 3000 });
             }
           });
+      }
+    });
+  }
+
+  impersonateUser(member: Member): void {
+    const dialogData: ConfirmationDialogData = {
+      title: 'Impersonate User',
+      message: `You are about to view the application as ${member.fullName} (@${member.username}). You will see exactly what they see. Continue?`,
+      confirmText: 'Start Impersonation',
+      cancelText: 'Cancel',
+      type: 'warning',
+      icon: 'supervisor_account'
+    };
+
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      width: '450px',
+      data: dialogData,
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.authService.startImpersonation(member._id).subscribe({
+          next: () => {
+            const snackBarRef = this.snackBar.open(
+              `Now viewing as ${member.fullName}`,
+              'Exit Impersonation',
+              {
+                duration: 0,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom',
+                panelClass: ['impersonation-snackbar']
+              }
+            );
+
+            snackBarRef.onAction().subscribe(() => {
+              this.authService.stopImpersonation().subscribe();
+            });
+
+            this.router.navigate(['/dashboard']);
+          },
+          error: (error) => {
+            console.error('Impersonation error:', error);
+            this.snackBar.open(
+              error.error?.error || 'Failed to start impersonation',
+              'Close',
+              { duration: 3000 }
+            );
+          }
+        });
       }
     });
   }

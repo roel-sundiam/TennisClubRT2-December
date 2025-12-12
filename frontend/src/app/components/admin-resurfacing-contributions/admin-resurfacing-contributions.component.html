@@ -1,0 +1,196 @@
+<div class="admin-contributions-container">
+  <div class="page-header">
+    <h1>
+      <mat-icon>construction</mat-icon>
+      Court Resurfacing Contributions
+    </h1>
+    <p class="page-description">Manage member contributions for the court resurfacing project</p>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid" *ngIf="stats">
+    <mat-card class="stat-card overall">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>account_balance_wallet</mat-icon>
+        <mat-card-title>Total Contributions</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-value">{{ formatCurrency(stats.overall.amount) }}</div>
+        <div class="stat-label">{{ stats.overall.count }} contributions</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card pledged">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>hourglass_empty</mat-icon>
+        <mat-card-title>Pledged</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-value">{{ formatCurrency(stats.pledged.amount) }}</div>
+        <div class="stat-label">{{ stats.pledged.count }} pending</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card received">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>check_circle</mat-icon>
+        <mat-card-title>Received</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stat-value">{{ formatCurrency(stats.received.amount) }}</div>
+        <div class="stat-label">{{ stats.received.count }} confirmed</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filter and Controls -->
+  <mat-card class="filter-card">
+    <div class="filter-controls">
+      <mat-form-field appearance="outline">
+        <mat-label>Filter by Status</mat-label>
+        <mat-select [(ngModel)]="selectedStatus" (selectionChange)="onStatusFilterChange()">
+          <mat-option value="all">All Contributions</mat-option>
+          <mat-option value="pledged">Pledged</mat-option>
+          <mat-option value="received">Received</mat-option>
+          <mat-option value="cancelled">Cancelled</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="loadContributions()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+  </mat-card>
+
+  <!-- Loading Spinner -->
+  <div class="loading-container" *ngIf="isLoading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading contributions...</p>
+  </div>
+
+  <!-- Error Message -->
+  <mat-card class="error-card" *ngIf="errorMessage && !isLoading">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMessage }}</span>
+  </mat-card>
+
+  <!-- Contributions Table -->
+  <mat-card class="table-card" *ngIf="!isLoading && contributions.length > 0">
+    <table mat-table [dataSource]="contributions" class="contributions-table">
+      <!-- Name Column -->
+      <ng-container matColumnDef="contributorName">
+        <th mat-header-cell *matHeaderCellDef>Contributor</th>
+        <td mat-cell *matCellDef="let contribution">
+          <div class="contributor-info">
+            <mat-icon>person</mat-icon>
+            <span>{{ contribution.contributorName }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Amount Column -->
+      <ng-container matColumnDef="amount">
+        <th mat-header-cell *matHeaderCellDef>Amount</th>
+        <td mat-cell *matCellDef="let contribution">
+          <span class="amount">{{ formatCurrency(contribution.amount) }}</span>
+        </td>
+      </ng-container>
+
+      <!-- Payment Method Column -->
+      <ng-container matColumnDef="paymentMethod">
+        <th mat-header-cell *matHeaderCellDef>Payment Method</th>
+        <td mat-cell *matCellDef="let contribution">
+          <div class="payment-method">
+            <mat-icon>{{ getPaymentMethodIcon(contribution.paymentMethod) }}</mat-icon>
+            <span>{{ contribution.paymentMethod === 'cash' ? 'Cash' : 'GCash' }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Status Column -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let contribution">
+          <mat-chip [color]="getStatusColor(contribution.status)" selected>
+            {{ contribution.status | titlecase }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <!-- Date Column -->
+      <ng-container matColumnDef="date">
+        <th mat-header-cell *matHeaderCellDef>Date</th>
+        <td mat-cell *matCellDef="let contribution">
+          <div class="date-info">
+            <span class="date-label">Created:</span>
+            <span>{{ formatDate(contribution.createdAt) }}</span>
+            <span class="date-label" *ngIf="contribution.receivedAt">Received:</span>
+            <span *ngIf="contribution.receivedAt">{{ formatDate(contribution.receivedAt) }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let contribution">
+          <div class="action-buttons">
+            <button
+              mat-icon-button
+              color="primary"
+              (click)="editContribution(contribution)"
+              matTooltip="Edit Contribution">
+              <mat-icon>edit</mat-icon>
+            </button>
+
+            <button
+              mat-icon-button
+              color="accent"
+              *ngIf="contribution.status === 'pledged'"
+              (click)="updateStatus(contribution, 'received')"
+              matTooltip="Mark as Received">
+              <mat-icon>check_circle</mat-icon>
+            </button>
+
+            <button
+              mat-icon-button
+              color="primary"
+              *ngIf="contribution.status === 'received'"
+              (click)="updateStatus(contribution, 'pledged')"
+              matTooltip="Mark as Pledged">
+              <mat-icon>undo</mat-icon>
+            </button>
+
+            <button
+              mat-icon-button
+              color="warn"
+              *ngIf="contribution.status !== 'cancelled'"
+              (click)="updateStatus(contribution, 'cancelled')"
+              matTooltip="Cancel Contribution">
+              <mat-icon>cancel</mat-icon>
+            </button>
+
+            <button
+              mat-icon-button
+              color="warn"
+              (click)="deleteContribution(contribution)"
+              matTooltip="Delete Contribution">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+  </mat-card>
+
+  <!-- Empty State -->
+  <mat-card class="empty-state" *ngIf="!isLoading && contributions.length === 0">
+    <mat-icon>inbox</mat-icon>
+    <h3>No Contributions Yet</h3>
+    <p>Contributions will appear here once members start pledging their support.</p>
+  </mat-card>
+</div>

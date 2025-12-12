@@ -1,0 +1,204 @@
+// Resurfacing Campaign Banner Styles
+// Following design system guidelines with glassmorphism and senior-friendly design
+
+.resurfacing-banner {
+  position: fixed;
+  top: 70px; // Below the main toolbar
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #4CAF50 0%, #2196F3 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: slideDown 0.3s ease-out;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.2);
+  }
+
+  .banner-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    .banner-icon {
+      font-size: 2.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .banner-text {
+      flex: 1;
+
+      .banner-title {
+        margin: 0;
+        font-size: 1.25rem; // 20px
+        font-weight: 600;
+        color: white;
+        line-height: 1.3;
+      }
+
+      .banner-subtitle {
+        margin: 0.25rem 0 0 0;
+        font-size: 1rem; // 16px - senior-friendly minimum
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.95);
+        line-height: 1.4;
+
+        .stats-highlight {
+          font-weight: 700;
+          font-size: 1.125rem;
+          color: #FFEB3B; // Bright yellow for visibility
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+      }
+    }
+
+    .contribute-btn {
+      flex-shrink: 0;
+      background: white !important;
+      color: #4CAF50 !important;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 0 1.5rem;
+      height: 48px; // Senior-friendly touch target
+      border-radius: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+
+      mat-icon {
+        margin-right: 0.5rem;
+      }
+
+      &:hover {
+        background: #f0f0f0 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
+}
+
+// Slide down animation
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+// Tablet breakpoint (769px - 1024px)
+@media (max-width: 1024px) {
+  .resurfacing-banner {
+    .banner-content {
+      padding: 0.875rem 1.5rem;
+      gap: 1.25rem;
+
+      .banner-icon {
+        font-size: 2.25rem;
+        width: 2.25rem;
+        height: 2.25rem;
+      }
+
+      .banner-text {
+        .banner-title {
+          font-size: 1.125rem; // 18px
+        }
+
+        .banner-subtitle {
+          font-size: 0.9375rem; // 15px
+        }
+      }
+    }
+  }
+}
+
+// Mobile breakpoint (≤768px)
+@media (max-width: 768px) {
+  .resurfacing-banner {
+    .banner-content {
+      padding: 0.75rem 1rem;
+      gap: 1rem;
+
+      .banner-icon {
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+      }
+
+      .banner-text {
+        .banner-title {
+          font-size: 1rem; // 16px
+        }
+
+        .banner-subtitle {
+          font-size: 0.875rem; // Smaller on mobile but still visible
+
+          .stats-highlight {
+            font-size: 1rem;
+          }
+        }
+      }
+
+      .contribute-btn {
+        padding: 0 1.25rem;
+        font-size: 0.9375rem;
+
+        .btn-text {
+          display: inline;
+        }
+      }
+    }
+  }
+}
+
+// Extra small mobile (≤480px)
+@media (max-width: 480px) {
+  .resurfacing-banner {
+    .banner-content {
+      padding: 0.625rem 0.75rem;
+      gap: 0.75rem;
+
+      .banner-icon {
+        font-size: 1.75rem;
+        width: 1.75rem;
+        height: 1.75rem;
+      }
+
+      .banner-text {
+        .banner-title {
+          font-size: 0.9375rem; // 15px - still readable
+          line-height: 1.2;
+        }
+      }
+
+      .contribute-btn {
+        padding: 0 1rem;
+        font-size: 0.875rem;
+        height: 44px;
+
+        .btn-text {
+          display: none; // Hide text on very small screens, show only icon
+        }
+
+        mat-icon {
+          margin-right: 0;
+        }
+      }
+    }
+  }
+}

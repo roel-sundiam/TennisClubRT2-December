@@ -431,6 +431,31 @@ import { environment } from '../../../environments/environment';
               </mat-card-actions>
             </mat-card>
 
+            <!-- Payment Management -->
+            <mat-card class="action-card admin-card" data-icon="payment" data-title="Payment Management" (click)="navigateTo('/admin/payments')">
+              <!-- Mobile Icon -->
+              <div class="mobile-card-icon">
+                <mat-icon>payment</mat-icon>
+              </div>
+              <div class="mobile-card-title">Payment Management</div>
+
+              <!-- Desktop Content -->
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="action-icon admin-icon">payment</mat-icon>
+                <mat-card-title>Payment Management</mat-card-title>
+                <mat-card-subtitle>Manage all payment records</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>Edit payment details, update status, and manage court usage and membership payments.</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/payments')">
+                  <mat-icon>payment</mat-icon>
+                  Manage Payments
+                </button>
+              </mat-card-actions>
+            </mat-card>
+
             <!-- Poll Management -->
             <mat-card class="action-card admin-card" data-icon="poll" data-title="Poll Management" (click)="navigateTo('/admin/polls')">
               <!-- Mobile Icon -->
@@ -627,6 +652,31 @@ import { environment } from '../../../environments/environment';
                 <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/manual-court-usage')">
                   <mat-icon>edit_calendar</mat-icon>
                   Record Usage
+                </button>
+              </mat-card-actions>
+            </mat-card>
+
+            <!-- Resurfacing Contributions Management -->
+            <mat-card class="action-card admin-card" data-icon="construction" data-title="Resurfacing Contributions" (click)="navigateTo('/admin/resurfacing-contributions')">
+              <!-- Mobile Icon -->
+              <div class="mobile-card-icon">
+                <mat-icon>construction</mat-icon>
+              </div>
+              <div class="mobile-card-title">Resurfacing Contributions</div>
+
+              <!-- Desktop Content -->
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="action-icon admin-icon">construction</mat-icon>
+                <mat-card-title>Resurfacing Contributions</mat-card-title>
+                <mat-card-subtitle>Manage court resurfacing donations</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>View and manage member contributions for the tennis court resurfacing project.</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/resurfacing-contributions')">
+                  <mat-icon>construction</mat-icon>
+                  View Contributions
                 </button>
               </mat-card-actions>
             </mat-card>

@@ -11,7 +11,6 @@ export interface User {
   isApproved: boolean;
   isActive: boolean;
   role: 'member' | 'admin' | 'superadmin';
-  coinBalance: number;
   creditBalance: number;
   registrationDate: Date;
   lastLogin?: Date;

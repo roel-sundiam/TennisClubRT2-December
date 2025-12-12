@@ -1,14 +1,14 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { 
-  register, 
-  login, 
-  logout, 
-  getProfile, 
-  updateProfile, 
-  changePassword 
+import {
+  register,
+  login,
+  logout,
+  getProfile,
+  updateProfile,
+  changePassword
 } from '../controllers/authController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, preventImpersonationFor } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 
 const router = express.Router();
@@ -102,6 +102,6 @@ router.use(authenticateToken);
 router.post('/logout', logout);
 router.get('/profile', getProfile);
 router.put('/profile', updateProfileValidation, validateRequest, updateProfile);
-router.put('/change-password', changePasswordValidation, validateRequest, changePassword);
+router.put('/change-password', preventImpersonationFor(['change password']), changePasswordValidation, validateRequest, changePassword);
 
 export default router;

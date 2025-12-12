@@ -1,0 +1,218 @@
+<div class="payment-management-container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <mat-icon class="header-icon">payments</mat-icon>
+      <div class="header-text">
+        <h1>Payment Management</h1>
+        <p>Manage and track all payment transactions</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="filters-grid">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Status</mat-label>
+          <mat-select [(ngModel)]="filterStatus" (selectionChange)="applyFilters()">
+            <mat-option value="all">All Statuses</mat-option>
+            <mat-option value="pending">Pending</mat-option>
+            <mat-option value="completed">Completed</mat-option>
+            <mat-option value="record">Recorded</mat-option>
+            <mat-option value="failed">Failed</mat-option>
+            <mat-option value="refunded">Refunded</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Payment Method</mat-label>
+          <mat-select [(ngModel)]="filterMethod" (selectionChange)="applyFilters()">
+            <mat-option value="all">All Methods</mat-option>
+            <mat-option value="cash">Cash</mat-option>
+            <mat-option value="bank_transfer">Bank Transfer</mat-option>
+            <mat-option value="gcash">GCash</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Payment Type</mat-label>
+          <mat-select [(ngModel)]="filterType" (selectionChange)="applyFilters()">
+            <mat-option value="all">All Types</mat-option>
+            <mat-option value="court_usage">Court Usage</mat-option>
+            <mat-option value="membership_fee">Membership Fee</mat-option>
+            <mat-option value="tournament_entry">Tournament Entry</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Search</mat-label>
+          <input matInput [(ngModel)]="searchTerm" (input)="applyFilters()" placeholder="Name, username, or ref#">
+          <mat-icon matPrefix>search</mat-icon>
+        </mat-form-field>
+
+        <button mat-stroked-button (click)="clearFilters()" class="clear-filters-btn">
+          <mat-icon>clear</mat-icon>
+          Clear
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Summary Section -->
+  <mat-card class="summary-card">
+    <mat-card-content>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-label">Total</div>
+          <div class="summary-value">{{ summary.total }} ({{ formatAmount(summary.totalAmount) }})</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Pending</div>
+          <div class="summary-value status-pending">{{ summary.pending }}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Completed</div>
+          <div class="summary-value status-completed">{{ summary.completed }}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Recorded</div>
+          <div class="summary-value status-recorded">{{ summary.recorded }}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Failed</div>
+          <div class="summary-value status-failed">{{ summary.failed }}</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-label">Refunded</div>
+          <div class="summary-value status-refunded">{{ summary.refunded }}</div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Payments Table -->
+  <mat-card class="table-card">
+    <mat-card-content>
+      <div *ngIf="isLoading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Loading payments...</p>
+      </div>
+
+      <div *ngIf="!isLoading && filteredPayments.length === 0" class="no-data">
+        <mat-icon>inbox</mat-icon>
+        <p>No payments found</p>
+      </div>
+
+      <div *ngIf="!isLoading && filteredPayments.length > 0" class="table-container">
+        <table mat-table [dataSource]="paginatedPayments" class="payments-table">
+          <!-- Reference Number Column -->
+          <ng-container matColumnDef="reference">
+            <th mat-header-cell *matHeaderCellDef>Reference</th>
+            <td mat-cell *matCellDef="let payment">
+              <span class="ref-number">{{ payment.referenceNumber }}</span>
+            </td>
+          </ng-container>
+
+          <!-- User Column -->
+          <ng-container matColumnDef="user">
+            <th mat-header-cell *matHeaderCellDef>User</th>
+            <td mat-cell *matCellDef="let payment">
+              <div class="user-info">
+                <span class="user-name">{{ payment.userId.fullName }}</span>
+                <span class="user-username">@{{ payment.userId.username }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Amount Column -->
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef>Amount</th>
+            <td mat-cell *matCellDef="let payment">
+              <div class="amount-container">
+                <span class="amount">{{ formatAmount(payment.amount, payment.currency) }}</span>
+                <span class="overdue-badge" *ngIf="isOverdue(payment)">Overdue</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Method Column -->
+          <ng-container matColumnDef="method">
+            <th mat-header-cell *matHeaderCellDef>Method</th>
+            <td mat-cell *matCellDef="let payment">
+              <div class="method-display">
+                <mat-icon [matTooltip]="payment.paymentMethod">{{ getMethodIcon(payment.paymentMethod) }}</mat-icon>
+                <span>{{ payment.paymentMethod === 'bank_transfer' ? 'Bank' : payment.paymentMethod === 'gcash' ? 'GCash' : 'Cash' }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Status Column -->
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let payment">
+              <mat-chip [class]="getStatusChipClass(payment.status)">
+                <mat-icon>{{ getStatusIcon(payment.status) }}</mat-icon>
+                {{ payment.status === 'record' ? 'Recorded' : payment.status }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Type Column -->
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Type</th>
+            <td mat-cell *matCellDef="let payment">
+              {{ getPaymentTypeLabel(payment.paymentType) }}
+              <span *ngIf="payment.membershipYear" class="year-badge">{{ payment.membershipYear }}</span>
+            </td>
+          </ng-container>
+
+          <!-- Payment Date Column -->
+          <ng-container matColumnDef="paymentDate">
+            <th mat-header-cell *matHeaderCellDef>Payment Date</th>
+            <td mat-cell *matCellDef="let payment">
+              {{ formatDate(payment.paymentDate) }}
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let payment">
+              <button mat-icon-button [matMenuTriggerFor]="actionsMenu">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #actionsMenu="matMenu">
+                <button mat-menu-item (click)="openEditDialog(payment)" [disabled]="!canEdit(payment)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit Details</span>
+                </button>
+                <button mat-menu-item (click)="recordPayment(payment)" [disabled]="!canRecord(payment)">
+                  <mat-icon>lock</mat-icon>
+                  <span>Record Payment</span>
+                </button>
+                <button mat-menu-item (click)="unrecordPayment(payment)" [disabled]="!canUnrecord(payment)">
+                  <mat-icon>lock_open</mat-icon>
+                  <span>Unrecord</span>
+                </button>
+              </mat-menu>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <mat-paginator
+          [length]="filteredPayments.length"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex"
+          [pageSizeOptions]="pageSizeOptions"
+          (page)="onPageChange($event)"
+          showFirstLastButtons>
+        </mat-paginator>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

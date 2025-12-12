@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import User from '../models/User';
+import Player from '../models/Player';
 import Reservation from '../models/Reservation';
 import Poll from '../models/Poll';
 import SeedingPoint from '../models/SeedingPoint';
@@ -90,37 +92,53 @@ export class SeedingService {
    */
   static async getRankings(limit: number = 50): Promise<PlayerRanking[]> {
     try {
-      console.log(`🔍 DEBUGGING: Getting rankings with limit: ${limit}`);
-      
-      const users = await User.find({
-        isActive: true,
-        isApproved: true,
-        role: { $in: ['member', 'admin'] }
+      console.log(`🔍 Getting player rankings with limit: ${limit}`);
+
+      // Query Player model instead of User model
+      const players = await Player.find({
+        isActive: true
       })
-      .select('username fullName seedPoints matchesWon matchesPlayed')
-      .sort({ seedPoints: -1, matchesWon: -1, username: 1 })
+      .select('fullName seedPoints matchesWon matchesPlayed')
+      .sort({ seedPoints: -1, matchesWon: -1, fullName: 1 })
       .limit(limit);
 
-      console.log(`🔍 DEBUGGING: Found ${users.length} active approved users`);
-      console.log(`🔍 DEBUGGING: Users with points:`, users.filter(u => u.seedPoints > 0).map(u => ({
-        name: u.fullName || u.username,
-        points: u.seedPoints,
-        wins: u.matchesWon,
-        played: u.matchesPlayed
+      console.log(`🔍 Found ${players.length} active players`);
+      console.log(`🔍 Players with points:`, players.filter(p => p.seedPoints > 0).map(p => ({
+        name: p.fullName,
+        points: p.seedPoints,
+        wins: p.matchesWon,
+        played: p.matchesPlayed
       })));
 
-      const rankings = users.map((user, index) => ({
-        _id: user._id.toString(),
-        username: user.username,
-        fullName: user.fullName,
-        seedPoints: user.seedPoints,
-        matchesWon: user.matchesWon,
-        matchesPlayed: user.matchesPlayed,
-        winRate: user.matchesPlayed > 0 ? Math.round((user.matchesWon / user.matchesPlayed) * 100) / 100 : 0,
-        rank: index + 1
-      }));
+      // Apply standard competition ranking (tied players get same rank, next rank skips)
+      // Example: #1, #1, #3, #4 (if two players tied for first)
+      const rankings: any[] = [];
+      for (let index = 0; index < players.length; index++) {
+        const player = players[index];
+        if (!player) continue; // Skip if player is undefined
 
-      console.log(`🔍 DEBUGGING: Returning ${rankings.length} rankings`);
+        let rank = index + 1;
+
+        // Check if current player has same points as previous player
+        const previousPlayer = players[index - 1];
+        if (index > 0 && previousPlayer && player.seedPoints === previousPlayer.seedPoints) {
+          // Use the same rank as the previous player
+          rank = rankings[index - 1].rank;
+        }
+
+        rankings.push({
+          _id: (player._id as any).toString(),
+          username: player.fullName, // Use fullName for username field for compatibility
+          fullName: player.fullName,
+          seedPoints: player.seedPoints,
+          matchesWon: player.matchesWon,
+          matchesPlayed: player.matchesPlayed,
+          winRate: player.matchesPlayed > 0 ? Math.round((player.matchesWon / player.matchesPlayed) * 100) / 100 : 0,
+          rank: rank
+        });
+      }
+
+      console.log(`🔍 Returning ${rankings.length} rankings`);
       return rankings;
     } catch (error) {
       console.error('Error getting rankings:', error);
@@ -499,7 +517,7 @@ export class SeedingService {
             );
           }
           // Team 2 lost
-          if (match.team2Player1) {
+          if (match.team2Player1 && loserGames > 0) {
             await this.awardTournamentPoints(
               match.team2Player1,
               loserGames,
@@ -509,7 +527,7 @@ export class SeedingService {
               false
             );
           }
-          if (match.team2Player2) {
+          if (match.team2Player2 && loserGames > 0) {
             await this.awardTournamentPoints(
               match.team2Player2,
               loserGames,
@@ -542,7 +560,7 @@ export class SeedingService {
             );
           }
           // Team 1 lost
-          if (match.team1Player1) {
+          if (match.team1Player1 && loserGames > 0) {
             await this.awardTournamentPoints(
               match.team1Player1,
               loserGames,
@@ -552,7 +570,7 @@ export class SeedingService {
               false
             );
           }
-          if (match.team1Player2) {
+          if (match.team1Player2 && loserGames > 0) {
             await this.awardTournamentPoints(
               match.team1Player2,
               loserGames,
@@ -579,7 +597,7 @@ export class SeedingService {
           );
         }
 
-        if (loserId) {
+        if (loserId && loserGames > 0) {
           await this.awardTournamentPoints(
             loserId,
             loserGames,
@@ -614,43 +632,116 @@ export class SeedingService {
     try {
       console.log(`♻️ Reversing points for tournament: ${tournamentId}`);
 
-      // Find all seeding points for this tournament
-      const seedingPoints = await SeedingPoint.find({ tournamentId });
+      // Find all non-reversed seeding points for this tournament
+      const seedingPoints = await SeedingPoint.find({
+        tournamentId,
+        reversedAt: { $exists: false } // Don't reverse already-reversed points
+      });
 
+      if (seedingPoints.length === 0) {
+        console.log('   No points to reverse (all already reversed or none exist)');
+        return { reversed: 0, errors: 0 };
+      }
+
+      console.log(`   Found ${seedingPoints.length} point records to reverse`);
+
+      // Group adjustments by player to batch updates
+      const playerAdjustments = new Map<string, {
+        points: number;
+        wins: number;
+        matches: number;
+        pointIds: string[];
+      }>();
+
+      // Calculate total adjustments per player
       for (const point of seedingPoints) {
-        try {
-          const user = await User.findById(point.userId);
-          if (!user) {
-            console.warn(`⚠️ User ${point.userId} not found, skipping point reversal`);
+        // Check if this is a player-based point or legacy user-based point
+        const targetId = point.playerId || point.userId;
+        const isPlayerBased = !!point.playerId;
+
+        if (!targetId) {
+          console.warn(`⚠️ No player or user ID found for seeding point ${point._id}, skipping`);
+          errors++;
+          continue;
+        }
+
+        // Only handle player-based points (legacy user points deprecated)
+        if (!isPlayerBased) {
+          console.warn(`⚠️ Skipping legacy user-based point ${point._id}`);
+          continue;
+        }
+
+        const playerId = targetId.toString();
+
+        if (!playerAdjustments.has(playerId)) {
+          playerAdjustments.set(playerId, {
+            points: 0,
+            wins: 0,
+            matches: 0,
+            pointIds: []
+          });
+        }
+
+        const adj = playerAdjustments.get(playerId)!;
+        adj.points += point.points;
+        adj.wins += point.isWinner ? 1 : 0;
+        adj.matches += 1;
+        adj.pointIds.push(point._id ? String(point._id as any) : '');
+      }
+
+      console.log(`   Affecting ${playerAdjustments.size} players`);
+
+      // Use MongoDB transaction for atomicity
+      const session = await mongoose.startSession();
+      session.startTransaction();
+
+      try {
+        // Update each player
+        for (const [playerId, adj] of playerAdjustments.entries()) {
+          const player = await Player.findById(playerId).session(session);
+
+          if (!player) {
+            console.warn(`⚠️ Player ${playerId} not found, skipping reversal`);
             errors++;
             continue;
           }
 
-          // Reverse the points
-          await User.findByIdAndUpdate(
-            point.userId,
+          // Direct set with Math.max to prevent negative values
+          player.seedPoints = Math.max(0, player.seedPoints - adj.points);
+          player.matchesWon = Math.max(0, player.matchesWon - adj.wins);
+          player.matchesPlayed = Math.max(0, player.matchesPlayed - adj.matches);
+
+          await player.save({ session });
+
+          // Mark seeding points as reversed (keep for audit trail, don't delete)
+          await SeedingPoint.updateMany(
+            { _id: { $in: adj.pointIds } },
             {
-              $inc: {
-                seedPoints: -point.points,
-                matchesPlayed: -1,
-                matchesWon: point.isWinner ? -1 : 0
+              $set: {
+                reversedAt: new Date(),
+                reversalReason: 'Tournament deleted or updated'
               }
-            }
+            },
+            { session }
           );
 
-          // Delete the seeding point record
-          await SeedingPoint.deleteOne({ _id: point._id });
-
-          console.log(`♻️ Reversed ${point.points} points from ${user.fullName || user.username}`);
-          reversed++;
-        } catch (error) {
-          console.error(`Error reversing point:`, error);
-          errors++;
+          console.log(`♻️ Reversed ${adj.points} points from ${player.fullName} (${adj.matches} matches)`);
+          reversed += adj.pointIds.length;
         }
+
+        await session.commitTransaction();
+
+      } catch (error) {
+        await session.abortTransaction();
+        console.error('   ❌ Transaction failed, rolling back all changes');
+        throw error;
+      } finally {
+        session.endSession();
       }
 
       console.log(`✅ Reversed ${reversed} point records with ${errors} errors`);
       return { reversed, errors };
+
     } catch (error) {
       console.error(`Error reversing tournament points:`, error);
       throw error;
@@ -661,7 +752,7 @@ export class SeedingService {
    * Award tournament-based points to a player
    */
   static async awardTournamentPoints(
-    userId: string,
+    playerId: string,
     points: number,
     description: string,
     tournamentId: string,
@@ -669,40 +760,74 @@ export class SeedingService {
     isWinner: boolean
   ): Promise<void> {
     try {
-      // Verify user exists
-      const user = await User.findById(userId);
-      if (!user) {
-        throw new Error(`User ${userId} not found`);
-      }
-
-      // Create SeedingPoint record
-      const seedingPoint = new SeedingPoint({
-        userId: userId,
-        points: points,
-        description: description,
-        source: 'tournament',
-        tournamentId: tournamentId,
-        matchIndex: matchIndex,
-        isWinner: isWinner
+      // IDEMPOTENCY CHECK: Has this point already been awarded?
+      const existing = await SeedingPoint.findOne({
+        tournamentId,
+        matchIndex,
+        playerId
       });
 
-      await seedingPoint.save();
+      if (existing) {
+        console.log(`⏭️  Points already awarded for player ${playerId.substring(0, 8)}... in match ${matchIndex}, skipping`);
+        return; // Idempotent - safe to call multiple times
+      }
 
-      // Update user stats
-      await User.findByIdAndUpdate(
-        userId,
-        {
-          $inc: {
-            seedPoints: points,
-            matchesWon: isWinner ? 1 : 0,
-            matchesPlayed: 1
-          }
-        }
-      );
+      // Verify player exists
+      const player = await Player.findById(playerId);
+      if (!player) {
+        throw new Error(`Player ${playerId} not found`);
+      }
 
-      console.log(`📊 Awarded ${points} points to ${user.fullName || user.username} (${isWinner ? 'Winner' : 'Loser'})`);
+      // Use MongoDB transaction to ensure atomicity
+      const session = await mongoose.startSession();
+      session.startTransaction();
 
-    } catch (error) {
+      try {
+        // Create SeedingPoint record with metadata
+        const seedingPoint = new SeedingPoint({
+          playerId: playerId,
+          points: points,
+          description: description,
+          source: 'tournament',
+          tournamentId: tournamentId,
+          matchIndex: matchIndex,
+          isWinner: isWinner,
+          processedAt: new Date(),
+          processedBy: 'system',
+          processingVersion: '2.0.0'
+        });
+
+        await seedingPoint.save({ session });
+
+        // Update player stats (still using $inc but within transaction)
+        await Player.findByIdAndUpdate(
+          playerId,
+          {
+            $inc: {
+              seedPoints: points,
+              matchesWon: isWinner ? 1 : 0,
+              matchesPlayed: 1
+            }
+          },
+          { session }
+        );
+
+        await session.commitTransaction();
+        console.log(`📊 Awarded ${points} points to ${player.fullName} (${isWinner ? 'Winner' : 'Loser'})`);
+
+      } catch (error) {
+        await session.abortTransaction();
+        throw error;
+      } finally {
+        session.endSession();
+      }
+
+    } catch (error: any) {
+      // Handle duplicate key error gracefully (from unique index)
+      if (error.code === 11000) {
+        console.log(`⏭️  Duplicate point award prevented by unique constraint for player in match ${matchIndex}`);
+        return; // Silent success - already processed
+      }
       console.error('Error awarding tournament points:', error);
       throw error;
     }

@@ -1,0 +1,151 @@
+<div class="player-management-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon>groups</mat-icon>
+    Manage Players
+  </h2>
+
+  <mat-dialog-content>
+    <!-- Add/Edit Form -->
+    <div class="form-section" *ngIf="showForm">
+      <h3>{{ editingPlayer ? 'Edit Player' : 'Add New Player' }}</h3>
+      <form [formGroup]="playerForm">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Full Name</mat-label>
+          <input matInput formControlName="fullName" placeholder="John Doe" required>
+          <mat-icon matPrefix>person</mat-icon>
+          <mat-error *ngIf="playerForm.get('fullName')?.hasError('required')">
+            Full name is required
+          </mat-error>
+          <mat-error *ngIf="playerForm.get('fullName')?.hasError('minlength')">
+            Name must be at least 2 characters
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Email (Optional)</mat-label>
+          <input matInput formControlName="email" type="email" placeholder="john@example.com">
+          <mat-icon matPrefix>email</mat-icon>
+          <mat-error *ngIf="playerForm.get('email')?.hasError('email')">
+            Invalid email format
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Phone (Optional)</mat-label>
+          <input matInput formControlName="phone" placeholder="123-456-7890">
+          <mat-icon matPrefix>phone</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Gender (Optional)</mat-label>
+          <mat-select formControlName="gender">
+            <mat-option value="">Not specified</mat-option>
+            <mat-option value="male">Male</mat-option>
+            <mat-option value="female">Female</mat-option>
+            <mat-option value="other">Other</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>wc</mat-icon>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button type="button" (click)="toggleForm()">
+            <mat-icon>cancel</mat-icon>
+            Cancel
+          </button>
+          <button mat-raised-button color="primary" type="button" (click)="savePlayer()" [disabled]="playerForm.invalid || loading">
+            <mat-icon>save</mat-icon>
+            {{ editingPlayer ? 'Update' : 'Create' }} Player
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Add Player Button -->
+    <div class="add-button-section" *ngIf="!showForm">
+      <button mat-raised-button color="primary" (click)="toggleForm()">
+        <mat-icon>add</mat-icon>
+        Add New Player
+      </button>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div *ngIf="loading" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+
+    <!-- Players Table -->
+    <div class="table-container" *ngIf="!loading">
+      <table mat-table [dataSource]="players" class="players-table">
+        <!-- Full Name Column -->
+        <ng-container matColumnDef="fullName">
+          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <td mat-cell *matCellDef="let player">
+            <strong>{{ player.fullName }}</strong>
+          </td>
+        </ng-container>
+
+        <!-- Email Column -->
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let player">{{ player.email || '-' }}</td>
+        </ng-container>
+
+        <!-- Phone Column -->
+        <ng-container matColumnDef="phone">
+          <th mat-header-cell *matHeaderCellDef>Phone</th>
+          <td mat-cell *matCellDef="let player">{{ player.phone || '-' }}</td>
+        </ng-container>
+
+        <!-- Gender Column -->
+        <ng-container matColumnDef="gender">
+          <th mat-header-cell *matHeaderCellDef>Gender</th>
+          <td mat-cell *matCellDef="let player">
+            {{ player.gender ? (player.gender | titlecase) : '-' }}
+          </td>
+        </ng-container>
+
+        <!-- Stats Column -->
+        <ng-container matColumnDef="stats">
+          <th mat-header-cell *matHeaderCellDef>Stats</th>
+          <td mat-cell *matCellDef="let player">
+            <div class="stats">
+              <span class="stat-item" title="Seed Points">
+                <mat-icon>star</mat-icon>
+                {{ player.seedPoints || 0 }}
+              </span>
+              <span class="stat-item" title="Matches Won/Played">
+                <mat-icon>emoji_events</mat-icon>
+                {{ player.matchesWon || 0 }}/{{ player.matchesPlayed || 0 }}
+              </span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let player">
+            <button mat-icon-button color="primary" (click)="editPlayer(player)" title="Edit">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="deletePlayer(player)" title="Delete">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+
+      <div *ngIf="players.length === 0" class="no-players">
+        <mat-icon>info</mat-icon>
+        <p>No players found. Add your first player to get started!</p>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="close()">Close</button>
+  </mat-dialog-actions>
+</div>

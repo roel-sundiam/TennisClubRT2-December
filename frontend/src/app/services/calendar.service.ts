@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, forkJoin, of } from 'rxjs';
+import { map, tap, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export interface Reservation {
@@ -34,6 +34,8 @@ export interface DayReservationInfo {
   hasAvailability: boolean;
   isPeakDay: boolean; // Has peak hours
   isWednesday: boolean;
+  maxRainChance?: number; // Highest rain probability from all reservations (0-100)
+  hasWeatherData: boolean; // True if at least one reservation has weather data
 }
 
 @Injectable({
@@ -57,7 +59,8 @@ export class CalendarService {
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
 
-    return this.http.get<any>(`${this.apiUrl}/reservations`, {
+    // Fetch both reservations and weather forecast in parallel
+    const reservations$ = this.http.get<any>(`${this.apiUrl}/reservations`, {
       params: {
         dateFrom: startDateStr,
         dateTo: endDateStr,
@@ -65,13 +68,24 @@ export class CalendarService {
         limit: '1000', // Get all reservations for the month (no pagination)
         showAll: 'true' // Show all users' reservations (not just mine)
       }
-    }).pipe(
-      map(response => {
-        if (!response.success || !response.data) {
-          return new Map();
-        }
+    });
 
-        return this.processMonthData(response.data, year, month);
+    const weather$ = this.http.get<any>(`${this.apiUrl}/weather/forecast`).pipe(
+      catchError(error => {
+        console.warn('Weather forecast unavailable:', error);
+        return of({ forecast: [] }); // Return empty forecast on error
+      })
+    );
+
+    return forkJoin({
+      reservations: reservations$,
+      weather: weather$
+    }).pipe(
+      map(({ reservations, weather }) => {
+        const reservationData = reservations.success && reservations.data ? reservations.data : [];
+        const weatherForecast = weather.forecast || [];
+
+        return this.processMonthData(reservationData, year, month, weatherForecast);
       }),
       tap(data => this.monthDataSubject.next(data))
     );
@@ -80,12 +94,21 @@ export class CalendarService {
   /**
    * Process raw reservation data into daily summaries
    */
-  private processMonthData(reservations: Reservation[], year: number, month: number): Map<string, DayReservationInfo> {
+  private processMonthData(reservations: Reservation[], year: number, month: number, weatherForecast: any[] = []): Map<string, DayReservationInfo> {
     console.log(`🔧 Processing ${reservations.length} reservations for ${month + 1}/${year}`);
+    console.log(`🌤️  Processing ${weatherForecast.length} days of weather forecast`);
 
     const dayMap = new Map<string, DayReservationInfo>();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const peakHours = [5, 18, 19, 20, 21]; // 5AM, 6PM, 7PM, 8PM, 9PM
+
+    // Create a map of weather data by date
+    const weatherMap = new Map<string, any>();
+    weatherForecast.forEach(dayForecast => {
+      if (dayForecast.date) {
+        weatherMap.set(dayForecast.date, dayForecast);
+      }
+    });
 
     console.log(`🔧 Days in month: ${daysInMonth}`);
 
@@ -103,7 +126,9 @@ export class CalendarService {
         totalHours: 0,
         hasAvailability: true, // Will calculate below
         isPeakDay: false,
-        isWednesday: isWednesday
+        isWednesday: isWednesday,
+        maxRainChance: undefined,
+        hasWeatherData: false
       });
     }
 
@@ -136,13 +161,41 @@ export class CalendarService {
             break;
           }
         }
+
+        // Calculate weather aggregation
+        if (reservation.weatherForecast?.rainChance !== undefined) {
+          const rainChance = reservation.weatherForecast.rainChance;
+
+          // Update max rain chance
+          if (dayInfo.maxRainChance === undefined || rainChance > dayInfo.maxRainChance) {
+            dayInfo.maxRainChance = rainChance;
+          }
+
+          dayInfo.hasWeatherData = true;
+        }
       }
     });
 
-    // Calculate availability (assuming 17 hours available: 5 AM - 10 PM)
+    // Calculate availability and add weather data from forecast for all days
     const totalHoursPerDay = 17;
-    dayMap.forEach((dayInfo, key) => {
+    dayMap.forEach((dayInfo, dateKey) => {
       dayInfo.hasAvailability = dayInfo.totalHours < totalHoursPerDay;
+
+      // If no weather data from reservations, try to get it from forecast
+      if (!dayInfo.hasWeatherData && weatherMap.has(dateKey)) {
+        const dayWeather = weatherMap.get(dateKey);
+        if (dayWeather && dayWeather.hourlyForecast && dayWeather.hourlyForecast.length > 0) {
+          // Calculate max rain chance from hourly forecasts
+          const rainChances = dayWeather.hourlyForecast
+            .map((h: any) => h.rainChance)
+            .filter((rc: number | undefined) => rc !== undefined);
+
+          if (rainChances.length > 0) {
+            dayInfo.maxRainChance = Math.max(...rainChances);
+            dayInfo.hasWeatherData = true;
+          }
+        }
+      }
     });
 
     return dayMap;

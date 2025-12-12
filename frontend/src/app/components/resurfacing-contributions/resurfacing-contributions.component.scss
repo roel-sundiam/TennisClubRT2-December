@@ -1,0 +1,606 @@
+.contributions-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+
+    h1 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1a202c;
+      margin: 0 0 0.5rem 0;
+
+      mat-icon {
+        font-size: 2.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        color: #4CAF50;
+      }
+    }
+
+    .page-description {
+      margin: 0;
+      color: #718096;
+      font-size: 1.125rem;
+      line-height: 1.6;
+    }
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+
+    .spinner {
+      font-size: 3rem;
+      width: 3rem;
+      height: 3rem;
+      color: #4CAF50;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: #718096;
+      font-size: 1rem;
+    }
+  }
+
+  .stats-section {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  // Progress Card
+  .progress-card {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(33, 150, 243, 0.05));
+    border: 2px solid #4CAF50;
+    box-shadow: 0 8px 24px rgba(76, 175, 80, 0.15);
+
+    mat-card-header {
+      .progress-icon {
+        background: linear-gradient(135deg, #4CAF50, #2196F3);
+        color: white;
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      mat-card-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1a202c;
+      }
+
+      mat-card-subtitle {
+        color: #4a5568;
+      }
+    }
+
+    mat-card-content {
+      padding: 1.5rem 0;
+
+      .progress-details {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+
+        .amount-raised,
+        .goal-amount {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+
+          .label {
+            font-size: 0.875rem;
+            color: #718096;
+            font-weight: 500;
+          }
+
+          .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a202c;
+          }
+        }
+
+        .amount-raised .value {
+          color: #4CAF50;
+        }
+      }
+
+      .progress-bar-container {
+        position: relative;
+        margin-bottom: 1rem;
+
+        .custom-progress-bar {
+          height: 20px;
+          border-radius: 10px;
+          background-color: #e2e8f0;
+
+          ::ng-deep .mdc-linear-progress__bar-inner {
+            border-top-width: 20px;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+          }
+        }
+
+        .progress-percentage {
+          position: absolute;
+          right: 0;
+          top: -28px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #4CAF50;
+        }
+      }
+
+      .remaining-info,
+      .success-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+      }
+
+      .remaining-info {
+        background-color: rgba(255, 152, 0, 0.1);
+        color: #f57c00;
+
+        mat-icon {
+          color: #f57c00;
+        }
+      }
+
+      .success-info {
+        background-color: rgba(76, 175, 80, 0.1);
+        color: #2e7d32;
+
+        mat-icon {
+          color: #2e7d32;
+        }
+      }
+    }
+
+    mat-card-actions {
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: center;
+
+      .contribute-btn {
+        font-size: 1rem;
+        padding: 0 2rem;
+        height: 48px;
+        background: linear-gradient(135deg, #4CAF50, #2196F3);
+        color: white;
+
+        mat-icon {
+          margin-right: 0.5rem;
+        }
+
+        &:hover {
+          background: linear-gradient(135deg, #45a049, #1e88e5);
+        }
+      }
+    }
+  }
+
+  // Stats Grid
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+
+    .stat-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.5rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+
+      .stat-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+
+        mat-icon {
+          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+        }
+      }
+
+      .stat-content {
+        flex: 1;
+
+        .stat-value {
+          font-size: 2rem;
+          font-weight: 700;
+          line-height: 1;
+          margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+          font-size: 0.875rem;
+          color: #718096;
+          font-weight: 500;
+        }
+
+        .stat-amount {
+          font-size: 0.9375rem;
+          font-weight: 600;
+          margin-top: 0.25rem;
+        }
+      }
+
+      &.contributors {
+        .stat-icon {
+          background: rgba(33, 150, 243, 0.1);
+
+          mat-icon {
+            color: #2196F3;
+          }
+        }
+
+        .stat-value {
+          color: #2196F3;
+        }
+      }
+
+      &.pledged {
+        .stat-icon {
+          background: rgba(255, 152, 0, 0.1);
+
+          mat-icon {
+            color: #FF9800;
+          }
+        }
+
+        .stat-value {
+          color: #FF9800;
+        }
+
+        .stat-amount {
+          color: #FF9800;
+        }
+      }
+
+      &.received {
+        .stat-icon {
+          background: rgba(76, 175, 80, 0.1);
+
+          mat-icon {
+            color: #4CAF50;
+          }
+        }
+
+        .stat-value {
+          color: #4CAF50;
+        }
+
+        .stat-amount {
+          color: #4CAF50;
+        }
+      }
+    }
+  }
+
+  // Impact Card
+  .impact-card {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.05), rgba(255, 152, 0, 0.05));
+    border-left: 4px solid #FFC107;
+
+    mat-card-header {
+      mat-icon {
+        color: #FFC107;
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+      }
+
+      mat-card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a202c;
+      }
+    }
+
+    mat-card-content {
+      p {
+        color: #4a5568;
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+      }
+
+      .impact-points {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+
+        .impact-point {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 0.75rem;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+          mat-icon {
+            color: #4CAF50;
+            flex-shrink: 0;
+          }
+
+          span {
+            font-size: 0.875rem;
+            color: #2d3748;
+            line-height: 1.4;
+          }
+        }
+      }
+    }
+  }
+
+  // Contributors List Card
+  .contributors-card {
+    border-left: 4px solid #2196F3;
+    background: linear-gradient(135deg, rgba(33, 150, 243, 0.02), rgba(76, 175, 80, 0.02));
+
+    mat-card-header {
+      mat-icon {
+        color: #2196F3;
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+      }
+
+      mat-card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a202c;
+      }
+
+      mat-card-subtitle {
+        color: #718096;
+      }
+    }
+
+    mat-card-content {
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        text-align: center;
+
+        .empty-icon {
+          font-size: 4rem;
+          width: 4rem;
+          height: 4rem;
+          color: #cbd5e0;
+          margin-bottom: 1rem;
+        }
+
+        .empty-message {
+          font-size: 1.25rem;
+          font-weight: 600;
+          color: #4a5568;
+          margin: 0 0 0.5rem 0;
+        }
+
+        .empty-submessage {
+          font-size: 1rem;
+          color: #718096;
+          margin: 0;
+        }
+      }
+
+      .contributors-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+
+        .contributor-item {
+          position: relative;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 1rem;
+          padding: 1rem;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+          &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          }
+
+          .contributor-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+
+            .contributor-avatar {
+              width: 48px;
+              height: 48px;
+              border-radius: 50%;
+              background: linear-gradient(135deg, #2196F3, #4CAF50);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+
+              mat-icon {
+                color: white;
+                font-size: 1.5rem;
+                width: 1.5rem;
+                height: 1.5rem;
+              }
+            }
+
+            .contributor-details {
+              display: flex;
+              flex-direction: column;
+              gap: 0.25rem;
+
+              .contributor-name {
+                font-size: 1rem;
+                font-weight: 600;
+                color: #1a202c;
+              }
+
+              .contributor-date {
+                font-size: 0.8125rem;
+                color: #718096;
+              }
+            }
+          }
+
+          .contributor-amount-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.5rem;
+
+            .contributor-amount {
+              font-size: 1.125rem;
+              font-weight: 700;
+              color: #4CAF50;
+            }
+
+            .status-badge {
+              padding: 0.25rem 0.75rem;
+              border-radius: 12px;
+              font-size: 0.75rem;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.025em;
+
+              &.status-confirmed {
+                background: rgba(76, 175, 80, 0.15);
+                color: #2e7d32;
+              }
+
+              &.status-pending {
+                background: rgba(255, 152, 0, 0.15);
+                color: #f57c00;
+              }
+            }
+          }
+
+          .contributor-actions {
+            display: flex;
+            align-items: center;
+
+            .menu-button {
+              color: #718096;
+
+              &:hover {
+                color: #4a5568;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Delete menu item styling
+  ::ng-deep .delete-menu-item {
+    color: #f44336 !important;
+
+    mat-icon {
+      color: #f44336 !important;
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .contributions-container {
+    padding: 1.5rem 1rem;
+
+    .page-header {
+      h1 {
+        font-size: 1.5rem;
+
+        mat-icon {
+          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+        }
+      }
+
+      .page-description {
+        font-size: 1rem;
+      }
+    }
+
+    .progress-card {
+      mat-card-content {
+        .progress-details {
+          flex-direction: column;
+          gap: 1rem;
+        }
+      }
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .impact-card mat-card-content .impact-points {
+      grid-template-columns: 1fr;
+    }
+
+    .contributors-card mat-card-content .contributors-list .contributor-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+
+      .contributor-amount-section {
+        align-items: flex-start;
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      .contributor-actions {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+      }
+    }
+  }
+}

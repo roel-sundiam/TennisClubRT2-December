@@ -1,0 +1,152 @@
+<div class="contribution-dialog">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>
+      <mat-icon>{{ isEditMode ? 'edit' : 'volunteer_activism' }}</mat-icon>
+      {{ isEditMode ? 'Edit Contribution' : 'Contribute to Court Resurfacing' }}
+    </h2>
+    <button mat-icon-button class="close-btn" (click)="onCancel()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content>
+    <div class="dialog-intro" *ngIf="!submitSuccess && !isEditMode">
+      <p>Thank you for supporting our court resurfacing project! Your contribution helps improve our playing experience.</p>
+    </div>
+
+    <div class="dialog-intro" *ngIf="!submitSuccess && isEditMode">
+      <p>Update the contribution details below.</p>
+    </div>
+
+    <!-- Success Message -->
+    <div class="success-message" *ngIf="submitSuccess">
+      <mat-icon class="success-icon">check_circle</mat-icon>
+      <h3>{{ isEditMode ? 'Contribution Updated!' : 'Contribution Pledge Recorded!' }}</h3>
+      <p>{{ isEditMode ? 'The contribution has been updated successfully.' : 'Thank you for your generous support. Our admin team will contact you regarding payment arrangements.' }}</p>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="contributionForm" (ngSubmit)="onSubmit()" *ngIf="!submitSuccess">
+      <!-- Name Field -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Your Name</mat-label>
+        <mat-icon matPrefix>person</mat-icon>
+        <input
+          matInput
+          formControlName="contributorName"
+          placeholder="Enter your full name"
+          autocomplete="name">
+        <mat-error *ngIf="contributorName?.hasError('required')">
+          Name is required
+        </mat-error>
+        <mat-error *ngIf="contributorName?.hasError('minlength')">
+          Name must be at least 2 characters
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Amount Field -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Contribution Amount</mat-label>
+        <mat-icon matPrefix>attach_money</mat-icon>
+        <input
+          matInput
+          type="number"
+          formControlName="amount"
+          placeholder="Enter amount in pesos"
+          min="1"
+          step="1">
+        <span matSuffix>PHP</span>
+        <mat-error *ngIf="amount?.hasError('required')">
+          Amount is required
+        </mat-error>
+        <mat-error *ngIf="amount?.hasError('min')">
+          Amount must be greater than 0
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Payment Method -->
+      <div class="payment-method-section">
+        <label class="section-label">
+          <mat-icon>payment</mat-icon>
+          Payment Method
+        </label>
+        <mat-radio-group formControlName="paymentMethod" class="payment-options">
+          <mat-radio-button value="cash">
+            <div class="payment-option">
+              <mat-icon>money</mat-icon>
+              <div class="payment-details">
+                <strong>Cash</strong>
+                <span>Pay at the club in person</span>
+              </div>
+            </div>
+          </mat-radio-button>
+
+          <mat-radio-button value="gcash">
+            <div class="payment-option">
+              <mat-icon>smartphone</mat-icon>
+              <div class="payment-details">
+                <strong>GCash</strong>
+                <span>Transfer via GCash mobile app</span>
+              </div>
+            </div>
+          </mat-radio-button>
+
+          <mat-radio-button value="bank_transfer">
+            <div class="payment-option">
+              <mat-icon>account_balance</mat-icon>
+              <div class="payment-details">
+                <strong>Bank Transfer</strong>
+                <span>Direct bank-to-bank transfer</span>
+              </div>
+            </div>
+          </mat-radio-button>
+        </mat-radio-group>
+
+        <div class="payment-instructions">
+          <mat-icon class="info-icon">info</mat-icon>
+          <div class="instruction-text">
+            <p><strong>Payment Instructions:</strong></p>
+            <ul>
+              <li><strong>Cash:</strong> Bring your contribution to the club. Admin will confirm receipt.</li>
+              <li><strong>GCash:</strong> Transfer to our official GCash number. Admin will verify the transaction.</li>
+              <li><strong>Bank Transfer:</strong> Transfer to our official bank account. Admin will verify the transaction.</li>
+            </ul>
+            <p class="note">After submitting, an admin will contact you to arrange payment.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes Field (Optional) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Additional Notes (Optional)</mat-label>
+        <mat-icon matPrefix>note</mat-icon>
+        <textarea
+          matInput
+          formControlName="notes"
+          placeholder="Any additional comments"
+          rows="2"></textarea>
+      </mat-form-field>
+
+      <!-- Error Message -->
+      <div class="error-message" *ngIf="submitError">
+        <mat-icon>error</mat-icon>
+        <span>{{ submitError }}</span>
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions *ngIf="!submitSuccess">
+    <button mat-button type="button" (click)="onCancel()" [disabled]="isSubmitting">
+      Cancel
+    </button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="onSubmit()"
+      [disabled]="isSubmitting || contributionForm.invalid">
+      <mat-icon *ngIf="!isSubmitting">{{ isEditMode ? 'save' : 'send' }}</mat-icon>
+      <mat-icon *ngIf="isSubmitting" class="spinner">refresh</mat-icon>
+      {{ isSubmitting ? (isEditMode ? 'Updating...' : 'Submitting...') : (isEditMode ? 'Update Contribution' : 'Submit Contribution') }}
+    </button>
+  </mat-dialog-actions>
+</div>

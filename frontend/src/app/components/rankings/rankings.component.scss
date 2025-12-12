@@ -450,9 +450,63 @@
   -webkit-overflow-scrolling: touch;
 }
 
+// Desktop: Two Column Layout
+.rankings-columns-desktop {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  position: relative;
+
+  @media (max-width: 992px) {
+    display: none;
+  }
+
+  // Vertical divider line
+  &::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      #dee2e6 10%,
+      #dee2e6 90%,
+      transparent 100%
+    );
+    transform: translateX(-50%);
+  }
+
+  // Add padding to columns to prevent overlap with divider
+  .rankings-table {
+    &:first-child {
+      padding-right: 12px;
+    }
+
+    &:last-child {
+      padding-left: 12px;
+    }
+  }
+}
+
+// Mobile: Single Column Layout
+.rankings-single-mobile {
+  display: none;
+
+  @media (max-width: 992px) {
+    display: block;
+  }
+}
+
 .rankings-table {
   width: 100%;
   min-width: 600px;
+
+  @media (max-width: 992px) {
+    min-width: 500px;
+  }
 
   @media (max-width: 768px) {
     min-width: 500px;
@@ -462,22 +516,22 @@
 .table-header,
 .table-row {
   display: grid;
-  grid-template-columns: 70px 1fr 110px 130px;
+  grid-template-columns: 60px 1fr 100px 120px;
   align-items: center;
-  padding: 16px 20px;
-  gap: 16px;
+  padding: 6px 12px;
+  gap: 10px;
 
   @media (max-width: 768px) {
-    grid-template-columns: 60px 1fr 90px 110px;
-    padding: 14px 16px;
-    gap: 12px;
+    grid-template-columns: 50px 1fr 85px 100px;
+    padding: 5px 10px;
+    gap: 8px;
   }
 }
 
 .table-header {
   background: #f8f9fa;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 10px;
   color: #6c757d;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -516,39 +570,39 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
 
   @media (max-width: 768px) {
-    width: 38px;
-    height: 38px;
+    width: 32px;
+    height: 32px;
   }
 }
 
 .trophy {
-  font-size: 32px !important;
-  width: 32px;
-  height: 32px;
+  font-size: 26px !important;
+  width: 26px;
+  height: 26px;
 
   &.gold { color: #FFD700; }
   &.silver { color: #C0C0C0; }
   &.bronze { color: #CD7F32; }
 
   @media (max-width: 768px) {
-    font-size: 28px !important;
-    width: 28px;
-    height: 28px;
+    font-size: 24px !important;
+    width: 24px;
+    height: 24px;
   }
 }
 
 .rank-number {
-  font-size: 15px;
+  font-size: 13px;
   color: #6c757d;
   font-weight: 600;
 
   @media (max-width: 768px) {
-    font-size: 14px;
+    font-size: 12px;
   }
 }
 
@@ -556,25 +610,25 @@
 .player-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .player-name {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
   color: #2c3e50;
 
   @media (max-width: 768px) {
-    font-size: 13px;
+    font-size: 11px;
   }
 }
 
 .player-username {
-  font-size: 12px;
+  font-size: 10px;
   color: #6c757d;
 
   @media (max-width: 768px) {
-    font-size: 11px;
+    font-size: 9px;
   }
 }
 
@@ -587,21 +641,21 @@
 .points-display {
   display: flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 3px;
 }
 
 .points-value {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   color: #667eea;
 
   @media (max-width: 768px) {
-    font-size: 16px;
+    font-size: 13px;
   }
 }
 
 .points-label {
-  font-size: 11px;
+  font-size: 9px;
   color: #6c757d;
 }
 
@@ -614,11 +668,11 @@
 .stats-display {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 5px;
+  font-size: 11px;
 
   @media (max-width: 768px) {
-    font-size: 12px;
+    font-size: 10px;
   }
 }
 
@@ -637,12 +691,12 @@
 }
 
 .win-rate {
-  font-size: 11px;
+  font-size: 9px;
   color: #6c757d;
-  margin-left: 4px;
+  margin-left: 3px;
 
   @media (max-width: 768px) {
-    font-size: 10px;
+    font-size: 8px;
   }
 }
 
@@ -1095,5 +1149,110 @@
         }
       }
     }
+  }
+}
+
+// Print/Screenshot Styles
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .page-container {
+    background: white;
+    padding: 20px;
+  }
+
+  .page-header {
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+  }
+
+  .back-button,
+  .header-actions {
+    display: none !important;
+  }
+
+  .stats-section {
+    display: none !important;
+  }
+
+  .tournaments-section {
+    display: none !important;
+  }
+
+  .my-stats-section {
+    display: none !important;
+  }
+
+  .player-name {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word;
+  }
+
+  .player-username {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .rankings-card {
+    box-shadow: none;
+    border: 1px solid #dee2e6;
+  }
+
+  .rankings-table {
+    page-break-inside: avoid;
+  }
+
+  .table-row {
+    page-break-inside: avoid;
+
+    &:hover {
+      background: none;
+    }
+  }
+
+  .load-more-section {
+    display: none !important;
+  }
+
+  // Ensure table is fully visible
+  .table-scroll-container {
+    overflow: visible !important;
+  }
+
+  .rankings-table {
+    min-width: 100% !important;
+  }
+
+  // Adjust grid for better print layout
+  .table-header,
+  .table-row {
+    grid-template-columns: 70px 2fr 110px 140px;
+  }
+}
+
+// Print button styling
+.print-button {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
+
+  mat-icon {
+    margin-right: 6px;
   }
 }

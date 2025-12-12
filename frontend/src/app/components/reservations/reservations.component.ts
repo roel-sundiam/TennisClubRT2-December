@@ -118,86 +118,145 @@ interface Reservation {
           <div class="time-range-section" *ngIf="selectedDate">
             <h3>Select Time Range *</h3>
 
-            <!-- Start Time Buttons -->
-            <div class="time-selection">
-              <h4>Start Time</h4>
-              <div class="time-buttons">
-                <button
-                  *ngFor="let slot of timeSlots"
-                  type="button"
-                  class="time-btn"
-                  [class.selected]="selectedStartTime === slot.hour"
-                  [class.unavailable]="!slot.available"
-                  [class.blocked-open-play]="slot.blockedByOpenPlay"
-                  [class.peak]="slot.isPeak"
-                  [disabled]="!slot.available"
-                  (click)="selectStartTime(slot.hour)"
-                  [title]="slot.blockedByOpenPlay ? 'Blocked by Open Play: ' + slot.openPlayEvent?.title : ''"
-                >
-                  <span class="time">{{ slot.hour }}:00</span>
-                  <span class="rate-type">{{ 
-                    slot.blockedByOpenPlay ? 'Open Play' : 
-                    (slot.isPeak ? 'Peak' : 'Regular') 
-                  }}</span>
-                  <small *ngIf="slot.blockedByOpenPlay && slot.openPlayEvent" class="open-play-info">
-                    {{ slot.openPlayEvent.status === 'active' ? 'Registration Open' : 'Event Confirmed' }}
-                  </small>
-                </button>
+            <!-- STEPPER UI -->
+            <div *ngIf="useStepperUI" class="stepper-time-selection">
+              <!-- Loading Indicator -->
+              <div *ngIf="!timeSlotsLoaded" class="stepper-loading">
+                <div class="spinner"></div>
+                <p>Loading available time slots...</p>
               </div>
-              <small
-                class="error"
-                *ngIf="
-                  reservationForm.get('startTime')?.hasError('required') &&
-                  reservationForm.get('startTime')?.touched
-                "
-              >
-                Start time is required
-              </small>
+
+              <!-- Compact Time Controls Row -->
+              <div *ngIf="timeSlotsLoaded" class="stepper-compact-row" [class.has-conflict]="getAvailabilityStatus() === 'conflict'" [class.available]="getAvailabilityStatus() === 'available'">
+                <!-- Start Time -->
+                <div class="stepper-compact-item">
+                  <span class="stepper-compact-label">Start</span>
+                  <div class="stepper-compact-controls">
+                    <button type="button" class="stepper-compact-btn" [disabled]="!canDecrementStart()" (click)="adjustStartTime(-1)">−</button>
+                    <div class="stepper-compact-value">{{ selectedStartTime ? formatTimeAMPM(selectedStartTime) : '--:-- --' }}</div>
+                    <button type="button" class="stepper-compact-btn" [disabled]="!canIncrementStart()" (click)="adjustStartTime(1)">+</button>
+                  </div>
+                </div>
+
+                <!-- Duration -->
+                <div class="stepper-compact-item" *ngIf="selectedStartTime">
+                  <span class="stepper-compact-label">Duration</span>
+                  <div class="stepper-compact-controls">
+                    <button type="button" class="stepper-compact-btn" [disabled]="!canDecrementDuration()" (click)="adjustDuration(-1)">−</button>
+                    <div class="stepper-compact-value">{{ getDurationHours() }}h</div>
+                    <button type="button" class="stepper-compact-btn" [disabled]="!canIncrementDuration()" (click)="adjustDuration(1)">+</button>
+                  </div>
+                </div>
+
+                <!-- End Time -->
+                <div class="stepper-compact-item stepper-compact-item-readonly" *ngIf="selectedStartTime && selectedEndTime">
+                  <span class="stepper-compact-label">End</span>
+                  <div class="stepper-compact-value-only">{{ formatTimeAMPM(selectedEndTime) }}</div>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="stepper-compact-status">
+                  <span class="availability-badge-compact" [class]="'availability-badge-compact-' + getAvailabilityStatus()">
+                    {{ getAvailabilityStatus() === 'available' ? '✓ Available' : '✗ Conflict' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Find Next Available Button -->
+              <button type="button" class="next-available-btn" *ngIf="timeSlotsLoaded && getAvailabilityStatus() === 'conflict'" (click)="findNextAvailableTime()">
+                Find Next Available Time →
+              </button>
+
+              <!-- Time Preview -->
+              <div class="time-preview" *ngIf="selectedStartTime && selectedEndTime" [class]="'time-preview-' + getAvailabilityStatus()">
+                <span *ngIf="getAvailabilityStatus() === 'available'">✓</span>
+                <span *ngIf="getAvailabilityStatus() === 'conflict'">✗</span>
+                {{ getTimeRangeDisplay() }} ({{ getDurationHours() }} hour{{ getDurationHours() > 1 ? 's' : '' }})
+              </div>
             </div>
 
-            <!-- End Time Buttons -->
-            <div class="time-selection" *ngIf="selectedStartTime">
-              <h4>End Time <span class="hint-text">(Maximum 4 hours per reservation)</span></h4>
-              <div class="time-buttons" *ngIf="availableEndTimes.length > 0">
-                <button
-                  *ngFor="let slot of availableEndTimes"
-                  type="button"
-                  class="time-btn"
-                  [class.selected]="selectedEndTime === slot.hour"
-                  [class.peak]="slot.isPeak"
-                  (click)="selectEndTime(slot.hour)"
+            <!-- ORIGINAL BUTTON UI -->
+            <div *ngIf="!useStepperUI">
+              <!-- Start Time Buttons -->
+              <div class="time-selection">
+                <h4>Start Time</h4>
+                <div class="time-buttons">
+                  <button
+                    *ngFor="let slot of timeSlots"
+                    type="button"
+                    class="time-btn"
+                    [class.selected]="selectedStartTime === slot.hour"
+                    [class.unavailable]="!slot.available"
+                    [class.blocked-open-play]="slot.blockedByOpenPlay"
+                    [class.peak]="slot.isPeak"
+                    [disabled]="!slot.available"
+                    (click)="selectStartTime(slot.hour)"
+                    [title]="slot.blockedByOpenPlay ? 'Blocked by Open Play: ' + slot.openPlayEvent?.title : ''"
+                  >
+                    <span class="time">{{ formatTimeAMPM(slot.hour) }}</span>
+                    <span class="rate-type">{{
+                      slot.blockedByOpenPlay ? 'Open Play' :
+                      (slot.isPeak ? 'Peak' : 'Regular')
+                    }}</span>
+                    <small *ngIf="slot.blockedByOpenPlay && slot.openPlayEvent" class="open-play-info">
+                      {{ slot.openPlayEvent.status === 'active' ? 'Registration Open' : 'Event Confirmed' }}
+                    </small>
+                  </button>
+                </div>
+                <small
+                  class="error"
+                  *ngIf="
+                    reservationForm.get('startTime')?.hasError('required') &&
+                    reservationForm.get('startTime')?.touched
+                  "
                 >
-                  <span class="time">{{ slot.hour }}:00</span>
-                  <span class="rate-type">{{ slot.isPeak ? 'Peak' : 'Regular' }}</span>
-                </button>
+                  Start time is required
+                </small>
               </div>
 
-              <!-- Message when no end times available -->
-              <div class="no-end-times-message" *ngIf="availableEndTimes.length === 0 && selectedStartTime">
-                <p><strong>No consecutive time slots available</strong> after {{ selectedStartTime }}:00</p>
-                <p>Court reservations require consecutive time blocks. The next hour ({{ selectedStartTime + 1 }}:00) is unavailable.</p>
+              <!-- End Time Buttons -->
+              <div class="time-selection" *ngIf="selectedStartTime">
+                <h4>End Time <span class="hint-text">(Maximum 4 hours per reservation)</span></h4>
+                <div class="time-buttons" *ngIf="availableEndTimes.length > 0">
+                  <button
+                    *ngFor="let slot of availableEndTimes"
+                    type="button"
+                    class="time-btn"
+                    [class.selected]="selectedEndTime === slot.hour"
+                    [class.peak]="slot.isPeak"
+                    (click)="selectEndTime(slot.hour)"
+                  >
+                    <span class="time">{{ formatTimeAMPM(slot.hour) }}</span>
+                    <span class="rate-type">{{ slot.isPeak ? 'Peak' : 'Regular' }}</span>
+                  </button>
+                </div>
 
+                <!-- Message when no end times available -->
+                <div class="no-end-times-message" *ngIf="availableEndTimes.length === 0 && selectedStartTime">
+                  <p><strong>No consecutive time slots available</strong> after {{ formatTimeAMPM(selectedStartTime) }}</p>
+                  <p>Court reservations require consecutive time blocks. The next hour ({{ formatTimeAMPM(selectedStartTime + 1) }}) is unavailable.</p>
+                </div>
+
+                <small
+                  class="error"
+                  *ngIf="
+                    reservationForm.get('endTime')?.hasError('required') &&
+                    reservationForm.get('endTime')?.touched
+                  "
+                >
+                  End time is required
+                </small>
               </div>
 
-              <small
-                class="error"
-                *ngIf="
-                  reservationForm.get('endTime')?.hasError('required') &&
-                  reservationForm.get('endTime')?.touched
-                "
-              >
-                End time is required
-              </small>
-            </div>
-
-            <!-- Duration Display -->
-            <div class="duration-info" *ngIf="selectedStartTime && selectedEndTime">
-              <div class="duration-badge">
-                <i class="pi pi-clock"></i>
-                <strong
-                  >{{ getDurationHours() }} hour{{ getDurationHours() > 1 ? 's' : '' }}</strong
-                >
-                <span class="time-range-display">{{ getTimeRangeDisplay() }}</span>
+              <!-- Duration Display -->
+              <div class="duration-info" *ngIf="selectedStartTime && selectedEndTime">
+                <div class="duration-badge">
+                  <i class="pi pi-clock"></i>
+                  <strong
+                    >{{ getDurationHours() }} hour{{ getDurationHours() > 1 ? 's' : '' }}</strong
+                  >
+                  <span class="time-range-display">{{ getTimeRangeDisplay() }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -555,6 +614,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
 
   private apiUrl = environment.apiUrl;
   private peakHours = [5, 18, 19, 20, 21]; // 5AM, 6PM, 7PM, 8PM, 9PM
+
+  // Stepper UI mode toggle
+  useStepperUI = true; // Set to false to use original button UI
 
   constructor(
     private fb: FormBuilder,
@@ -1235,6 +1297,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
           if (this.selectedStartTime !== null) {
             console.log('🔄 Start time already selected, updating available end times now that data is loaded');
             this.updateAvailableEndTimes();
+          } else {
+            // Initialize stepper with first available time if using stepper UI
+            this.initializeStepperDefaults();
           }
         } else {
           console.log('❌ No timeSlots in backend response, falling back to local generation');
@@ -1244,6 +1309,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
           this.timeSlotsLoaded = true;
           if (this.selectedStartTime !== null) {
             this.updateAvailableEndTimes();
+          } else {
+            // Initialize stepper with first available time if using stepper UI
+            this.initializeStepperDefaults();
           }
         }
       },
@@ -1252,6 +1320,8 @@ export class ReservationsComponent implements OnInit, OnDestroy {
         this.existingReservations = [];
         this.updateTimeSlotAvailability();
         this.timeSlotsLoaded = true; // Mark as loaded even on error to prevent blocking UI
+        // Initialize stepper with first available time if using stepper UI
+        this.initializeStepperDefaults();
       },
     });
   }
@@ -1394,9 +1464,17 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     return this.selectedEndTime - this.selectedStartTime;
   }
 
+  // Convert 24-hour time to AM/PM format
+  formatTimeAMPM(hour: number): string {
+    if (hour === 0) return '12:00 AM';
+    if (hour < 12) return `${hour}:00 AM`;
+    if (hour === 12) return '12:00 PM';
+    return `${hour - 12}:00 PM`;
+  }
+
   getTimeRangeDisplay(): string {
     if (!this.selectedStartTime || !this.selectedEndTime) return '';
-    return `${this.selectedStartTime}:00 - ${this.selectedEndTime}:00`;
+    return `${this.formatTimeAMPM(this.selectedStartTime)} - ${this.formatTimeAMPM(this.selectedEndTime)}`;
   }
 
   getRateType(): string {
@@ -1979,6 +2057,199 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     this.router.navigate(['/payments'], {
       queryParams: { tab: 'pending' }
     });
+  }
+
+  // ========== STEPPER UI METHODS ==========
+
+  // Initialize stepper with default values when using stepper UI
+  private initializeStepperDefaults(): void {
+    if (this.useStepperUI && !this.selectedStartTime && this.timeSlots.length > 0) {
+      // Find first available time slot
+      const firstAvailable = this.timeSlots.find(slot => slot.available);
+      if (firstAvailable) {
+        this.selectedStartTime = firstAvailable.hour;
+        this.selectedEndTime = Math.min(22, firstAvailable.hour + 1);
+        this.reservationForm.patchValue({
+          startTime: this.selectedStartTime,
+          endTime: this.selectedEndTime
+        });
+        this.calculateFee();
+      }
+    }
+  }
+
+  adjustStartTime(delta: number): void {
+    if (!this.selectedStartTime) {
+      // Initialize to first available time or default to 14:00
+      const firstAvailable = this.timeSlots.find(slot => slot.available);
+      this.selectedStartTime = firstAvailable ? firstAvailable.hour : 14;
+      this.selectedEndTime = Math.min(22, this.selectedStartTime + 1);
+      this.reservationForm.patchValue({
+        startTime: this.selectedStartTime,
+        endTime: this.selectedEndTime
+      });
+      this.calculateFee();
+      return;
+    }
+
+    // Find next available time in the direction of delta
+    let newStart = this.selectedStartTime + delta;
+    const maxAttempts = 17; // Maximum time slots (5-22)
+    let attempts = 0;
+
+    // Keep searching for available time in the delta direction
+    while (attempts < maxAttempts) {
+      // Check bounds first
+      if (newStart < 5 || newStart > 21) {
+        return; // Reached the limit
+      }
+
+      // Check if this time is available
+      if (!this.isTimeBooked(newStart)) {
+        // Found available time - reset duration to 1 hour
+        this.selectedStartTime = newStart;
+        this.selectedEndTime = Math.min(22, newStart + 1);
+
+        this.reservationForm.get('startTime')?.setValue(this.selectedStartTime);
+        this.reservationForm.get('endTime')?.setValue(this.selectedEndTime);
+
+        this.calculateFee();
+        return;
+      }
+
+      // Time is booked, continue searching in the same direction
+      newStart += delta;
+      attempts++;
+    }
+
+    // If we reach here, no available time was found in that direction
+  }
+
+  adjustDuration(delta: number): void {
+    const currentDuration = this.getDurationHours();
+    const newDuration = Math.max(1, Math.min(4, currentDuration + delta));
+
+    if (!this.selectedStartTime) return;
+
+    const newEndTime = this.selectedStartTime + newDuration;
+
+    // Check if new duration would cause conflict
+    if (newEndTime > 22 || this.isRangeBooked(this.selectedStartTime, newEndTime)) {
+      return; // Don't allow extending into booked slot
+    }
+
+    this.selectedEndTime = newEndTime;
+    this.reservationForm.get('endTime')?.setValue(newEndTime);
+    this.calculateFee();
+  }
+
+  canIncrementStart(): boolean {
+    if (!this.selectedStartTime || this.selectedStartTime >= 21) return false;
+
+    // Check if there's ANY available time after current time
+    for (let hour = this.selectedStartTime + 1; hour <= 21; hour++) {
+      if (!this.isTimeBooked(hour)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  canDecrementStart(): boolean {
+    if (!this.selectedStartTime || this.selectedStartTime <= 5) return false;
+
+    // Check if there's ANY available time before current time
+    for (let hour = this.selectedStartTime - 1; hour >= 5; hour--) {
+      if (!this.isTimeBooked(hour)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  canIncrementDuration(): boolean {
+    const currentDuration = this.getDurationHours();
+    if (currentDuration >= 4 || !this.selectedStartTime) return false;
+
+    const newEndTime = this.selectedStartTime + currentDuration + 1;
+    if (newEndTime > 22) return false;
+
+    return !this.isTimeBooked(newEndTime - 1);
+  }
+
+  canDecrementDuration(): boolean {
+    const currentDuration = this.getDurationHours();
+    return currentDuration > 1;
+  }
+
+  getAvailabilityStatus(): 'available' | 'conflict' | 'warning' {
+    if (!this.selectedStartTime || !this.selectedEndTime) return 'available';
+
+    if (this.isRangeBooked(this.selectedStartTime, this.selectedEndTime)) {
+      return 'conflict';
+    }
+
+    return 'available';
+  }
+
+  getAvailabilityMessage(): string {
+    const status = this.getAvailabilityStatus();
+
+    if (status === 'conflict') {
+      return 'Conflicts with existing booking';
+    }
+
+    return 'Available';
+  }
+
+  findNextAvailableTime(): void {
+    if (!this.selectedStartTime) return;
+
+    const duration = this.getDurationHours();
+
+    for (let h = this.selectedStartTime + 1; h <= 22 - duration; h++) {
+      if (!this.isRangeBooked(h, h + duration)) {
+        this.selectedStartTime = h;
+        this.selectedEndTime = h + duration;
+        this.reservationForm.patchValue({
+          startTime: h,
+          endTime: h + duration
+        });
+        this.calculateFee();
+        return;
+      }
+    }
+
+    this.showWarning('No Available Time', 'No consecutive time slots available for the selected duration.');
+  }
+
+  // Helper method to check if a single hour is booked
+  private isTimeBooked(hour: number): boolean {
+    // First check if the time slot is marked as unavailable (includes Open Play blocking)
+    const timeSlot = this.timeSlots.find(slot => slot.hour === hour);
+    if (timeSlot && !timeSlot.available) {
+      return true;
+    }
+
+    // Then check existing reservations
+    return this.existingReservations.some(res => {
+      const endTimeSlot = res.endTimeSlot || (res.timeSlot + (res.duration || 1));
+      return hour >= res.timeSlot && hour < endTimeSlot &&
+             (res.status === 'pending' || res.status === 'confirmed') &&
+             (!this.isEditMode || res._id !== this.editingReservationId);
+    });
+  }
+
+  // Helper method to check if a time range is booked
+  private isRangeBooked(startHour: number, endHour: number): boolean {
+    for (let h = startHour; h < endHour; h++) {
+      if (this.isTimeBooked(h)) return true;
+    }
+    return false;
+  }
+
+  private showWarning(title: string, message: string): void {
+    this.showNotification('warning', title, message, 4000);
   }
 }
 

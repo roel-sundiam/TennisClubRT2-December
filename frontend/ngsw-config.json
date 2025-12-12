@@ -79,15 +79,39 @@
     {
       "name": "dynamic-api-fresh",
       "urls": [
-        "https://tennis-club-rt2-backend.onrender.com/api/reservations/**",
-        "https://tennis-club-rt2-backend.onrender.com/api/notifications/**",
-        "https://tennis-club-rt2-backend.onrender.com/api/payments/**"
+        "https://tennis-club-rt2-backend.onrender.com/api/notifications/**"
       ],
       "cacheConfig": {
         "strategy": "freshness",
         "maxSize": 100,
         "maxAge": "1h",
         "timeout": "8s"
+      }
+    },
+    {
+      "name": "reservations-api-nocache",
+      "urls": [
+        "https://tennis-club-rt2-backend.onrender.com/api/reservations/**",
+        "http://localhost:3000/api/reservations/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 0,
+        "maxAge": "0s",
+        "timeout": "10s"
+      }
+    },
+    {
+      "name": "payments-api-nocache",
+      "urls": [
+        "https://tennis-club-rt2-backend.onrender.com/api/payments/**",
+        "http://localhost:3000/api/payments/**"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "maxSize": 0,
+        "maxAge": "0s",
+        "timeout": "10s"
       }
     },
     {

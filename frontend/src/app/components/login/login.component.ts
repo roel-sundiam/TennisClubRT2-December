@@ -65,17 +65,7 @@ import { AnalyticsService } from '../../services/analytics.service';
               <p>Participate in open court sessions, earn points from competitive matches, and climb the seeding rankings. Build your tennis reputation!</p>
             </div>
           </div>
-          
-          <div class="feature-item">
-            <div class="feature-icon">
-              <i class="pi pi-coins"></i>
-            </div>
-            <div class="feature-content">
-              <h3>Coin System</h3>
-              <p>Earn and spend coins for app features. New members receive 100 free coins to get started!</p>
-            </div>
-          </div>
-          
+
           <div class="feature-item">
             <div class="feature-icon">
               <i class="pi pi-users"></i>

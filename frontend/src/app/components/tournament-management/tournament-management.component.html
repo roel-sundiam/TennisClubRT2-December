@@ -12,10 +12,20 @@
         </h1>
         <p class="page-subtitle">Create and manage tournaments with game-based scoring</p>
       </div>
-      <button mat-raised-button color="primary" (click)="toggleCreateForm()" class="create-button">
-        <mat-icon>{{ showCreateForm ? 'close' : 'add' }}</mat-icon>
-        {{ showCreateForm ? 'Cancel' : 'Create Tournament' }}
-      </button>
+      <div class="header-buttons">
+        <button mat-raised-button color="accent" (click)="openPlayerManagement()" class="manage-button">
+          <mat-icon>groups</mat-icon>
+          Manage Players
+        </button>
+        <button mat-raised-button style="background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%); color: white;" (click)="openMedalAssignment()" class="manage-button">
+          <mat-icon>emoji_events</mat-icon>
+          Award Medal
+        </button>
+        <button mat-raised-button color="primary" (click)="toggleCreateForm()" class="create-button">
+          <mat-icon>{{ showCreateForm ? 'close' : 'add' }}</mat-icon>
+          {{ showCreateForm ? 'Cancel' : 'Create Tournament' }}
+        </button>
+      </div>
     </div>
   </div>
 
@@ -105,37 +115,25 @@
                 <div *ngIf="match.get('matchType')?.value === 'singles'">
                   <div class="form-row two-column">
                     <mat-form-field appearance="outline">
-                      <mat-label>Player 1 (Member)</mat-label>
-                      <mat-select formControlName="player1">
-                        <mat-option value="">-- Select Member --</mat-option>
-                        <mat-option *ngFor="let member of members" [value]="member._id">
-                          {{ member.fullName }}
+                      <mat-label>Player 1</mat-label>
+                      <mat-select formControlName="player1" required>
+                        <mat-option value="">-- Select Player --</mat-option>
+                        <mat-option *ngFor="let player of players" [value]="player._id">
+                          {{ player.fullName }}
                         </mat-option>
                       </mat-select>
+                      <mat-error>Player 1 is required</mat-error>
                     </mat-form-field>
 
                     <mat-form-field appearance="outline">
-                      <mat-label>Player 1 (Non-Member Name)</mat-label>
-                      <input matInput formControlName="player1Name" placeholder="Enter non-member name">
-                      <mat-hint>Use this if player is not a member</mat-hint>
-                    </mat-form-field>
-                  </div>
-
-                  <div class="form-row two-column">
-                    <mat-form-field appearance="outline">
-                      <mat-label>Player 2 (Member)</mat-label>
-                      <mat-select formControlName="player2">
-                        <mat-option value="">-- Select Member --</mat-option>
-                        <mat-option *ngFor="let member of members" [value]="member._id">
-                          {{ member.fullName }}
+                      <mat-label>Player 2</mat-label>
+                      <mat-select formControlName="player2" required>
+                        <mat-option value="">-- Select Player --</mat-option>
+                        <mat-option *ngFor="let player of players" [value]="player._id">
+                          {{ player.fullName }}
                         </mat-option>
                       </mat-select>
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline">
-                      <mat-label>Player 2 (Non-Member Name)</mat-label>
-                      <input matInput formControlName="player2Name" placeholder="Enter non-member name">
-                      <mat-hint>Use this if player is not a member</mat-hint>
+                      <mat-error>Player 2 is required</mat-error>
                     </mat-form-field>
                   </div>
                 </div>
@@ -145,70 +143,50 @@
                   <div class="team-label">Team 1</div>
                   <div class="form-row two-column">
                     <mat-form-field appearance="outline">
-                      <mat-label>Team 1 - Player 1 (Member)</mat-label>
-                      <mat-select formControlName="team1Player1">
-                        <mat-option value="">-- Select Member --</mat-option>
-                        <mat-option *ngFor="let member of members" [value]="member._id">
-                          {{ member.fullName }}
+                      <mat-label>Team 1 - Player 1</mat-label>
+                      <mat-select formControlName="team1Player1" required>
+                        <mat-option value="">-- Select Player --</mat-option>
+                        <mat-option *ngFor="let player of players" [value]="player._id">
+                          {{ player.fullName }}
                         </mat-option>
                       </mat-select>
+                      <mat-error>Player 1 is required</mat-error>
                     </mat-form-field>
 
                     <mat-form-field appearance="outline">
-                      <mat-label>Team 1 - Player 1 (Non-Member)</mat-label>
-                      <input matInput formControlName="team1Player1Name" placeholder="Enter non-member name">
-                    </mat-form-field>
-                  </div>
-
-                  <div class="form-row two-column">
-                    <mat-form-field appearance="outline">
-                      <mat-label>Team 1 - Player 2 (Member)</mat-label>
-                      <mat-select formControlName="team1Player2">
-                        <mat-option value="">-- Select Member --</mat-option>
-                        <mat-option *ngFor="let member of members" [value]="member._id">
-                          {{ member.fullName }}
+                      <mat-label>Team 1 - Player 2</mat-label>
+                      <mat-select formControlName="team1Player2" required>
+                        <mat-option value="">-- Select Player --</mat-option>
+                        <mat-option *ngFor="let player of players" [value]="player._id">
+                          {{ player.fullName }}
                         </mat-option>
                       </mat-select>
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline">
-                      <mat-label>Team 1 - Player 2 (Non-Member)</mat-label>
-                      <input matInput formControlName="team1Player2Name" placeholder="Enter non-member name">
+                      <mat-error>Player 2 is required</mat-error>
                     </mat-form-field>
                   </div>
 
                   <div class="team-label">Team 2</div>
                   <div class="form-row two-column">
                     <mat-form-field appearance="outline">
-                      <mat-label>Team 2 - Player 1 (Member)</mat-label>
-                      <mat-select formControlName="team2Player1">
-                        <mat-option value="">-- Select Member --</mat-option>
-                        <mat-option *ngFor="let member of members" [value]="member._id">
-                          {{ member.fullName }}
+                      <mat-label>Team 2 - Player 1</mat-label>
+                      <mat-select formControlName="team2Player1" required>
+                        <mat-option value="">-- Select Player --</mat-option>
+                        <mat-option *ngFor="let player of players" [value]="player._id">
+                          {{ player.fullName }}
                         </mat-option>
                       </mat-select>
+                      <mat-error>Player 1 is required</mat-error>
                     </mat-form-field>
 
                     <mat-form-field appearance="outline">
-                      <mat-label>Team 2 - Player 1 (Non-Member)</mat-label>
-                      <input matInput formControlName="team2Player1Name" placeholder="Enter non-member name">
-                    </mat-form-field>
-                  </div>
-
-                  <div class="form-row two-column">
-                    <mat-form-field appearance="outline">
-                      <mat-label>Team 2 - Player 2 (Member)</mat-label>
-                      <mat-select formControlName="team2Player2">
-                        <mat-option value="">-- Select Member --</mat-option>
-                        <mat-option *ngFor="let member of members" [value]="member._id">
-                          {{ member.fullName }}
+                      <mat-label>Team 2 - Player 2</mat-label>
+                      <mat-select formControlName="team2Player2" required>
+                        <mat-option value="">-- Select Player --</mat-option>
+                        <mat-option *ngFor="let player of players" [value]="player._id">
+                          {{ player.fullName }}
                         </mat-option>
                       </mat-select>
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline">
-                      <mat-label>Team 2 - Player 2 (Non-Member)</mat-label>
-                      <input matInput formControlName="team2Player2Name" placeholder="Enter non-member name">
+                      <mat-error>Player 2 is required</mat-error>
                     </mat-form-field>
                   </div>
                 </div>
@@ -243,28 +221,26 @@
                     <mat-select formControlName="winner">
                       <!-- Singles winner options -->
                       <ng-container *ngIf="match.get('matchType')?.value === 'singles'">
-                        <!-- Player 1 option (member or non-member) -->
                         <mat-option
-                          [value]="match.get('player1')?.value || 'player1'"
-                          *ngIf="hasPlayer(match, 'player1', 'player1Name')">
-                          {{ getPlayerDisplayName(match, 'player1', 'player1Name') }}
+                          [value]="match.get('player1')?.value"
+                          *ngIf="match.get('player1')?.value">
+                          {{ getPlayerName(match.get('player1')?.value) }}
                         </mat-option>
-                        <!-- Player 2 option (member or non-member) -->
                         <mat-option
-                          [value]="match.get('player2')?.value || 'player2'"
-                          *ngIf="hasPlayer(match, 'player2', 'player2Name')">
-                          {{ getPlayerDisplayName(match, 'player2', 'player2Name') }}
+                          [value]="match.get('player2')?.value"
+                          *ngIf="match.get('player2')?.value">
+                          {{ getPlayerName(match.get('player2')?.value) }}
                         </mat-option>
                       </ng-container>
                       <!-- Doubles winner options -->
                       <ng-container *ngIf="match.get('matchType')?.value === 'doubles'">
                         <mat-option value="team1"
-                          *ngIf="hasPlayer(match, 'team1Player1', 'team1Player1Name') && hasPlayer(match, 'team1Player2', 'team1Player2Name')">
-                          Team 1: {{ getPlayerDisplayName(match, 'team1Player1', 'team1Player1Name') }} / {{ getPlayerDisplayName(match, 'team1Player2', 'team1Player2Name') }}
+                          *ngIf="match.get('team1Player1')?.value && match.get('team1Player2')?.value">
+                          Team 1: {{ getPlayerName(match.get('team1Player1')?.value) }} / {{ getPlayerName(match.get('team1Player2')?.value) }}
                         </mat-option>
                         <mat-option value="team2"
-                          *ngIf="hasPlayer(match, 'team2Player1', 'team2Player1Name') && hasPlayer(match, 'team2Player2', 'team2Player2Name')">
-                          Team 2: {{ getPlayerDisplayName(match, 'team2Player1', 'team2Player1Name') }} / {{ getPlayerDisplayName(match, 'team2Player2', 'team2Player2Name') }}
+                          *ngIf="match.get('team2Player1')?.value && match.get('team2Player2')?.value">
+                          Team 2: {{ getPlayerName(match.get('team2Player1')?.value) }} / {{ getPlayerName(match.get('team2Player2')?.value) }}
                         </mat-option>
                       </ng-container>
                     </mat-select>
@@ -343,13 +319,14 @@
         <ng-container matColumnDef="matches">
           <th mat-header-cell *matHeaderCellDef>Matches</th>
           <td mat-cell *matCellDef="let tournament">
-            {{ tournament.totalMatches }}
-            <mat-chip-set *ngIf="tournament.matches.length > 0">
-              <mat-chip [highlighted]="match.pointsProcessed" *ngFor="let match of tournament.matches">
-                <mat-icon *ngIf="match.pointsProcessed">check_circle</mat-icon>
-                {{ match.round }}
-              </mat-chip>
-            </mat-chip-set>
+            <div class="matches-summary">
+              <strong>{{ tournament.totalMatches }} Total</strong>
+              <mat-chip-set *ngIf="tournament.matches.length > 0">
+                <mat-chip *ngFor="let roundSummary of getMatchesByRound(tournament.matches) | keyvalue">
+                  {{ roundSummary.value }} {{ roundSummary.key }}
+                </mat-chip>
+              </mat-chip-set>
+            </div>
           </td>
         </ng-container>
 
@@ -373,12 +350,6 @@
                     (click)="editTournament(tournament)"
                     matTooltip="Edit Tournament">
               <mat-icon>edit</mat-icon>
-            </button>
-            <button mat-icon-button color="primary"
-                    (click)="processPoints(tournament._id)"
-                    [disabled]="!hasUnprocessedMatches(tournament)"
-                    matTooltip="Process Points">
-              <mat-icon>calculate</mat-icon>
             </button>
             <button mat-icon-button color="warn"
                     (click)="deleteTournament(tournament._id)"

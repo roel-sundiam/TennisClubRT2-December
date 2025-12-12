@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Selection UI Demos - Tennis Club</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e0 100%);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e40af;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+
+        .intro {
+            text-align: center;
+            color: #4b5563;
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .demo-section h2 {
+            color: #1f2937;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .demo-section .description {
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .pros, .cons {
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .pros {
+            background: #ecfdf5;
+            border-left: 4px solid #10b981;
+        }
+
+        .cons {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+        }
+
+        .pros h3, .cons h3 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .pros h3 { color: #059669; }
+        .cons h3 { color: #dc2626; }
+
+        .pros ul, .cons ul {
+            list-style: none;
+            font-size: 0.85rem;
+            color: #4b5563;
+        }
+
+        .pros li::before {
+            content: '✓ ';
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .cons li::before {
+            content: '✗ ';
+            color: #ef4444;
+            font-weight: bold;
+        }
+
+        /* DEMO 1: Quick Presets */
+        .quick-presets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .preset-btn {
+            padding: 1.5rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 0.9rem;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .preset-btn .icon {
+            font-size: 2rem;
+        }
+
+        .preset-btn .label {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .preset-btn .time {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .preset-btn:hover {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+        }
+
+        .preset-btn.selected {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+
+        .preset-btn.selected .label,
+        .preset-btn.selected .time {
+            color: white;
+        }
+
+        .or-divider {
+            text-align: center;
+            color: #9ca3af;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #e5e7eb;
+        }
+
+        .or-divider::before { left: 0; }
+        .or-divider::after { right: 0; }
+
+        /* DEMO 2: Stepper Controls */
+        .stepper-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .stepper-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: #f9fafb;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .stepper-label {
+            font-weight: 600;
+            color: #1f2937;
+            min-width: 120px;
+            font-size: 1rem;
+        }
+
+        .stepper-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .stepper-btn {
+            width: 48px;
+            height: 48px;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            background: white;
+            color: #3b82f6;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stepper-btn:hover {
+            background: #3b82f6;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .stepper-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e40af;
+            min-width: 120px;
+            text-align: center;
+            padding: 0.5rem 1rem;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #dbeafe;
+        }
+
+        .time-preview {
+            margin-top: 1rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe);
+            border-radius: 12px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: #1e40af;
+            font-weight: 600;
+        }
+
+        /* DEMO 3: Timeline Slider */
+        .timeline-container {
+            padding: 2rem 0;
+        }
+
+        .timeline-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .timeline-track {
+            position: relative;
+            height: 60px;
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            border-radius: 30px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .timeline-segments {
+            display: flex;
+            height: 100%;
+        }
+
+        .timeline-segment {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid #cbd5e1;
+            font-size: 0.75rem;
+            color: #6b7280;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .timeline-segment:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .timeline-segment.peak {
+            background: rgba(251, 146, 60, 0.2);
+        }
+
+        .timeline-segment.booked {
+            background: rgba(220, 38, 38, 0.2);
+            cursor: not-allowed;
+        }
+
+        .timeline-segment.selected {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            font-weight: 600;
+        }
+
+        .timeline-selection {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(37, 99, 235, 0.8));
+            border-radius: 30px;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1.5rem;
+        }
+
+        .timeline-legend {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #4b5563;
+        }
+
+        .legend-box {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+        }
+
+        /* DEMO 4: Native Time Inputs */
+        .native-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 1rem;
+        }
+
+        .input-group input[type="time"] {
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e40af;
+            background: white;
+            cursor: pointer;
+        }
+
+        .input-group input[type="time"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .selected-time-display {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            border-radius: 12px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: #047857;
+            font-weight: 600;
+        }
+
+        .result-display {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f0fdf4;
+            border: 2px solid #86efac;
+            border-radius: 12px;
+            color: #15803d;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .pros-cons {
+                grid-template-columns: 1fr;
+            }
+
+            .native-inputs {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-info {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎾 Tennis Court Time Selection UI Demos</h1>
+        <p class="intro">Test different time selection interfaces - Try them on both desktop and mobile!</p>
+
+        <!-- DEMO 1: Quick Presets with Manual Override -->
+        <div class="demo-section">
+            <h2>1️⃣ Quick Presets (Recommended for Mobile)</h2>
+            <div class="description">
+                <strong>Best for:</strong> Mobile users, quick bookings, common time slots
+                <br><strong>User Action:</strong> Tap a preset for instant 2-hour booking
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h3>Pros</h3>
+                    <ul>
+                        <li>One-tap selection</li>
+                        <li>Reduces scrolling by 80%</li>
+                        <li>Large touch targets</li>
+                        <li>Visual icons for quick recognition</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons</h3>
+                    <ul>
+                        <li>Limited to preset times</li>
+                        <li>Needs fallback for custom times</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="quick-presets">
+                <button class="preset-btn" onclick="selectPreset(this, 5, 7)">
+                    <div class="icon">🌅</div>
+                    <div class="label">Early Bird</div>
+                    <div class="time">5:00 - 7:00 AM</div>
+                </button>
+                <button class="preset-btn" onclick="selectPreset(this, 7, 9)">
+                    <div class="icon">☀️</div>
+                    <div class="label">Morning</div>
+                    <div class="time">7:00 - 9:00 AM</div>
+                </button>
+                <button class="preset-btn" onclick="selectPreset(this, 12, 14)">
+                    <div class="icon">🌤️</div>
+                    <div class="label">Midday</div>
+                    <div class="time">12:00 - 2:00 PM</div>
+                </button>
+                <button class="preset-btn" onclick="selectPreset(this, 18, 20)">
+                    <div class="icon">🌆</div>
+                    <div class="label">Evening</div>
+                    <div class="time">6:00 - 8:00 PM</div>
+                </button>
+                <button class="preset-btn" onclick="selectPreset(this, 20, 22)">
+                    <div class="icon">🌙</div>
+                    <div class="label">Night</div>
+                    <div class="time">8:00 - 10:00 PM</div>
+                </button>
+            </div>
+
+            <div class="result-display" id="preset-result">Select a preset above</div>
+
+            <p class="or-divider">or choose custom time with buttons</p>
+        </div>
+
+        <!-- DEMO 2: Stepper Controls -->
+        <div class="demo-section">
+            <h2>2️⃣ Stepper Controls</h2>
+            <div class="description">
+                <strong>Best for:</strong> Precise control, accessible design, all ages
+                <br><strong>User Action:</strong> Click +/- buttons to adjust time
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h3>Pros</h3>
+                    <ul>
+                        <li>Very accessible</li>
+                        <li>Clear current value</li>
+                        <li>Easy to adjust</li>
+                        <li>No scrolling needed</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons</h3>
+                    <ul>
+                        <li>Slower for large time jumps</li>
+                        <li>More clicks required</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="stepper-container">
+                <div class="stepper-row">
+                    <div class="stepper-label">Start Time:</div>
+                    <div class="stepper-controls">
+                        <button class="stepper-btn" onclick="adjustTime('start', -1)">−</button>
+                        <div class="stepper-value" id="start-time">14:00</div>
+                        <button class="stepper-btn" onclick="adjustTime('start', 1)">+</button>
+                    </div>
+                </div>
+
+                <div class="stepper-row">
+                    <div class="stepper-label">Duration:</div>
+                    <div class="stepper-controls">
+                        <button class="stepper-btn" onclick="adjustDuration(-1)">−</button>
+                        <div class="stepper-value" id="duration">2 hrs</div>
+                        <button class="stepper-btn" onclick="adjustDuration(1)">+</button>
+                    </div>
+                </div>
+
+                <div class="stepper-row">
+                    <div class="stepper-label">End Time:</div>
+                    <div class="stepper-controls">
+                        <div class="stepper-value" id="end-time" style="border-color: #86efac; color: #059669;">16:00</div>
+                        <span style="color: #6b7280; font-size: 0.9rem;">(Auto-calculated)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="time-preview" id="stepper-preview">
+                Selected: 14:00 - 16:00 (2 hours)
+            </div>
+        </div>
+
+        <!-- DEMO 3: Visual Timeline -->
+        <div class="demo-section">
+            <h2>3️⃣ Interactive Timeline</h2>
+            <div class="description">
+                <strong>Best for:</strong> Desktop users, visual context, seeing full day schedule
+                <br><strong>User Action:</strong> Click time blocks to select range
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h3>Pros</h3>
+                    <ul>
+                        <li>See entire day at once</li>
+                        <li>Visual peak hours</li>
+                        <li>Shows existing bookings</li>
+                        <li>Intuitive drag/click</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons</h3>
+                    <ul>
+                        <li>Harder on small screens</li>
+                        <li>Requires mouse precision</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="timeline-container">
+                <div class="timeline-labels">
+                    <span>5 AM</span>
+                    <span>Noon</span>
+                    <span>10 PM</span>
+                </div>
+
+                <div class="timeline-track" id="timeline">
+                    <div class="timeline-segments" id="timeline-segments">
+                        <!-- Generated by JS -->
+                    </div>
+                </div>
+
+                <div class="timeline-info">
+                    <div class="timeline-legend">
+                        <div class="legend-box" style="background: rgba(251, 146, 60, 0.2);"></div>
+                        Peak Hours
+                    </div>
+                    <div class="timeline-legend">
+                        <div class="legend-box" style="background: rgba(220, 38, 38, 0.2);"></div>
+                        Booked
+                    </div>
+                    <div class="timeline-legend">
+                        <div class="legend-box" style="background: linear-gradient(135deg, #3b82f6, #2563eb);"></div>
+                        Your Selection
+                    </div>
+                </div>
+
+                <div class="result-display" id="timeline-result">Click segments to select time range</div>
+            </div>
+        </div>
+
+        <!-- DEMO 4: Native Time Inputs -->
+        <div class="demo-section">
+            <h2>4️⃣ Native Time Inputs</h2>
+            <div class="description">
+                <strong>Best for:</strong> All mobile users, familiar interface
+                <br><strong>User Action:</strong> Use device's built-in time picker
+            </div>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h3>Pros</h3>
+                    <ul>
+                        <li>Native mobile experience</li>
+                        <li>Familiar to all users</li>
+                        <li>Zero learning curve</li>
+                        <li>Optimized per device</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>Cons</h3>
+                    <ul>
+                        <li>Less visual context</li>
+                        <li>Doesn't show availability</li>
+                        <li>Requires validation</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="native-inputs">
+                <div class="input-group">
+                    <label for="native-start">⏰ Start Time</label>
+                    <input type="time" id="native-start" value="14:00" onchange="updateNativeDisplay()">
+                </div>
+
+                <div class="input-group">
+                    <label for="native-end">⏰ End Time</label>
+                    <input type="time" id="native-end" value="16:00" onchange="updateNativeDisplay()">
+                </div>
+            </div>
+
+            <div class="selected-time-display" id="native-result">
+                Selected: 14:00 - 16:00 (2 hours)
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // DEMO 1: Quick Presets
+        function selectPreset(btn, startHour, endHour) {
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            const formatTime = (h) => `${h}:00`;
+            const duration = endHour - startHour;
+            document.getElementById('preset-result').textContent =
+                `✓ Selected: ${formatTime(startHour)} - ${formatTime(endHour)} (${duration} hours)`;
+        }
+
+        // DEMO 2: Stepper Controls
+        let startHour = 14;
+        let durationHours = 2;
+
+        function adjustTime(type, delta) {
+            if (type === 'start') {
+                startHour = Math.max(5, Math.min(21, startHour + delta));
+            }
+            updateStepperDisplay();
+        }
+
+        function adjustDuration(delta) {
+            durationHours = Math.max(1, Math.min(4, durationHours + delta));
+            updateStepperDisplay();
+        }
+
+        function updateStepperDisplay() {
+            const formatTime = (h) => `${String(h).padStart(2, '0')}:00`;
+            const endHour = Math.min(22, startHour + durationHours);
+
+            document.getElementById('start-time').textContent = formatTime(startHour);
+            document.getElementById('duration').textContent = `${durationHours} hrs`;
+            document.getElementById('end-time').textContent = formatTime(endHour);
+            document.getElementById('stepper-preview').textContent =
+                `Selected: ${formatTime(startHour)} - ${formatTime(endHour)} (${durationHours} hours)`;
+        }
+
+        // DEMO 3: Timeline
+        const peakHours = [5, 18, 19, 20, 21];
+        const bookedHours = [10, 11, 15]; // Simulate booked slots
+        let timelineStart = null;
+        let timelineEnd = null;
+
+        function initTimeline() {
+            const container = document.getElementById('timeline-segments');
+            for (let hour = 5; hour <= 21; hour++) {
+                const segment = document.createElement('div');
+                segment.className = 'timeline-segment';
+                segment.dataset.hour = hour;
+                segment.textContent = hour;
+
+                if (peakHours.includes(hour)) segment.classList.add('peak');
+                if (bookedHours.includes(hour)) segment.classList.add('booked');
+
+                segment.addEventListener('click', () => selectTimelineHour(hour));
+                container.appendChild(segment);
+            }
+        }
+
+        function selectTimelineHour(hour) {
+            if (bookedHours.includes(hour)) return;
+
+            if (!timelineStart) {
+                timelineStart = hour;
+                timelineEnd = hour + 1;
+            } else if (hour >= timelineStart) {
+                timelineEnd = hour + 1;
+            } else {
+                timelineStart = hour;
+            }
+
+            updateTimelineDisplay();
+        }
+
+        function updateTimelineDisplay() {
+            document.querySelectorAll('.timeline-segment').forEach(seg => {
+                const h = parseInt(seg.dataset.hour);
+                if (h >= timelineStart && h < timelineEnd && !bookedHours.includes(h)) {
+                    seg.classList.add('selected');
+                } else {
+                    seg.classList.remove('selected');
+                }
+            });
+
+            const formatTime = (h) => `${h}:00`;
+            const duration = timelineEnd - timelineStart;
+            document.getElementById('timeline-result').textContent =
+                `✓ Selected: ${formatTime(timelineStart)} - ${formatTime(timelineEnd)} (${duration} hours)`;
+        }
+
+        // DEMO 4: Native Time Inputs
+        function updateNativeDisplay() {
+            const start = document.getElementById('native-start').value;
+            const end = document.getElementById('native-end').value;
+
+            if (start && end) {
+                const [startH, startM] = start.split(':').map(Number);
+                const [endH, endM] = end.split(':').map(Number);
+                const duration = (endH + endM/60) - (startH + startM/60);
+
+                document.getElementById('native-result').textContent =
+                    `Selected: ${start} - ${end} (${duration.toFixed(1)} hours)`;
+            }
+        }
+
+        // Initialize
+        initTimeline();
+        updateStepperDisplay();
+    </script>
+</body>
+</html>

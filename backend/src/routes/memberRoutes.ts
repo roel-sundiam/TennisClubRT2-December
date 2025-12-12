@@ -11,7 +11,7 @@ import {
   getPendingMembers,
   resetMemberPassword
 } from '../controllers/memberController';
-import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { authenticateToken, requireRole, preventImpersonationFor, AuthenticatedRequest } from '../middleware/auth';
 import { validationResult } from 'express-validator';
 
 const router = Router();
@@ -88,14 +88,14 @@ router.get('/admin/pending', authenticateToken, requireRole(['admin', 'superadmi
  * @desc Update member approval status (admin only)
  * @access Private (Admin/SuperAdmin)
  */
-router.put('/:id/approval', authenticateToken, requireRole(['admin', 'superadmin']), updateMemberApproval);
+router.put('/:id/approval', authenticateToken, requireRole(['admin', 'superadmin']), preventImpersonationFor(['approve members']), updateMemberApproval);
 
 /**
  * @route DELETE /api/members/:id
  * @desc Deactivate member (admin only)
  * @access Private (Admin/SuperAdmin)
  */
-router.delete('/:id', authenticateToken, requireRole(['admin', 'superadmin']), deleteMember);
+router.delete('/:id', authenticateToken, requireRole(['admin', 'superadmin']), preventImpersonationFor(['delete members']), deleteMember);
 
 /**
  * @route PUT /api/members/:id/reset-password

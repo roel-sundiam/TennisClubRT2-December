@@ -1,0 +1,488 @@
+.contribution-dialog {
+  max-width: 500px;
+
+  .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+
+    h2 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1a202c;
+
+      mat-icon {
+        color: #4CAF50;
+        font-size: 1.5rem;
+        width: 1.5rem;
+        height: 1.5rem;
+      }
+    }
+
+    .close-btn {
+      margin-top: -8px;
+      margin-right: -8px;
+    }
+  }
+
+  mat-dialog-content {
+    padding: 0 20px;
+    overflow-y: auto;
+    max-height: 75vh;
+  }
+
+  .dialog-intro {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(33, 150, 243, 0.1));
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    border-left: 3px solid #4CAF50;
+
+    p {
+      margin: 0;
+      color: #2d3748;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+  }
+
+  .success-message {
+    text-align: center;
+    padding: 1.5rem;
+
+    .success-icon {
+      font-size: 3rem;
+      width: 3rem;
+      height: 3rem;
+      color: #4CAF50;
+      margin-bottom: 0.75rem;
+    }
+
+    h3 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1a202c;
+    }
+
+    p {
+      margin: 0;
+      color: #4a5568;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .full-width {
+    width: 100%;
+
+    // Make form fields very compact
+    ::ng-deep {
+      .mat-mdc-form-field {
+        font-size: 0.75rem !important;
+        line-height: 1.2;
+      }
+
+      .mat-mdc-text-field-wrapper {
+        padding-bottom: 0;
+      }
+
+      .mat-mdc-form-field-infix {
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+        min-height: 32px !important;
+      }
+
+      .mdc-text-field {
+        padding-top: 0;
+        padding-bottom: 0;
+        height: auto;
+      }
+
+      .mdc-text-field--filled {
+        height: auto;
+      }
+
+      .mat-mdc-form-field-text-prefix,
+      .mat-mdc-form-field-text-suffix {
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+
+      input.mat-mdc-input-element {
+        font-size: 0.75rem !important;
+        padding: 4px 0;
+        height: 28px;
+
+        &::placeholder {
+          font-size: 0.75rem !important;
+          opacity: 0.6;
+        }
+
+        &::-webkit-input-placeholder {
+          font-size: 0.75rem !important;
+        }
+
+        &::-moz-placeholder {
+          font-size: 0.75rem !important;
+        }
+
+        &:-ms-input-placeholder {
+          font-size: 0.75rem !important;
+        }
+      }
+
+      textarea.mat-mdc-input-element {
+        font-size: 0.75rem !important;
+        padding: 4px 0;
+        min-height: 40px;
+        line-height: 1.3;
+
+        &::placeholder {
+          font-size: 0.75rem !important;
+          opacity: 0.6;
+        }
+
+        &::-webkit-input-placeholder {
+          font-size: 0.75rem !important;
+        }
+
+        &::-moz-placeholder {
+          font-size: 0.75rem !important;
+        }
+
+        &:-ms-input-placeholder {
+          font-size: 0.75rem !important;
+        }
+      }
+
+      .mat-mdc-form-field-icon-prefix,
+      .mat-mdc-form-field-icon-suffix {
+        padding: 0 4px;
+
+        mat-icon {
+          font-size: 0.875rem;
+          width: 0.875rem;
+          height: 0.875rem;
+        }
+      }
+
+      .mat-mdc-form-field-subscript-wrapper {
+        font-size: 0.65rem;
+        margin-top: 2px;
+      }
+
+      label.mat-mdc-form-field-label {
+        font-size: 0.75rem !important;
+      }
+
+      .mat-mdc-floating-label {
+        font-size: 0.75rem !important;
+      }
+
+      // Override Material's default font sizes
+      .mat-mdc-outlined-field-label {
+        font-size: 0.75rem !important;
+      }
+
+      .mdc-notched-outline {
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-width: 1px;
+        }
+      }
+    }
+  }
+
+  .payment-method-section {
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #2d3748;
+      margin-bottom: 0.5rem;
+
+      mat-icon {
+        font-size: 1.125rem;
+        width: 1.125rem;
+        height: 1.125rem;
+        color: #4CAF50;
+      }
+    }
+
+    .payment-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+
+      mat-radio-button {
+        ::ng-deep .mdc-radio {
+          padding: 0;
+        }
+
+        ::ng-deep .mdc-form-field {
+          width: 100%;
+        }
+      }
+
+      .payment-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+
+        &:hover {
+          border-color: #4CAF50;
+          background-color: rgba(76, 175, 80, 0.05);
+        }
+
+        mat-icon {
+          font-size: 1.5rem;
+          width: 1.5rem;
+          height: 1.5rem;
+          color: #4CAF50;
+        }
+
+        .payment-details {
+          display: flex;
+          flex-direction: column;
+          gap: 0.125rem;
+
+          strong {
+            font-size: 0.875rem;
+            color: #1a202c;
+          }
+
+          span {
+            font-size: 0.75rem;
+            color: #718096;
+          }
+        }
+      }
+
+      mat-radio-button.mat-mdc-radio-checked .payment-option {
+        border-color: #4CAF50;
+        background-color: rgba(76, 175, 80, 0.1);
+      }
+    }
+
+    .payment-instructions {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background-color: #f7fafc;
+      border-radius: 6px;
+      border-left: 3px solid #2196F3;
+
+      .info-icon {
+        flex-shrink: 0;
+        color: #2196F3;
+        font-size: 1.125rem;
+        width: 1.125rem;
+        height: 1.125rem;
+      }
+
+      .instruction-text {
+        flex: 1;
+
+        p {
+          margin: 0 0 0.375rem 0;
+          color: #2d3748;
+          font-size: 0.75rem;
+          line-height: 1.5;
+
+          strong {
+            color: #1a202c;
+          }
+        }
+
+        ul {
+          margin: 0.375rem 0;
+          padding-left: 1.25rem;
+
+          li {
+            margin-bottom: 0.25rem;
+            color: #2d3748;
+            font-size: 0.75rem;
+            line-height: 1.5;
+          }
+        }
+
+        .note {
+          margin-top: 0.5rem;
+          font-size: 0.7rem;
+          color: #718096;
+          font-style: italic;
+        }
+      }
+    }
+  }
+
+  .error-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background-color: #fff5f5;
+    border: 1px solid #fc8181;
+    border-radius: 6px;
+    color: #c53030;
+    font-size: 0.8125rem;
+
+    mat-icon {
+      font-size: 1.125rem;
+      width: 1.125rem;
+      height: 1.125rem;
+    }
+  }
+
+  mat-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.625rem;
+    padding: 14px 20px;
+    margin: 0;
+
+    button {
+      min-width: 100px;
+      height: 40px;
+      font-size: 0.875rem;
+
+      mat-icon {
+        margin-right: 0.375rem;
+        font-size: 1.125rem;
+        width: 1.125rem;
+        height: 1.125rem;
+      }
+
+      .spinner {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .contribution-dialog {
+    max-width: 95vw;
+
+    mat-dialog-content {
+      padding: 0 16px;
+    }
+
+    .dialog-header h2 {
+      font-size: 1.125rem;
+
+      mat-icon {
+        font-size: 1.375rem;
+        width: 1.375rem;
+        height: 1.375rem;
+      }
+    }
+
+    .dialog-intro p {
+      font-size: 0.8125rem;
+    }
+
+    form {
+      gap: 0.875rem;
+    }
+
+    .payment-method-section {
+      .payment-option {
+        padding: 0.625rem;
+
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+      }
+
+      .payment-instructions {
+        padding: 0.625rem;
+      }
+    }
+
+    mat-dialog-actions {
+      padding: 12px 16px;
+      flex-direction: column;
+
+      button {
+        width: 100%;
+        min-width: auto;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .contribution-dialog {
+    .dialog-header h2 {
+      font-size: 1rem;
+    }
+
+    .full-width ::ng-deep {
+      input.mat-mdc-input-element {
+        font-size: 0.6875rem !important;
+        height: 26px !important;
+
+        &::placeholder {
+          font-size: 0.6875rem !important;
+        }
+      }
+
+      textarea.mat-mdc-input-element {
+        font-size: 0.6875rem !important;
+        min-height: 36px !important;
+
+        &::placeholder {
+          font-size: 0.6875rem !important;
+        }
+      }
+
+      .mat-mdc-form-field-infix {
+        min-height: 28px !important;
+      }
+
+      label.mat-mdc-form-field-label,
+      .mat-mdc-floating-label,
+      .mat-mdc-outlined-field-label {
+        font-size: 0.6875rem !important;
+      }
+    }
+
+    form {
+      gap: 0.625rem;
+    }
+  }
+}

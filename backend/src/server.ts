@@ -22,7 +22,6 @@ import weatherRoutes from './routes/weatherRoutes';
 import pollRoutes from './routes/pollRoutes';
 import suggestionRoutes from './routes/suggestions';
 import analyticsRoutes from './routes/analytics';
-import coinRoutes from './routes/coinRoutes';
 import creditRoutes from './routes/creditRoutes';
 import memberRoutes from './routes/memberRoutes';
 import reportRoutes, { specialRouter } from './routes/reportRoutes';
@@ -34,6 +33,11 @@ import chatRoutes from './routes/chat';
 import manualCourtUsageRoutes from './routes/manualCourtUsageRoutes';
 import fixReservationRoutes from './routes/fix-reservation';
 import tournamentRoutes from './routes/tournamentRoutes';
+import playerRoutes from './routes/playerRoutes';
+import validationRoutes from './routes/validationRoutes';
+import rankingRoutes from './routes/rankingRoutes';
+import resurfacingRoutes from './routes/resurfacingRoutes';
+import impersonationRoutes from './routes/impersonation';
 
 dotenv.config();
 
@@ -195,7 +199,6 @@ console.log('📥 Registering poll routes...', typeof pollRoutes);
 app.use('/api/polls', pollRoutes);
 app.use('/api/suggestions', authenticateToken, suggestionRoutes);
 app.use('/api/analytics', analyticsRoutes);
-app.use('/api/coins', authenticateToken, coinRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/reports', reportRoutes); // Temporarily removing auth for testing fix endpoint
@@ -208,6 +211,11 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/manual-court-usage', manualCourtUsageRoutes);
 app.use('/api/fix-reservation', authenticateToken, fixReservationRoutes);
 app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/players', playerRoutes);
+app.use('/api/validation', authenticateToken, validationRoutes);
+app.use('/api/rankings', rankingRoutes); // New calculated rankings endpoint
+app.use('/api/resurfacing', resurfacingRoutes); // Resurfacing contribution routes
+app.use('/api/impersonation', impersonationRoutes); // Admin impersonation routes
 console.log('📥 All routes registered');
 
 // 404 handler
@@ -282,3 +290,4 @@ process.on('uncaughtException', (err: Error) => {
 startServer();
 
 export default app;// trigger restart
+// trigger restart

@@ -4,10 +4,11 @@ import { RouterOutlet, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ToolbarComponent } from '../toolbar/toolbar.component';
 import { PaymentAlertsComponent } from '../../components/payment-alerts/payment-alerts.component';
-import { CoinBalanceAlertsComponent } from '../../components/coin-balance-alerts/coin-balance-alerts.component';
 import { PWAInstallPromptComponent } from '../../components/pwa-install-prompt/pwa-install-prompt.component';
 import { UpdateBannerComponent } from '../../components/update-banner/update-banner.component';
 import { ChatWindowComponent } from '../../components/chat-window/chat-window.component';
+import { ResurfacingBannerComponent } from '../../components/resurfacing-banner/resurfacing-banner.component';
+import { ImpersonationBannerComponent } from '../../components/impersonation-banner/impersonation-banner.component';
 
 @Component({
   selector: 'app-layout',
@@ -17,22 +18,28 @@ import { ChatWindowComponent } from '../../components/chat-window/chat-window.co
     RouterOutlet,
     ToolbarComponent,
     PaymentAlertsComponent,
-    CoinBalanceAlertsComponent,
     PWAInstallPromptComponent,
     UpdateBannerComponent,
-    ChatWindowComponent
+    ChatWindowComponent,
+    ResurfacingBannerComponent,
+    ImpersonationBannerComponent
   ],
   template: `
     <div class="app-layout" [class.authenticated]="isAuthenticated" [class.loading]="isAuthLoading">
       <!-- Global Toolbar (only on authenticated pages) -->
       <app-toolbar *ngIf="isAuthenticated"></app-toolbar>
 
+      <!-- Resurfacing Banner (only on authenticated pages) -->
+      <app-resurfacing-banner *ngIf="isAuthenticated && !isAuthLoading"></app-resurfacing-banner>
+
+      <!-- Impersonation Banner (only on authenticated pages) -->
+      <app-impersonation-banner *ngIf="isAuthenticated"></app-impersonation-banner>
+
       <!-- Update Banner (always available) -->
       <app-update-banner></app-update-banner>
 
-      <!-- Payment & Coin Alerts (only on authenticated pages and not loading) -->
+      <!-- Payment Alerts (only on authenticated pages and not loading) -->
       <app-payment-alerts *ngIf="isAuthenticated && !isAuthLoading"></app-payment-alerts>
-      <app-coin-balance-alerts *ngIf="isAuthenticated && !isAuthLoading"></app-coin-balance-alerts>
 
       <!-- Page Content -->
       <div class="page-container" [class.with-toolbar]="isAuthenticated">

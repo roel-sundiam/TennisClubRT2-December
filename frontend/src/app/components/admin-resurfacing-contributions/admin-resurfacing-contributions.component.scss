@@ -1,0 +1,331 @@
+.admin-contributions-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+
+  .page-header {
+    margin-bottom: 2rem;
+
+    h1 {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1a202c;
+      margin: 0 0 0.5rem 0;
+
+      mat-icon {
+        font-size: 2.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        color: #4CAF50;
+      }
+    }
+
+    .page-description {
+      margin: 0;
+      color: #718096;
+      font-size: 1rem;
+    }
+  }
+
+  // Statistics Grid
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+
+    .stat-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+
+      mat-card-header {
+        margin-bottom: 1rem;
+
+        mat-icon {
+          font-size: 2.5rem;
+          width: 2.5rem;
+          height: 2.5rem;
+        }
+
+        mat-card-title {
+          font-size: 1rem;
+          font-weight: 500;
+          color: #4a5568;
+        }
+      }
+
+      mat-card-content {
+        .stat-value {
+          font-size: 2rem;
+          font-weight: 700;
+          margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+          font-size: 0.875rem;
+          color: #718096;
+        }
+      }
+
+      &.overall {
+        mat-icon {
+          color: #2196F3;
+        }
+
+        .stat-value {
+          color: #2196F3;
+        }
+      }
+
+      &.pledged {
+        mat-icon {
+          color: #FF9800;
+        }
+
+        .stat-value {
+          color: #FF9800;
+        }
+      }
+
+      &.received {
+        mat-icon {
+          color: #4CAF50;
+        }
+
+        .stat-value {
+          color: #4CAF50;
+        }
+      }
+    }
+  }
+
+  // Filter Card
+  .filter-card {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+
+    .filter-controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+
+      mat-form-field {
+        min-width: 200px;
+        flex: 1;
+      }
+
+      button {
+        height: 48px;
+      }
+    }
+  }
+
+  // Loading
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    gap: 1rem;
+
+    p {
+      color: #718096;
+      font-size: 1rem;
+    }
+  }
+
+  // Error Card
+  .error-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: #fff5f5;
+    border-left: 4px solid #fc8181;
+
+    mat-icon {
+      color: #c53030;
+      font-size: 2rem;
+      width: 2rem;
+      height: 2rem;
+    }
+
+    span {
+      color: #c53030;
+      font-size: 1rem;
+    }
+  }
+
+  // Table Card
+  .table-card {
+    padding: 0;
+    overflow-x: auto;
+
+    .contributions-table {
+      width: 100%;
+      min-width: 800px;
+
+      th {
+        background-color: #f7fafc;
+        font-weight: 600;
+        color: #2d3748;
+        padding: 1rem;
+      }
+
+      td {
+        padding: 1rem;
+        vertical-align: middle;
+      }
+
+      .contributor-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        mat-icon {
+          color: #4a5568;
+        }
+
+        span {
+          font-weight: 500;
+        }
+      }
+
+      .amount {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #2d3748;
+      }
+
+      .payment-method {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        mat-icon {
+          color: #4CAF50;
+        }
+      }
+
+      .date-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+
+        .date-label {
+          font-weight: 500;
+          color: #718096;
+        }
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+
+        button {
+          width: 40px;
+          height: 40px;
+        }
+      }
+
+      tr:hover {
+        background-color: #f7fafc;
+      }
+    }
+  }
+
+  // Empty State
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+
+    mat-icon {
+      font-size: 4rem;
+      width: 4rem;
+      height: 4rem;
+      color: #cbd5e0;
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    p {
+      margin: 0;
+      color: #718096;
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 1024px) {
+  .admin-contributions-container {
+    padding: 1.5rem;
+
+    .stats-grid {
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-contributions-container {
+    padding: 1rem;
+
+    .page-header h1 {
+      font-size: 1.5rem;
+
+      mat-icon {
+        font-size: 2rem;
+        width: 2rem;
+        height: 2rem;
+      }
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .filter-card .filter-controls {
+      flex-direction: column;
+      align-items: stretch;
+
+      mat-form-field {
+        width: 100%;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+
+    .table-card {
+      .contributions-table {
+        font-size: 0.875rem;
+
+        th,
+        td {
+          padding: 0.75rem 0.5rem;
+        }
+      }
+    }
+  }
+}

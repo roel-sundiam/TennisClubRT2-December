@@ -24,7 +24,19 @@
     "restore": "npx ts-node src/scripts/restoreDatabase.ts",
     "restore:dry-run": "npx ts-node src/scripts/restoreDatabase.ts -- --dry-run",
     "cleanup-orphaned-payments": "npx ts-node src/scripts/cleanupOrphanedPayments.ts",
-    "clear-reservations-payments": "npx ts-node src/scripts/clearReservationsAndPayments.ts"
+    "clear-reservations-payments": "npx ts-node src/scripts/clearReservationsAndPayments.ts",
+    "replicate-to-test": "npx ts-node src/scripts/replicateToTestDatabase.ts",
+    "migrate-players": "npx ts-node src/scripts/migrateUsersToPlayers.ts",
+    "migrate-players:rollback": "npx ts-node src/scripts/migrateUsersToPlayers.ts -- --rollback",
+    "audit-tournament-data": "npx ts-node src/scripts/auditTournamentData.ts",
+    "cleanup-duplicate-points": "npx ts-node src/scripts/cleanupDuplicatePoints.ts",
+    "create-tournament-indexes": "npx ts-node src/scripts/createTournamentIndexes.ts",
+    "test-tournament-processing": "npx ts-node src/scripts/testTournamentProcessing.ts",
+    "copy-to-test": "npx ts-node src/scripts/copyDatabaseToTest.ts",
+    "copy-to-test:dry-run": "npx ts-node src/scripts/copyDatabaseToTest.ts -- --dry-run",
+    "copy-to-test:force": "npx ts-node src/scripts/copyDatabaseToTest.ts -- --force",
+    "copy-to-test:no-tournaments": "npx ts-node src/scripts/copyDatabaseToTest.ts -- --exclude tournaments",
+    "migrate-tournaments-completed": "npx ts-node src/scripts/migrateTournamentsToCompleted.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

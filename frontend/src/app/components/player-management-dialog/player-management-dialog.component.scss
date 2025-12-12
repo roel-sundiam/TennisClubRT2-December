@@ -1,0 +1,152 @@
+.player-management-dialog {
+  h2[mat-dialog-title] {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin: -24px -24px 20px -24px;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  mat-dialog-content {
+    min-width: 800px;
+    max-height: 600px;
+    padding: 20px;
+  }
+
+  .form-section {
+    background: #f5f5f5;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+
+    h3 {
+      margin-top: 0;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    form {
+      mat-form-field {
+        margin-bottom: 15px;
+
+        &.full-width {
+          width: 100%;
+        }
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+      }
+    }
+  }
+
+  .add-button-section {
+    text-align: center;
+    margin-bottom: 20px;
+
+    button {
+      padding: 0 30px;
+    }
+  }
+
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+  }
+
+  .table-container {
+    .players-table {
+      width: 100%;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+      th {
+        background: #f5f5f5;
+        font-weight: 600;
+        color: #333;
+      }
+
+      td {
+        padding: 12px 16px;
+
+        strong {
+          color: #667eea;
+        }
+      }
+
+      .stats {
+        display: flex;
+        gap: 15px;
+
+        .stat-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 14px;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+            color: #666;
+          }
+        }
+      }
+
+      button {
+        &[color="primary"] {
+          mat-icon {
+            color: #667eea;
+          }
+        }
+
+        &[color="warn"] {
+          mat-icon {
+            color: #f44336;
+          }
+        }
+      }
+    }
+
+    .no-players {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+
+      mat-icon {
+        font-size: 64px;
+        width: 64px;
+        height: 64px;
+        color: #ddd;
+        margin-bottom: 20px;
+      }
+
+      p {
+        font-size: 16px;
+        margin: 0;
+      }
+    }
+  }
+
+  mat-dialog-actions {
+    padding: 20px 24px;
+    margin: 0 -24px -24px -24px;
+    border-top: 1px solid #eee;
+  }
+}

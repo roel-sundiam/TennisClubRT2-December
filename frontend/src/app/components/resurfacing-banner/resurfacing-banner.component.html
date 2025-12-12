@@ -1,0 +1,16 @@
+<div class="resurfacing-banner" (click)="navigateToContributions()">
+  <div class="banner-content">
+    <mat-icon class="banner-icon">construction</mat-icon>
+    <div class="banner-text">
+      <h3 class="banner-title">Together We're Building a Better Court</h3>
+      <p class="banner-subtitle">
+        Join us on our journey to resurface our tennis court
+        <span class="stats-text" *ngIf="stats"> • <span class="stats-highlight">{{ formatCurrency(stats.overall.amount) }}</span> raised of {{ formatCurrency(goalAmount) }}</span>
+      </p>
+    </div>
+    <button mat-raised-button class="contribute-btn" (click)="navigateToContributions(); $event.stopPropagation()">
+      <mat-icon>volunteer_activism</mat-icon>
+      <span class="btn-text">View Progress</span>
+    </button>
+  </div>
+</div>

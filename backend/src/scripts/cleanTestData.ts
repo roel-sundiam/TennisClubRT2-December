@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import Reservation from '../models/Reservation';
 import Payment from '../models/Payment';
 import Poll from '../models/Poll';
-import CoinTransaction from '../models/CoinTransaction';
 import { PageView, UserActivity, SessionInfo } from '../models/Analytics';
 import Suggestion from '../models/Suggestion';
 
@@ -34,11 +33,6 @@ async function cleanTestData() {
     const pollsResult = await Poll.deleteMany({});
     console.log(`   ✅ Deleted ${pollsResult.deletedCount} polls/open play events`);
 
-    // Clean Coin Transactions
-    console.log('🪙 Cleaning coin transactions...');
-    const coinTransactionsResult = await CoinTransaction.deleteMany({});
-    console.log(`   ✅ Deleted ${coinTransactionsResult.deletedCount} coin transactions`);
-
     // Clean Analytics
     console.log('📈 Cleaning analytics data...');
     const pageViewsResult = await PageView.deleteMany({});
@@ -57,7 +51,6 @@ async function cleanTestData() {
     console.log(`   • Reservations: ${reservationsResult.deletedCount} deleted`);
     console.log(`   • Payments: ${paymentsResult.deletedCount} deleted`);
     console.log(`   • Polls/Open Play: ${pollsResult.deletedCount} deleted`);
-    console.log(`   • Coin Transactions: ${coinTransactionsResult.deletedCount} deleted`);
     console.log(`   • Analytics: ${totalAnalyticsDeleted} deleted`);
     console.log(`   • Suggestions: ${suggestionsResult.deletedCount} deleted`);
     console.log('\n✅ User accounts and system settings preserved');

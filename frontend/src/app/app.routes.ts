@@ -6,10 +6,6 @@ import { ReservationsComponent } from './components/reservations/reservations.co
 import { RegisterComponent } from './components/register/register.component';
 import { MyReservationsComponent } from './components/my-reservations/my-reservations.component';
 import { PaymentsComponent } from './components/payments/payments.component';
-import { CoinDashboardComponent } from './components/coin-dashboard/coin-dashboard.component';
-import { CoinPurchaseComponent } from './components/coin-purchase/coin-purchase.component';
-import { CoinHistoryComponent } from './components/coin-history/coin-history.component';
-import { AdminCoinManagementComponent } from './components/admin-coin-management/admin-coin-management.component';
 import { AdminCreditManagementComponent } from './components/admin-credit-management/admin-credit-management.component';
 import { CreditTopupComponent } from './components/credit-topup/credit-topup.component';
 import { CreditHistoryComponent } from './components/credit-history/credit-history.component';
@@ -34,6 +30,9 @@ import { AdminManualCourtUsageComponent } from './components/admin-manual-court-
 import { AdminBlockCourtComponent } from './components/admin-block-court/admin-block-court.component';
 import { AdminMembershipPaymentsComponent } from './components/admin-membership-payments/admin-membership-payments.component';
 import { TournamentManagementComponent } from './components/tournament-management/tournament-management.component';
+import { AdminPaymentManagementComponent } from './components/admin-payment-management/admin-payment-management.component';
+import { AdminResurfacingContributionsComponent } from './components/admin-resurfacing-contributions/admin-resurfacing-contributions.component';
+import { ResurfacingContributionsComponent } from './components/resurfacing-contributions/resurfacing-contributions.component';
 import { authGuard, loginGuard, adminGuard, superadminGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -71,32 +70,10 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   // Payment management
-  { 
-    path: 'payments', 
+  {
+    path: 'payments',
     component: PaymentsComponent,
     canActivate: [authGuard]
-  },
-  // Coin management
-  { 
-    path: 'coins', 
-    component: CoinDashboardComponent,
-    canActivate: [authGuard]
-  },
-  { 
-    path: 'coins/purchase', 
-    component: CoinPurchaseComponent,
-    canActivate: [authGuard]
-  },
-  { 
-    path: 'coins/history', 
-    component: CoinHistoryComponent,
-    canActivate: [authGuard]
-  },
-  // Admin coin management
-  { 
-    path: 'admin/coins', 
-    component: AdminCoinManagementComponent,
-    canActivate: [authGuard, adminGuard]
   },
   // Admin credit management
   { 
@@ -204,5 +181,8 @@ export const routes: Routes = [
   { path: 'admin/block-court', component: AdminBlockCourtComponent, canActivate: [authGuard, adminGuard] },
   { path: 'admin/membership-payments', component: AdminMembershipPaymentsComponent, canActivate: [authGuard, adminGuard] },
   { path: 'admin/tournaments', component: TournamentManagementComponent, canActivate: [authGuard, adminGuard] },
+  { path: 'admin/payments', component: AdminPaymentManagementComponent, canActivate: [authGuard, adminGuard] },
+  { path: 'admin/resurfacing-contributions', component: AdminResurfacingContributionsComponent, canActivate: [authGuard, adminGuard] },
+  { path: 'resurfacing-contributions', component: ResurfacingContributionsComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '/calendar' }
 ];

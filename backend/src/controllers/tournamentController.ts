@@ -2,65 +2,77 @@ import { Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import Tournament from '../models/Tournament';
 import User from '../models/User';
+import Player from '../models/Player';
 import SeedingService from '../services/seedingService';
+import CalculatedRankingService from '../services/calculatedRankingService';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 
 // Helper function to populate player names in matches
 async function populateMatchPlayers(tournaments: any[]) {
-  const allUserIds = new Set<string>();
+  const allPlayerIds = new Set<string>();
 
-  // Collect all user IDs from all tournaments (filter out empty strings)
+  // Collect all player IDs from all tournaments (filter out empty/falsy values)
   tournaments.forEach(tournament => {
     tournament.matches?.forEach((match: any) => {
-      if (match.player1 && match.player1.trim()) allUserIds.add(match.player1);
-      if (match.player2 && match.player2.trim()) allUserIds.add(match.player2);
-      if (match.team1Player1 && match.team1Player1.trim()) allUserIds.add(match.team1Player1);
-      if (match.team1Player2 && match.team1Player2.trim()) allUserIds.add(match.team1Player2);
-      if (match.team2Player1 && match.team2Player1.trim()) allUserIds.add(match.team2Player1);
-      if (match.team2Player2 && match.team2Player2.trim()) allUserIds.add(match.team2Player2);
+      if (match.player1 && typeof match.player1 === 'string' && match.player1.trim() !== '') {
+        allPlayerIds.add(match.player1);
+      }
+      if (match.player2 && typeof match.player2 === 'string' && match.player2.trim() !== '') {
+        allPlayerIds.add(match.player2);
+      }
+      if (match.team1Player1 && typeof match.team1Player1 === 'string' && match.team1Player1.trim() !== '') {
+        allPlayerIds.add(match.team1Player1);
+      }
+      if (match.team1Player2 && typeof match.team1Player2 === 'string' && match.team1Player2.trim() !== '') {
+        allPlayerIds.add(match.team1Player2);
+      }
+      if (match.team2Player1 && typeof match.team2Player1 === 'string' && match.team2Player1.trim() !== '') {
+        allPlayerIds.add(match.team2Player1);
+      }
+      if (match.team2Player2 && typeof match.team2Player2 === 'string' && match.team2Player2.trim() !== '') {
+        allPlayerIds.add(match.team2Player2);
+      }
     });
   });
 
-  // Fetch all users at once
-  const users = await User.find({ _id: { $in: Array.from(allUserIds) } })
-    .select('_id username fullName')
+  // Fetch all players at once
+  const players = await Player.find({ _id: { $in: Array.from(allPlayerIds) } })
+    .select('_id fullName')
     .lean();
 
   // Create a map for quick lookup
-  const userMap = new Map(users.map(u => [u._id.toString(), u]));
+  const playerMap = new Map(players.map(p => [p._id.toString(), p]));
 
   // Populate player data in each match
   tournaments.forEach(tournament => {
     tournament.matches?.forEach((match: any) => {
       // Singles
-      if (match.player1 && match.player1.trim() && !match.player1Name?.trim()) {
-        const user = userMap.get(match.player1);
-        match.player1 = user || { fullName: 'Unknown Member', username: 'unknown' };
+      if (match.player1 && typeof match.player1 === 'string' && match.player1.trim() !== '') {
+        const player = playerMap.get(match.player1);
+        match.player1 = player || { fullName: 'Unknown Player' };
       }
-      if (match.player2 && match.player2.trim() && !match.player2Name?.trim()) {
-        const user = userMap.get(match.player2);
-        match.player2 = user || { fullName: 'Unknown Member', username: 'unknown' };
+      if (match.player2 && typeof match.player2 === 'string' && match.player2.trim() !== '') {
+        const player = playerMap.get(match.player2);
+        match.player2 = player || { fullName: 'Unknown Player' };
       }
       // Doubles Team 1
-      if (match.team1Player1 && match.team1Player1.trim() && !match.team1Player1Name?.trim()) {
-        const user = userMap.get(match.team1Player1);
-        match.team1Player1 = user || { fullName: 'Unknown Member', username: 'unknown' };
+      if (match.team1Player1 && typeof match.team1Player1 === 'string' && match.team1Player1.trim() !== '') {
+        const player = playerMap.get(match.team1Player1);
+        match.team1Player1 = player || { fullName: 'Unknown Player' };
       }
-      if (match.team1Player2 && match.team1Player2.trim() && !match.team1Player2Name?.trim()) {
-        const user = userMap.get(match.team1Player2);
-        match.team1Player2 = user || { fullName: 'Unknown Member', username: 'unknown' };
+      if (match.team1Player2 && typeof match.team1Player2 === 'string' && match.team1Player2.trim() !== '') {
+        const player = playerMap.get(match.team1Player2);
+        match.team1Player2 = player || { fullName: 'Unknown Player' };
       }
       // Doubles Team 2
-      if (match.team2Player1 && match.team2Player1.trim() && !match.team2Player1Name?.trim()) {
-        const user = userMap.get(match.team2Player1);
-        console.log(`🔍 Populating team2Player1: ${match.team2Player1} -> ${user?.fullName || 'NOT FOUND'}`);
-        match.team2Player1 = user || { fullName: 'Unknown Member', username: 'unknown' };
+      if (match.team2Player1 && typeof match.team2Player1 === 'string' && match.team2Player1.trim() !== '') {
+        const player = playerMap.get(match.team2Player1);
+        match.team2Player1 = player || { fullName: 'Unknown Player' };
       }
-      if (match.team2Player2 && match.team2Player2.trim() && !match.team2Player2Name?.trim()) {
-        const user = userMap.get(match.team2Player2);
-        console.log(`🔍 Populating team2Player2: ${match.team2Player2} -> ${user?.fullName || 'NOT FOUND'}`);
-        match.team2Player2 = user || { fullName: 'Unknown Member', username: 'unknown' };
+      if (match.team2Player2 && typeof match.team2Player2 === 'string' && match.team2Player2.trim() !== '') {
+        const player = playerMap.get(match.team2Player2);
+        match.team2Player2 = player || { fullName: 'Unknown Player' };
       }
     });
   });
@@ -175,9 +187,9 @@ export const createTournament = asyncHandler(async (req: AuthenticatedRequest, r
           return;
         }
 
-        // Verify members exist if IDs are provided
+        // Verify players exist if IDs are provided
         if (match.player1 && match.player1.trim()) {
-          const player1 = await User.findById(match.player1.trim());
+          const player1 = await Player.findById(match.player1.trim());
           if (!player1) {
             res.status(400).json({
               success: false,
@@ -188,7 +200,7 @@ export const createTournament = asyncHandler(async (req: AuthenticatedRequest, r
         }
 
         if (match.player2 && match.player2.trim()) {
-          const player2 = await User.findById(match.player2.trim());
+          const player2 = await Player.findById(match.player2.trim());
           if (!player2) {
             res.status(400).json({
               success: false,
@@ -248,9 +260,9 @@ export const createTournament = asyncHandler(async (req: AuthenticatedRequest, r
           }
         }
 
-        // Verify members exist if IDs are provided
+        // Verify players exist if IDs are provided
         if (match.team1Player1 && match.team1Player1.trim()) {
-          const t1p1 = await User.findById(match.team1Player1.trim());
+          const t1p1 = await Player.findById(match.team1Player1.trim());
           if (!t1p1) {
             res.status(400).json({ success: false, error: 'Team 1 Player 1 not found' });
             return;
@@ -258,7 +270,7 @@ export const createTournament = asyncHandler(async (req: AuthenticatedRequest, r
         }
 
         if (match.team1Player2 && match.team1Player2.trim()) {
-          const t1p2 = await User.findById(match.team1Player2.trim());
+          const t1p2 = await Player.findById(match.team1Player2.trim());
           if (!t1p2) {
             res.status(400).json({ success: false, error: 'Team 1 Player 2 not found' });
             return;
@@ -266,7 +278,7 @@ export const createTournament = asyncHandler(async (req: AuthenticatedRequest, r
         }
 
         if (match.team2Player1 && match.team2Player1.trim()) {
-          const t2p1 = await User.findById(match.team2Player1.trim());
+          const t2p1 = await Player.findById(match.team2Player1.trim());
           if (!t2p1) {
             res.status(400).json({ success: false, error: 'Team 2 Player 1 not found' });
             return;
@@ -274,7 +286,7 @@ export const createTournament = asyncHandler(async (req: AuthenticatedRequest, r
         }
 
         if (match.team2Player2 && match.team2Player2.trim()) {
-          const t2p2 = await User.findById(match.team2Player2.trim());
+          const t2p2 = await Player.findById(match.team2Player2.trim());
           if (!t2p2) {
             res.status(400).json({ success: false, error: 'Team 2 Player 2 not found' });
             return;
@@ -298,7 +310,7 @@ export const createTournament = asyncHandler(async (req: AuthenticatedRequest, r
     date: new Date(date),
     createdBy: req.user._id,
     matches: matches || [],
-    status: 'draft'
+    status: 'completed'
   });
 
   await tournament.save();
@@ -351,9 +363,9 @@ export const updateTournament = asyncHandler(async (req: AuthenticatedRequest, r
           return;
         }
 
-        // Verify members exist if IDs are provided
+        // Verify players exist if IDs are provided
         if (match.player1 && match.player1.trim()) {
-          const player1 = await User.findById(match.player1.trim());
+          const player1 = await Player.findById(match.player1.trim());
           if (!player1) {
             res.status(400).json({ success: false, error: 'Player 1 not found' });
             return;
@@ -361,7 +373,7 @@ export const updateTournament = asyncHandler(async (req: AuthenticatedRequest, r
         }
 
         if (match.player2 && match.player2.trim()) {
-          const player2 = await User.findById(match.player2.trim());
+          const player2 = await Player.findById(match.player2.trim());
           if (!player2) {
             res.status(400).json({ success: false, error: 'Player 2 not found' });
             return;
@@ -418,9 +430,9 @@ export const updateTournament = asyncHandler(async (req: AuthenticatedRequest, r
           }
         }
 
-        // Verify members exist if IDs are provided
+        // Verify players exist if IDs are provided
         if (match.team1Player1 && match.team1Player1.trim()) {
-          const t1p1 = await User.findById(match.team1Player1.trim());
+          const t1p1 = await Player.findById(match.team1Player1.trim());
           if (!t1p1) {
             res.status(400).json({ success: false, error: 'Team 1 Player 1 not found' });
             return;
@@ -428,7 +440,7 @@ export const updateTournament = asyncHandler(async (req: AuthenticatedRequest, r
         }
 
         if (match.team1Player2 && match.team1Player2.trim()) {
-          const t1p2 = await User.findById(match.team1Player2.trim());
+          const t1p2 = await Player.findById(match.team1Player2.trim());
           if (!t1p2) {
             res.status(400).json({ success: false, error: 'Team 1 Player 2 not found' });
             return;
@@ -436,7 +448,7 @@ export const updateTournament = asyncHandler(async (req: AuthenticatedRequest, r
         }
 
         if (match.team2Player1 && match.team2Player1.trim()) {
-          const t2p1 = await User.findById(match.team2Player1.trim());
+          const t2p1 = await Player.findById(match.team2Player1.trim());
           if (!t2p1) {
             res.status(400).json({ success: false, error: 'Team 2 Player 1 not found' });
             return;
@@ -444,7 +456,7 @@ export const updateTournament = asyncHandler(async (req: AuthenticatedRequest, r
         }
 
         if (match.team2Player2 && match.team2Player2.trim()) {
-          const t2p2 = await User.findById(match.team2Player2.trim());
+          const t2p2 = await Player.findById(match.team2Player2.trim());
           if (!t2p2) {
             res.status(400).json({ success: false, error: 'Team 2 Player 2 not found' });
             return;
@@ -461,7 +473,46 @@ export const updateTournament = asyncHandler(async (req: AuthenticatedRequest, r
       }
     }
 
-    tournament.matches = matches;
+    // AUTO-REVERSAL: Check if any matches have been processed
+    const hasProcessedMatches = tournament.matches.some(m => m.pointsProcessed);
+
+    if (hasProcessedMatches) {
+      console.log(`♻️ Tournament has processed matches, auto-reversing before update...`);
+
+      try {
+        const reversalResult = await SeedingService.reverseTournamentPoints(id as string);
+        console.log(`♻️ Reversed ${reversalResult.reversed} point records (${reversalResult.errors} errors)`);
+
+        if (reversalResult.errors > 0) {
+          res.status(500).json({
+            success: false,
+            error: `Failed to reverse ${reversalResult.errors} point records. Cannot update tournament.`,
+            hint: 'Check server logs for details. Some players may not exist or data may be corrupted.'
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Error during auto-reversal:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Failed to reverse tournament points before update',
+          hint: 'Tournament cannot be updated while points are processed. Please contact admin.'
+        });
+        return;
+      }
+
+      // Now safe to reset flags - will be reprocessed after update
+      tournament.matches = matches.map((match: any) => ({
+        ...match,
+        pointsProcessed: false
+      }));
+    } else if (matches) {
+      // No processed matches, safe to update without reversal
+      tournament.matches = matches.map((match: any) => ({
+        ...match,
+        pointsProcessed: false
+      }));
+    }
   }
 
   await tournament.save();
@@ -471,6 +522,9 @@ export const updateTournament = asyncHandler(async (req: AuthenticatedRequest, r
   await tournament.populate('matches.winner', 'username fullName');
 
   console.log(`🏆 Tournament updated: ${tournament.name}`);
+
+  // Clear rankings cache since tournament data changed
+  CalculatedRankingService.clearCache();
 
   res.status(200).json({
     success: true,
@@ -513,6 +567,9 @@ export const deleteTournament = asyncHandler(async (req: AuthenticatedRequest, r
   await Tournament.deleteOne({ _id: id });
 
   console.log(`🗑️ Tournament deleted: ${tournament.name}`);
+
+  // Clear rankings cache since tournament was deleted
+  CalculatedRankingService.clearCache();
 
   res.status(200).json({
     success: true,

@@ -84,13 +84,6 @@ const userSchema = new Schema<IUserDocument>({
     default: 'member',
     index: true
   },
-  coinBalance: {
-    type: Number,
-    default: function() {
-      return parseInt(process.env.FREE_COINS_NEW_USER || '100');
-    },
-    min: [0, 'Coin balance cannot be negative']
-  },
   creditBalance: {
     type: Number,
     default: 0,
@@ -191,35 +184,6 @@ userSchema.statics.findActiveMembers = function() {
     role: { $in: ['member', 'admin'] }
   });
 };
-
-// Post-save middleware to create welcome coin transaction for new users
-userSchema.post('save', async function(doc, next) {
-  // Only run for new users with coin balance
-  if (doc.isNew && doc.coinBalance > 0) {
-    try {
-      // Import CoinTransaction dynamically to avoid circular dependencies
-      const { default: CoinTransaction } = await import('./CoinTransaction');
-      
-      // Create welcome bonus transaction
-      await (CoinTransaction as any).createTransaction(
-        doc._id.toString(),
-        'earned',
-        doc.coinBalance,
-        'Welcome bonus for joining Tennis Club RT2!',
-        {
-          referenceType: 'bonus',
-          metadata: {
-            source: 'welcome_bonus',
-            reason: 'New user registration bonus'
-          }
-        }
-      );
-    } catch (error) {
-      console.error('Error creating welcome coin transaction:', error);
-    }
-  }
-  next();
-});
 
 // Virtual for user age
 userSchema.virtual('age').get(function(this: IUserDocument) {

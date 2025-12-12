@@ -14,28 +14,15 @@ import {
 
 const router = Router();
 
-// All tournament routes require admin authentication
-router.use(authenticateToken, requireAdmin);
+// Public read endpoints - all authenticated users can view tournaments
+router.get('/', authenticateToken, getTournaments);
+router.get('/stats', authenticateToken, getTournamentStats);
+router.get('/:id', authenticateToken, getTournament);
 
-// Get all tournaments
-router.get('/', getTournaments);
-
-// Get tournament statistics
-router.get('/stats', getTournamentStats);
-
-// Get single tournament
-router.get('/:id', getTournament);
-
-// Create new tournament
-router.post('/', createTournamentValidation, createTournament);
-
-// Update tournament
-router.put('/:id', updateTournamentValidation, updateTournament);
-
-// Delete tournament
-router.delete('/:id', deleteTournament);
-
-// Process points for tournament
-router.post('/:id/process-points', processTournamentPoints);
+// Admin-only write endpoints
+router.post('/', authenticateToken, requireAdmin, createTournamentValidation, createTournament);
+router.put('/:id', authenticateToken, requireAdmin, updateTournamentValidation, updateTournament);
+router.delete('/:id', authenticateToken, requireAdmin, deleteTournament);
+router.post('/:id/process-points', authenticateToken, requireAdmin, processTournamentPoints);
 
 export default router;

@@ -17,14 +17,22 @@ import { AuthService } from '../../services/auth.service';
 import { environment } from '../../../environments/environment';
 
 interface PlayerRanking {
-  _id: string;
-  username: string;
-  fullName: string;
-  seedPoints: number;
+  playerId: string;
+  playerName: string;
+  gender: string;
+  totalPoints: number;
   matchesWon: number;
+  matchesLost: number;
   matchesPlayed: number;
   winRate: number;
+  tournamentsPlayed: number;
   rank: number;
+  medals: ('gold' | 'silver' | 'bronze')[];
+  // Legacy fields for backward compatibility
+  _id?: string;
+  username?: string;
+  fullName?: string;
+  seedPoints?: number;
 }
 
 interface TournamentStats {
@@ -99,7 +107,7 @@ interface Tournament {
               </div>
             </div>
             <div class="header-actions">
-              <button mat-icon-button (click)="refreshRankings()" [disabled]="loading" class="refresh-button" 
+              <button mat-icon-button (click)="refreshRankings()" [disabled]="loading" class="refresh-button no-print"
                       [class.spinning]="loading" title="Refresh rankings">
                 <mat-icon>refresh</mat-icon>
               </button>
@@ -108,7 +116,7 @@ interface Tournament {
         </div>
 
         <!-- Tournament Stats Cards -->
-        <div class="stats-section" *ngIf="tournamentStats">
+        <div class="stats-section no-print" *ngIf="tournamentStats">
           <h2 class="section-title">
             <mat-icon>analytics</mat-icon>
             Tournament Statistics
@@ -199,7 +207,7 @@ interface Tournament {
               <div class="header-content">
                 <div class="header-info">
                   <h2 class="card-title">Current Rankings</h2>
-                  <p class="card-subtitle">Member rankings based on participation in Open Play events</p>
+                  <p class="card-subtitle">Member rankings based on participation in Open Play events and tournaments</p>
                 </div>
                 <div class="header-chips">
                   <div class="legend-chip tier-100">100</div>
@@ -211,52 +219,158 @@ interface Tournament {
             
             <div class="card-content">
               <div class="table-scroll-container">
-                <div class="rankings-table">
-                  <div class="table-header">
-                    <div class="rank-col">Rank</div>
-                    <div class="player-col">Player</div>
-                    <div class="points-col">Points</div>
-                    <div class="stats-col">Record</div>
+                <!-- Desktop: Two Column Layout -->
+                <div class="rankings-columns-desktop">
+                  <!-- Left Column -->
+                  <div class="rankings-table">
+                    <div class="table-header">
+                      <div class="rank-col">Rank</div>
+                      <div class="player-col">Player</div>
+                      <div class="points-col">Points</div>
+                      <div class="stats-col">Record</div>
+                    </div>
+
+                    <div
+                      *ngFor="let player of leftColumnRankings; trackBy: trackPlayer"
+                      class="table-row"
+                      [class.current-user]="player._id === currentUserId"
+                      [class.top-3]="player.rank <= 3">
+
+                      <div class="rank-col">
+                        <div class="rank-display" [class]="'rank-' + player.rank">
+                          <span class="rank-number">#{{ player.rank }}</span>
+                        </div>
+                      </div>
+
+                      <div class="player-col">
+                        <div class="player-info">
+                          <div class="player-name">
+                            {{ player.fullName }}
+                            <ng-container *ngIf="player.medals && player.medals.length > 0">
+                              <span *ngFor="let medal of player.medals" class="medal-icon">{{ getMedalEmoji(medal) }}</span>
+                            </ng-container>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="points-col">
+                        <div class="points-display">
+                          <span class="points-value">{{ player.seedPoints }}</span>
+                          <span class="points-label">pts</span>
+                        </div>
+                      </div>
+
+                      <div class="stats-col">
+                        <div class="stats-display">
+                          <span class="wins">{{ player.matchesWon }}W</span>
+                          <span class="separator">-</span>
+                          <span class="total">{{ player.matchesPlayed }}P</span>
+                          <span class="win-rate" *ngIf="player.winRate > 0">({{ player.winRate.toFixed(0) }}%)</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-            <div 
-              *ngFor="let player of rankings; trackBy: trackPlayer"
-              class="table-row"
-              [class.current-user]="player._id === currentUserId"
-              [class.top-3]="player.rank <= 3">
-              
-              <div class="rank-col">
-                <div class="rank-display" [class]="'rank-' + player.rank">
-                  <mat-icon *ngIf="player.rank === 1" class="trophy gold">emoji_events</mat-icon>
-                  <mat-icon *ngIf="player.rank === 2" class="trophy silver">emoji_events</mat-icon>
-                  <mat-icon *ngIf="player.rank === 3" class="trophy bronze">emoji_events</mat-icon>
-                  <span *ngIf="player.rank > 3" class="rank-number">#{{ player.rank }}</span>
-                </div>
-              </div>
+                  <!-- Right Column -->
+                  <div class="rankings-table">
+                    <div class="table-header">
+                      <div class="rank-col">Rank</div>
+                      <div class="player-col">Player</div>
+                      <div class="points-col">Points</div>
+                      <div class="stats-col">Record</div>
+                    </div>
 
-              <div class="player-col">
-                <div class="player-info">
-                  <div class="player-name">{{ player.fullName }}</div>
-                  <div class="player-username">@{{ player.username }}</div>
-                </div>
-              </div>
+                    <div
+                      *ngFor="let player of rightColumnRankings; trackBy: trackPlayer"
+                      class="table-row"
+                      [class.current-user]="player._id === currentUserId"
+                      [class.top-3]="player.rank <= 3">
 
-              <div class="points-col">
-                <div class="points-display">
-                  <span class="points-value">{{ player.seedPoints }}</span>
-                  <span class="points-label">pts</span>
-                </div>
-              </div>
+                      <div class="rank-col">
+                        <div class="rank-display" [class]="'rank-' + player.rank">
+                          <span class="rank-number">#{{ player.rank }}</span>
+                        </div>
+                      </div>
 
-              <div class="stats-col">
-                <div class="stats-display">
-                  <span class="wins">{{ player.matchesWon }}W</span>
-                  <span class="separator">-</span>
-                  <span class="total">{{ player.matchesPlayed }}P</span>
-                  <span class="win-rate" *ngIf="player.winRate > 0">({{ (player.winRate * 100).toFixed(0) }}%)</span>
-                </div>
-              </div>
+                      <div class="player-col">
+                        <div class="player-info">
+                          <div class="player-name">
+                            {{ player.fullName }}
+                            <ng-container *ngIf="player.medals && player.medals.length > 0">
+                              <span *ngFor="let medal of player.medals" class="medal-icon">{{ getMedalEmoji(medal) }}</span>
+                            </ng-container>
+                          </div>
+                        </div>
+                      </div>
 
+                      <div class="points-col">
+                        <div class="points-display">
+                          <span class="points-value">{{ player.seedPoints }}</span>
+                          <span class="points-label">pts</span>
+                        </div>
+                      </div>
+
+                      <div class="stats-col">
+                        <div class="stats-display">
+                          <span class="wins">{{ player.matchesWon }}W</span>
+                          <span class="separator">-</span>
+                          <span class="total">{{ player.matchesPlayed }}P</span>
+                          <span class="win-rate" *ngIf="player.winRate > 0">({{ player.winRate.toFixed(0) }}%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mobile: Single Column Layout -->
+                <div class="rankings-single-mobile">
+                  <div class="rankings-table">
+                    <div class="table-header">
+                      <div class="rank-col">Rank</div>
+                      <div class="player-col">Player</div>
+                      <div class="points-col">Points</div>
+                      <div class="stats-col">Record</div>
+                    </div>
+
+                    <div
+                      *ngFor="let player of rankings; trackBy: trackPlayer"
+                      class="table-row"
+                      [class.current-user]="player._id === currentUserId"
+                      [class.top-3]="player.rank <= 3">
+
+                      <div class="rank-col">
+                        <div class="rank-display" [class]="'rank-' + player.rank">
+                          <span class="rank-number">#{{ player.rank }}</span>
+                        </div>
+                      </div>
+
+                      <div class="player-col">
+                        <div class="player-info">
+                          <div class="player-name">
+                            {{ player.fullName }}
+                            <ng-container *ngIf="player.medals && player.medals.length > 0">
+                              <span *ngFor="let medal of player.medals" class="medal-icon">{{ getMedalEmoji(medal) }}</span>
+                            </ng-container>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="points-col">
+                        <div class="points-display">
+                          <span class="points-value">{{ player.seedPoints }}</span>
+                          <span class="points-label">pts</span>
+                        </div>
+                      </div>
+
+                      <div class="stats-col">
+                        <div class="stats-display">
+                          <span class="wins">{{ player.matchesWon }}W</span>
+                          <span class="separator">-</span>
+                          <span class="total">{{ player.matchesPlayed }}P</span>
+                          <span class="win-rate" *ngIf="player.winRate > 0">({{ player.winRate.toFixed(0) }}%)</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -443,23 +557,17 @@ export class RankingsComponent implements OnInit {
   }
 
   getPlayerName(match: any, playerKey: string): string {
-    // Check for custom name field first (non-member)
-    const nameKey = `${playerKey}Name`;
-    const playerName = match[nameKey];
-
-    // Debug logging
-    console.log(`Getting player name for key: ${playerKey}`);
-    console.log(`  - Custom name (${nameKey}):`, playerName);
-    console.log(`  - Player object (${playerKey}):`, match[playerKey]);
-
-    if (playerName && playerName.trim()) {
-      return String(playerName).trim();
-    }
-
-    // Check for populated member object
+    // Check for populated player object (from Player model)
     const playerObj = match[playerKey];
     if (playerObj && typeof playerObj === 'object') {
-      return playerObj.fullName || playerObj.username || 'Unknown Member';
+      // Player model has fullName
+      if (playerObj.fullName) {
+        return playerObj.fullName;
+      }
+      // Fallback to username for legacy User model data
+      if (playerObj.username) {
+        return playerObj.username;
+      }
     }
 
     return 'Unknown Player';
@@ -498,11 +606,20 @@ export class RankingsComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    this.http.get<any>(`${this.apiUrl}/seeding/rankings?limit=${this.currentLimit}`).subscribe({
+    // NEW: Use calculated rankings endpoint
+    this.http.get<any>(`${this.apiUrl}/rankings?limit=${this.currentLimit}`).subscribe({
       next: (response) => {
         if (response.success) {
-          // Filter out players with 0 seed points
-          this.rankings = (response.data.rankings || []).filter((player: any) => player.seedPoints > 0);
+          // Map new format to component format
+          this.rankings = (response.data.rankings || []).map((player: any) => ({
+            ...player,
+            // Map new fields to legacy fields for compatibility
+            _id: player.playerId,
+            fullName: player.playerName,
+            seedPoints: player.totalPoints
+          }));
+
+          console.log(`✅ Loaded ${this.rankings.length} rankings (calculated from ${response.data.totalTournaments} tournaments)`);
         } else {
           this.error = response.message || 'Failed to load rankings';
         }
@@ -557,11 +674,18 @@ export class RankingsComponent implements OnInit {
   loadMoreRankings(): void {
     this.loadingMore = true;
     this.currentLimit += 50;
-    
-    this.http.get<any>(`${this.apiUrl}/seeding/rankings?limit=${this.currentLimit}`).subscribe({
+
+    // NEW: Use calculated rankings endpoint
+    this.http.get<any>(`${this.apiUrl}/rankings?limit=${this.currentLimit}`).subscribe({
       next: (response) => {
         if (response.success) {
-          this.rankings = response.data.rankings || [];
+          // Map new format to component format
+          this.rankings = (response.data.rankings || []).map((player: any) => ({
+            ...player,
+            _id: player.playerId,
+            fullName: player.playerName,
+            seedPoints: player.totalPoints
+          }));
         }
         this.loadingMore = false;
       },
@@ -582,8 +706,33 @@ export class RankingsComponent implements OnInit {
     return player._id;
   }
 
+  get leftColumnRankings(): PlayerRanking[] {
+    const midPoint = Math.ceil(this.rankings.length / 2);
+    return this.rankings.slice(0, midPoint);
+  }
+
+  get rightColumnRankings(): PlayerRanking[] {
+    const midPoint = Math.ceil(this.rankings.length / 2);
+    return this.rankings.slice(midPoint);
+  }
+
   goBack(): void {
     this.router.navigate(['/dashboard']);
+  }
+
+  getMedalEmoji(medal: any): string {
+    // Handle null/undefined
+    if (!medal) return '';
+
+    // Handle both old format (string) and new format (object with type property)
+    const medalType = typeof medal === 'string' ? medal : medal?.type;
+
+    switch(medalType) {
+      case 'gold': return '🥇';
+      case 'silver': return '🥈';
+      case 'bronze': return '🥉';
+      default: return '';
+    }
   }
 
 }

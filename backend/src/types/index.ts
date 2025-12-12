@@ -11,7 +11,6 @@ export interface User {
   isApproved: boolean;
   isActive: boolean;
   role: 'member' | 'admin' | 'superadmin';
-  coinBalance: number;
   creditBalance: number;
   registrationDate: Date;
   lastLogin?: Date;
@@ -519,4 +518,38 @@ export interface ChatStats {
     username: string;
     messageCount: number;
   }>;
+}
+
+// Financial Report Types
+export interface ServiceFeeLiability {
+  totalAccrued: number;
+  totalPaid: number;
+  remainingLiability: number;
+}
+
+export interface FinancialStatementData {
+  clubName: string;
+  location: string;
+  period: string;
+  beginningBalance: {
+    date: string;
+    amount: number;
+  };
+  receiptsCollections: Array<{
+    description: string;
+    amount: number;
+    highlighted?: boolean;
+  }>;
+  totalReceipts: number;
+  disbursementsExpenses: Array<{
+    description: string;
+    amount: number;
+  }>;
+  totalDisbursements: number;
+  netIncome: number;
+  fundBalance: number;
+  lastUpdated: string;
+  liabilities?: {
+    appServiceFee: ServiceFeeLiability;
+  };
 }

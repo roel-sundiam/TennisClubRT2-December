@@ -94,4 +94,38 @@ export class CalendarDayDetailsDialogComponent {
     checkDate.setHours(0, 0, 0, 0);
     return checkDate < today;
   }
+
+  /**
+   * Get comma-separated list of player names
+   */
+  getPlayerNames(players: any[]): string {
+    if (!players || players.length === 0) {
+      return 'No players';
+    }
+
+    const names = players.map(player => {
+      // Handle both string format (legacy) and object format
+      if (typeof player === 'string') {
+        return player;
+      } else if (player && player.name) {
+        return player.name;
+      }
+      return 'Unknown';
+    });
+
+    return names.join(', ');
+  }
+
+  /**
+   * Get payment status label for display
+   */
+  getPaymentStatusLabel(paymentStatus: string): string {
+    const labels: { [key: string]: string } = {
+      'paid': 'Paid ✓',
+      'pending': 'Pending Payment',
+      'overdue': 'Overdue!',
+      'not_applicable': 'N/A'
+    };
+    return labels[paymentStatus] || paymentStatus;
+  }
 }

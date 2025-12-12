@@ -3602,12 +3602,15 @@ export class PaymentsComponent implements OnInit {
     if (payment.reservationId) {
       const date = new Date(payment.reservationId.date).toLocaleDateString('en-US', {
         weekday: 'short',
-        month: 'short', 
+        month: 'short',
         day: 'numeric'
       });
       const startTime = this.formatTime(payment.reservationId.timeSlot);
-      const endTime = this.formatTime(payment.reservationId.timeSlot + 1);
-      
+      // Use endTimeSlot if available, otherwise calculate from duration or default to +1
+      const calculatedEndTime = payment.reservationId.endTimeSlot ||
+                                (payment.reservationId.timeSlot + (payment.reservationId.duration || 1));
+      const endTime = this.formatTime(calculatedEndTime);
+
       // Create a more compact description for mobile
       return `Court reservation ${date} ${startTime}-${endTime}`;
     } else if (payment.pollId?.title) {

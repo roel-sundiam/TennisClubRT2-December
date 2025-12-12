@@ -1462,3 +1462,229 @@
     height: 44px !important;
   }
 }
+
+/* ============================================
+   PAYMENT STATUS BORDER INDICATORS
+   ============================================ */
+
+/* Payment Status Border Indicators */
+::ng-deep .fc .fc-event.payment-paid {
+  border-left: 6px solid #4caf50 !important;
+  padding-left: 4px !important;
+}
+
+::ng-deep .fc .fc-event.payment-pending {
+  border-left: 6px solid #ff9800 !important;
+  padding-left: 4px !important;
+}
+
+::ng-deep .fc .fc-event.payment-overdue {
+  border-left: 6px solid #dc2626 !important;
+  padding-left: 4px !important;
+  animation: pulseOverdueBorder 2s ease-in-out infinite;
+}
+
+::ng-deep .fc .fc-event.payment-not_applicable {
+  border-left: 3px solid #9e9e9e !important;
+  padding-left: 2px !important;
+}
+
+/* Pulsing animation for overdue payments */
+@keyframes pulseOverdueBorder {
+  0%, 100% { border-left-color: #dc2626; }
+  50% { border-left-color: #ef4444; }
+}
+
+/* Mobile adjustments - maintain border visibility */
+@media (max-width: 768px) {
+  ::ng-deep .fc .fc-event.payment-paid,
+  ::ng-deep .fc .fc-event.payment-pending,
+  ::ng-deep .fc .fc-event.payment-overdue {
+    border-left-width: 5px !important;
+    padding-left: 3px !important;
+  }
+}
+
+/* ============================================
+   CALENDAR LEGEND STYLES
+   ============================================ */
+
+/* Calendar Legend */
+.calendar-legend {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(118, 75, 162, 0.05));
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.legend-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 1.5rem 0;
+}
+
+.legend-title mat-icon {
+  color: #3b82f6;
+}
+
+.legend-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.legend-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.legend-subtitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin: 0 0 1rem 0;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.color-box {
+  width: 48px;
+  height: 28px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+/* Background status boxes */
+.color-box.bg-confirmed { background: #4caf50; }
+.color-box.bg-pending { background: #ff9800; }
+.color-box.bg-completed { background: #2196f3; }
+.color-box.bg-blocked { background: #9e9e9e; }
+
+/* Payment border boxes */
+.color-box.border-paid {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-left: 6px solid #4caf50;
+}
+
+.color-box.border-pending {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-left: 6px solid #ff9800;
+}
+
+.color-box.border-overdue {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-left: 6px solid #dc2626;
+  animation: pulseOverdueBorder 2s ease-in-out infinite;
+}
+
+/* Mobile legend layout */
+@media (max-width: 768px) {
+  .legend-sections {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .calendar-legend {
+    padding: 1rem;
+  }
+
+  .legend-title {
+    font-size: 1.1rem;
+  }
+
+  .legend-subtitle {
+    font-size: 0.9rem;
+  }
+}
+
+/* ============================================ */
+/* Rain Forecast Visualization */
+/* ============================================ */
+
+/* Ensure day number and events remain readable over rain tint */
+.fc .fc-daygrid-day-top {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+}
+
+/* Rain probability badge */
+.rain-probability-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: rgba(37, 99, 235, 0.95);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 3;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.rain-probability-badge .rain-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+/* Increase event contrast when rain background is present */
+.fc .fc-daygrid-day-frame[style*="rgba(59, 130, 246"] .fc-event {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* High contrast mode - remove rain tints for accessibility */
+@media (prefers-contrast: high) {
+  .fc .fc-daygrid-day-frame {
+    background: transparent !important;
+  }
+
+  .rain-probability-badge {
+    background: #000 !important;
+    border: 2px solid #fff !important;
+  }
+}
+
+/* Reduce opacity on mobile for better readability */
+@media (max-width: 768px) {
+  .fc .fc-daygrid-day-frame[style*="rgba(59, 130, 246"] {
+    opacity: 0.85 !important;
+  }
+
+  .rain-probability-badge {
+    font-size: 0.5rem;
+    padding: 2px 4px;
+    top: 2px;
+    left: 2px;
+  }
+
+  .rain-probability-badge .rain-icon {
+    font-size: 0.55rem;
+  }
+}

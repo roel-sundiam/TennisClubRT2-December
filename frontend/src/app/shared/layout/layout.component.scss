@@ -7,12 +7,12 @@
 .page-container {
   flex: 1;
   min-height: 100vh;
-  
+
   &.with-toolbar {
     min-height: calc(100vh - 70px);
-    padding-top: 0;
+    padding-top: 60px; // Add padding for fixed resurfacing banner
   }
-  
+
   &:not(.with-toolbar) {
     min-height: 100vh;
   }

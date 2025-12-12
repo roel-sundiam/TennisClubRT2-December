@@ -1,0 +1,266 @@
+{
+  "timestamp": "2025-11-27T04:59:21.560Z",
+  "totalMappings": 65,
+  "mappings": [
+    {
+      "userId": "68a7ba50f21aef21530c43d1",
+      "playerId": "6927daa149bce2aa4ebfb87a"
+    },
+    {
+      "userId": "68a7bd602e91c9d68ec844a6",
+      "playerId": "6927daa149bce2aa4ebfb881"
+    },
+    {
+      "userId": "68a7bd612e91c9d68ec844ae",
+      "playerId": "6927daa149bce2aa4ebfb884"
+    },
+    {
+      "userId": "68a7bd612e91c9d68ec844b6",
+      "playerId": "6927daa149bce2aa4ebfb887"
+    },
+    {
+      "userId": "68a7bd622e91c9d68ec844bb",
+      "playerId": "6927daa149bce2aa4ebfb88c"
+    },
+    {
+      "userId": "68a7bd622e91c9d68ec844c0",
+      "playerId": "6927daa149bce2aa4ebfb890"
+    },
+    {
+      "userId": "68a7bd622e91c9d68ec844c5",
+      "playerId": "6927daa249bce2aa4ebfb895"
+    },
+    {
+      "userId": "68a7bd632e91c9d68ec844ca",
+      "playerId": "6927daa249bce2aa4ebfb89a"
+    },
+    {
+      "userId": "68a7bd632e91c9d68ec844cf",
+      "playerId": "6927daa249bce2aa4ebfb89d"
+    },
+    {
+      "userId": "68a7bd642e91c9d68ec844d4",
+      "playerId": "6927daa249bce2aa4ebfb8a4"
+    },
+    {
+      "userId": "68a7bd642e91c9d68ec844d9",
+      "playerId": "6927daa249bce2aa4ebfb8a7"
+    },
+    {
+      "userId": "68a7bd642e91c9d68ec844de",
+      "playerId": "6927daa249bce2aa4ebfb8ab"
+    },
+    {
+      "userId": "68a7bd652e91c9d68ec844e3",
+      "playerId": "6927daa249bce2aa4ebfb8b1"
+    },
+    {
+      "userId": "68a7bd652e91c9d68ec844e8",
+      "playerId": "6927daa249bce2aa4ebfb8b5"
+    },
+    {
+      "userId": "68a7bd662e91c9d68ec844ed",
+      "playerId": "6927daa249bce2aa4ebfb8b9"
+    },
+    {
+      "userId": "68a7bd662e91c9d68ec844f2",
+      "playerId": "6927daa249bce2aa4ebfb8be"
+    },
+    {
+      "userId": "68a7bd662e91c9d68ec844f7",
+      "playerId": "6927daa249bce2aa4ebfb8c2"
+    },
+    {
+      "userId": "68a7bd672e91c9d68ec844fc",
+      "playerId": "6927daa249bce2aa4ebfb8c6"
+    },
+    {
+      "userId": "68a7bd672e91c9d68ec84501",
+      "playerId": "6927daa249bce2aa4ebfb8ca"
+    },
+    {
+      "userId": "68a7bd682e91c9d68ec84506",
+      "playerId": "6927daa349bce2aa4ebfb8cd"
+    },
+    {
+      "userId": "68a7bd682e91c9d68ec8450b",
+      "playerId": "6927daa349bce2aa4ebfb8d0"
+    },
+    {
+      "userId": "68a7bd682e91c9d68ec84510",
+      "playerId": "6927daa349bce2aa4ebfb8d5"
+    },
+    {
+      "userId": "68a7bd692e91c9d68ec84515",
+      "playerId": "6927daa349bce2aa4ebfb8d8"
+    },
+    {
+      "userId": "68a7bd692e91c9d68ec8451a",
+      "playerId": "6927daa349bce2aa4ebfb8dd"
+    },
+    {
+      "userId": "68a7bd692e91c9d68ec8451f",
+      "playerId": "6927daa349bce2aa4ebfb8e1"
+    },
+    {
+      "userId": "68a7bd6a2e91c9d68ec84524",
+      "playerId": "6927daa349bce2aa4ebfb8e5"
+    },
+    {
+      "userId": "68a7bd6a2e91c9d68ec84529",
+      "playerId": "6927daa349bce2aa4ebfb8e9"
+    },
+    {
+      "userId": "68a7bd6b2e91c9d68ec8452e",
+      "playerId": "6927daa349bce2aa4ebfb8ec"
+    },
+    {
+      "userId": "68a7bd6b2e91c9d68ec84533",
+      "playerId": "6927daa349bce2aa4ebfb8ef"
+    },
+    {
+      "userId": "68a7bd6c2e91c9d68ec84538",
+      "playerId": "6927daa349bce2aa4ebfb8f2"
+    },
+    {
+      "userId": "68a7bd6c2e91c9d68ec8453d",
+      "playerId": "6927daa349bce2aa4ebfb8f5"
+    },
+    {
+      "userId": "68a7bd6c2e91c9d68ec84542",
+      "playerId": "6927daa449bce2aa4ebfb8f8"
+    },
+    {
+      "userId": "68a7bd6d2e91c9d68ec84547",
+      "playerId": "6927daa449bce2aa4ebfb8fb"
+    },
+    {
+      "userId": "68a7bd6d2e91c9d68ec8454c",
+      "playerId": "6927daa449bce2aa4ebfb8fe"
+    },
+    {
+      "userId": "68a7bd6e2e91c9d68ec84551",
+      "playerId": "6927daa449bce2aa4ebfb901"
+    },
+    {
+      "userId": "68a7bd6e2e91c9d68ec84556",
+      "playerId": "6927daa449bce2aa4ebfb904"
+    },
+    {
+      "userId": "68a7bd6e2e91c9d68ec8455b",
+      "playerId": "6927daa449bce2aa4ebfb907"
+    },
+    {
+      "userId": "68a7bd6f2e91c9d68ec84560",
+      "playerId": "6927daa449bce2aa4ebfb90a"
+    },
+    {
+      "userId": "68a7bd6f2e91c9d68ec84565",
+      "playerId": "6927daa449bce2aa4ebfb90d"
+    },
+    {
+      "userId": "68a7bd6f2e91c9d68ec8456a",
+      "playerId": "6927daa449bce2aa4ebfb910"
+    },
+    {
+      "userId": "68a7bd702e91c9d68ec8456f",
+      "playerId": "6927daa449bce2aa4ebfb913"
+    },
+    {
+      "userId": "68a7bd702e91c9d68ec84574",
+      "playerId": "6927daa449bce2aa4ebfb916"
+    },
+    {
+      "userId": "68a7bd712e91c9d68ec84579",
+      "playerId": "6927daa549bce2aa4ebfb919"
+    },
+    {
+      "userId": "68a7bd712e91c9d68ec8457e",
+      "playerId": "6927daa549bce2aa4ebfb91c"
+    },
+    {
+      "userId": "68a7bd712e91c9d68ec84583",
+      "playerId": "6927daa549bce2aa4ebfb91f"
+    },
+    {
+      "userId": "68a7bd722e91c9d68ec84588",
+      "playerId": "6927daa549bce2aa4ebfb922"
+    },
+    {
+      "userId": "68a7bd722e91c9d68ec8458d",
+      "playerId": "6927daa549bce2aa4ebfb925"
+    },
+    {
+      "userId": "68a7bd732e91c9d68ec84592",
+      "playerId": "6927daa549bce2aa4ebfb928"
+    },
+    {
+      "userId": "68a7bd732e91c9d68ec84597",
+      "playerId": "6927daa549bce2aa4ebfb92b"
+    },
+    {
+      "userId": "68a7bd732e91c9d68ec8459c",
+      "playerId": "6927daa549bce2aa4ebfb92e"
+    },
+    {
+      "userId": "68a7bd742e91c9d68ec845a1",
+      "playerId": "6927daa549bce2aa4ebfb931"
+    },
+    {
+      "userId": "68a7bd742e91c9d68ec845a6",
+      "playerId": "6927daa549bce2aa4ebfb934"
+    },
+    {
+      "userId": "68a7bd752e91c9d68ec845ab",
+      "playerId": "6927daa549bce2aa4ebfb937"
+    },
+    {
+      "userId": "68a7bd752e91c9d68ec845b0",
+      "playerId": "6927daa549bce2aa4ebfb93a"
+    },
+    {
+      "userId": "68a7bd752e91c9d68ec845b5",
+      "playerId": "6927daa649bce2aa4ebfb93d"
+    },
+    {
+      "userId": "68a7bd762e91c9d68ec845ba",
+      "playerId": "6927daa649bce2aa4ebfb940"
+    },
+    {
+      "userId": "68b0d916d22a4d7befad44f6",
+      "playerId": "6927daa649bce2aa4ebfb943"
+    },
+    {
+      "userId": "68bbc27ab939aa6ab1fab53e",
+      "playerId": "6927daa649bce2aa4ebfb946"
+    },
+    {
+      "userId": "68bbc27ab939aa6ab1fab557",
+      "playerId": "6927daa649bce2aa4ebfb949"
+    },
+    {
+      "userId": "68bbc27bb939aa6ab1fab55f",
+      "playerId": "6927daa649bce2aa4ebfb94c"
+    },
+    {
+      "userId": "68bbc27bb939aa6ab1fab564",
+      "playerId": "6927daa649bce2aa4ebfb94f"
+    },
+    {
+      "userId": "68eb330e41aecfa1592cdb78",
+      "playerId": "6927daa649bce2aa4ebfb952"
+    },
+    {
+      "userId": "690b2fc29b1c36fe6bdb92ed",
+      "playerId": "6927daa649bce2aa4ebfb955"
+    },
+    {
+      "userId": "690c388f119426b5e7dfb6ba",
+      "playerId": "6927daa649bce2aa4ebfb958"
+    },
+    {
+      "userId": "690d6c1ca41bd88e6ec9f8fd",
+      "playerId": "6927daa749bce2aa4ebfb95b"
+    }
+  ]
+}

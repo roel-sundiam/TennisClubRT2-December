@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
@@ -6,7 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTabsModule } from '@angular/material/tabs';
+import { MatTabsModule, MatTabGroup } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { interval, Subscription } from 'rxjs';
 import { switchMap, filter, tap } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -23,6 +24,12 @@ interface FinancialAPIResponse {
     lastModified: string;
     cached: boolean;
   };
+}
+
+interface ServiceFeeLiability {
+  totalAccrued: number;
+  totalPaid: number;
+  remainingLiability: number;
 }
 
 interface FinancialStatementData {
@@ -48,6 +55,9 @@ interface FinancialStatementData {
   netIncome: number;
   fundBalance: number;
   lastUpdated: string;
+  liabilities?: {
+    appServiceFee: ServiceFeeLiability;
+  };
 }
 
 interface CourtUsageAPIResponse {
@@ -83,6 +93,7 @@ interface CourtUsageData {
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTabsModule,
+    MatTooltipModule,
     ExpenseReportComponent
   ],
   template: `
@@ -121,7 +132,7 @@ interface CourtUsageData {
 
       <!-- Tabbed Content -->
       <div class="tabs-container" *ngIf="!loading && financialData">
-        <mat-tab-group class="financial-tabs">
+        <mat-tab-group #tabGroup class="financial-tabs">
           <!-- Financial Statement Tab -->
           <mat-tab>
             <ng-template mat-tab-label>
@@ -159,6 +170,12 @@ interface CourtUsageData {
           <div class="statement-section disbursements-section">
             <div class="section-header">
               <div class="section-title">DISBURSEMENTS/EXPENSES</div>
+              <button mat-icon-button
+                      (click)="switchToExpenseTab()"
+                      matTooltip="Manage Expenses (Edit/Delete)"
+                      class="manage-expenses-btn">
+                <mat-icon>edit</mat-icon>
+              </button>
             </div>
             <div class="section-items">
               <div class="line-item" *ngFor="let item of financialData.disbursementsExpenses; let last = last">
@@ -167,6 +184,27 @@ interface CourtUsageData {
                 <div class="disbursement-totals" *ngIf="last">
                   <div class="total-disbursements">({{ formatCurrency(financialData.totalDisbursements) }})</div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Liabilities Section -->
+          <div class="statement-section liabilities-section" *ngIf="financialData.liabilities?.appServiceFee">
+            <div class="section-header">
+              <div class="section-title">LIABILITIES</div>
+            </div>
+            <div class="section-items">
+              <div class="line-item liability-item">
+                <div class="item-description">Accrued App Service Fee (10%)</div>
+                <div class="item-amount">{{ formatCurrency(financialData.liabilities.appServiceFee.totalAccrued) }}</div>
+              </div>
+              <div class="line-item liability-item paid" *ngIf="financialData.liabilities.appServiceFee.totalPaid > 0">
+                <div class="item-description indent">Less: Paid to Developer</div>
+                <div class="item-amount negative">({{ formatCurrency(financialData.liabilities.appServiceFee.totalPaid) }})</div>
+              </div>
+              <div class="line-item liability-item total">
+                <div class="item-description strong">Remaining Liability</div>
+                <div class="item-amount highlight strong">{{ formatCurrency(financialData.liabilities.appServiceFee.remainingLiability) }}</div>
               </div>
             </div>
           </div>
@@ -214,13 +252,15 @@ interface CourtUsageData {
   styleUrls: ['./financial-report.component.scss']
 })
 export class FinancialReportComponent implements OnInit, OnDestroy {
+  @ViewChild('tabGroup') tabGroup!: MatTabGroup;
+
   financialData: FinancialStatementData | null = null;
   loading = true;
   error: string | null = null;
   lastUpdated: string | null = null;
   autoRefreshEnabled = true;
   nextUpdateCountdown = 30;
-  
+
   private apiUrl = environment.apiUrl;
   private autoRefreshSubscription?: Subscription;
   private countdownSubscription?: Subscription;
@@ -336,6 +376,12 @@ export class FinancialReportComponent implements OnInit, OnDestroy {
       return '0.00';
     }
     return amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  switchToExpenseTab(): void {
+    if (this.tabGroup) {
+      this.tabGroup.selectedIndex = 1; // Switch to the Expense Report tab (index 1)
+    }
   }
 
   private hasDataChanged(newData: FinancialStatementData): boolean {

@@ -2,7 +2,6 @@ import { Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import Reservation from '../models/Reservation';
 import User from '../models/User';
-import CoinTransaction from '../models/CoinTransaction';
 import CreditTransaction from '../models/CreditTransaction';
 import Poll from '../models/Poll';
 import Payment from '../models/Payment';
@@ -10,7 +9,6 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { CreateReservationRequest, UpdateReservationRequest, CompleteReservationRequest } from '../types';
 import weatherService from '../services/weatherService';
-import coinService from '../services/coinService';
 import SeedingService from '../services/seedingService';
 
 // Helper function for string similarity calculation (Levenshtein distance)
@@ -649,41 +647,6 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     return;
   }
 
-  // Check if user has enough coins (5 coins per hour) - still required for reservation
-  const coinsRequired = 5;
-  if (user.coinBalance < coinsRequired) {
-    res.status(400).json({
-      success: false,
-      error: `Insufficient coins. You have ${user.coinBalance} coins but need ${coinsRequired} coins to book a court.`
-    });
-    return;
-  }
-
-  // Deduct coins for the reservation
-  try {
-    await (CoinTransaction as any).createTransaction(
-      req.user._id,
-      'spent',
-      coinsRequired,
-      `Court booking for ${reservationDate.toISOString().split('T')[0]} at ${timeSlot}:00`,
-      {
-        referenceType: 'reservation',
-        metadata: {
-          source: 'court_booking',
-          reason: 'Court reservation fee',
-          date: reservationDate.toISOString().split('T')[0],
-          timeSlot: timeSlot
-        }
-      }
-    );
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: 'Failed to process coin payment. Please try again.'
-    });
-    return;
-  }
-
   // Use totalFee from frontend if provided, otherwise calculate fallback
   const trimmedPlayers = players.map(p => p.trim());
   let finalTotalFee = totalFee || 0;
@@ -838,8 +801,8 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
   }
 
   const message = creditUsed
-    ? `Reservation created successfully. ₱${finalTotalFee} automatically deducted from your credit balance. ${coinsRequired} coins deducted.`
-    : `Reservation created successfully. ${members.length} payment(s) created for members. Payments can be made after the reservation time. ${coinsRequired} coins deducted.`;
+    ? `Reservation created successfully. ₱${finalTotalFee} automatically deducted from your credit balance.`
+    : `Reservation created successfully. ${members.length} payment(s) created for members. Payments can be made after the reservation time.`;
 
   res.status(201).json({
     success: true,
@@ -1209,31 +1172,7 @@ export const cancelReservation = asyncHandler(async (req: AuthenticatedRequest, 
     return;
   }
 
-  // Refund the 5 coins that were deducted when creating the reservation
-  const coinsToRefund = 5;
   const { reason } = req.body;
-  
-  try {
-    await (CoinTransaction as any).createTransaction(
-      reservation.userId,
-      'refunded',
-      coinsToRefund,
-      `Refund for cancelled reservation on ${reservation.date.toISOString().split('T')[0]} at ${reservation.timeSlot}:00`,
-      {
-        referenceType: 'reservation_cancellation',
-        referenceId: reservation._id?.toString() || '',
-        metadata: {
-          source: 'court_cancellation',
-          reason: reason || 'Reservation cancelled',
-          originalDate: reservation.date.toISOString().split('T')[0],
-          originalTimeSlot: reservation.timeSlot
-        }
-      }
-    );
-  } catch (error) {
-    console.warn('Failed to refund coins for cancelled reservation:', error);
-    // Continue with cancellation even if coin refund fails
-  }
 
   // Auto-refund credits if the reservation was paid with credits
   let creditRefundAmount = 0;
@@ -1273,8 +1212,8 @@ export const cancelReservation = asyncHandler(async (req: AuthenticatedRequest, 
   await reservation.populate('userId', 'username fullName email');
 
   const message = creditRefundAmount > 0 
-    ? `Reservation cancelled successfully. ${coinsToRefund} coins and ₱${creditRefundAmount} credits refunded.`
-    : `Reservation cancelled successfully. ${coinsToRefund} coins refunded.`;
+    ? `Reservation cancelled successfully. ₱${creditRefundAmount} credits refunded.`
+    : `Reservation cancelled successfully.`;
 
   res.status(200).json({
     success: true,

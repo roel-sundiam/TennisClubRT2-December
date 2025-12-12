@@ -1,0 +1,190 @@
+<div class="contributions-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>
+      <mat-icon>construction</mat-icon>
+      Court Resurfacing Project
+    </h1>
+    <p class="page-description">Together we're building a better court for our community</p>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <mat-icon class="spinner">refresh</mat-icon>
+    <p>Loading contribution details...</p>
+  </div>
+
+  <!-- Stats Display -->
+  <div class="stats-section" *ngIf="!isLoading && stats">
+    <!-- Progress Card -->
+    <mat-card class="progress-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar class="progress-icon">account_balance_wallet</mat-icon>
+        <mat-card-title>Fundraising Progress</mat-card-title>
+        <mat-card-subtitle>Help us reach our goal!</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="progress-details">
+          <div class="amount-raised">
+            <span class="label">Total Raised</span>
+            <span class="value">{{ formatCurrency(stats.overall.amount) }}</span>
+          </div>
+          <div class="goal-amount">
+            <span class="label">Goal</span>
+            <span class="value">{{ formatCurrency(goalAmount) }}</span>
+          </div>
+        </div>
+
+        <div class="progress-bar-container">
+          <mat-progress-bar
+            mode="determinate"
+            [value]="getProgressPercentage()"
+            class="custom-progress-bar">
+          </mat-progress-bar>
+          <span class="progress-percentage">{{ getProgressPercentage().toFixed(1) }}%</span>
+        </div>
+
+        <div class="remaining-info" *ngIf="getRemainingAmount() > 0">
+          <mat-icon>info</mat-icon>
+          <span>{{ formatCurrency(getRemainingAmount()) }} remaining to reach our goal</span>
+        </div>
+
+        <div class="success-info" *ngIf="getRemainingAmount() === 0">
+          <mat-icon>celebration</mat-icon>
+          <span>Goal achieved! Thank you for your amazing support!</span>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button mat-raised-button color="primary" class="contribute-btn" (click)="openContributionForm()">
+          <mat-icon>volunteer_activism</mat-icon>
+          Make a Contribution
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Statistics Grid -->
+    <div class="stats-grid">
+      <!-- Total Contributors -->
+      <mat-card class="stat-card contributors">
+        <div class="stat-icon">
+          <mat-icon>people</mat-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.overall.count }}</div>
+          <div class="stat-label">Total Contributors</div>
+        </div>
+      </mat-card>
+
+      <!-- Pledged -->
+      <mat-card class="stat-card pledged">
+        <div class="stat-icon">
+          <mat-icon>pending</mat-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.pledged.count }}</div>
+          <div class="stat-label">Pending Pledges</div>
+          <div class="stat-amount">{{ formatCurrency(stats.pledged.amount) }}</div>
+        </div>
+      </mat-card>
+
+      <!-- Received -->
+      <mat-card class="stat-card received">
+        <div class="stat-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.received.count }}</div>
+          <div class="stat-label">Confirmed</div>
+          <div class="stat-amount">{{ formatCurrency(stats.received.amount) }}</div>
+        </div>
+      </mat-card>
+    </div>
+
+    <!-- Impact Message -->
+    <mat-card class="impact-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>emoji_events</mat-icon>
+        <mat-card-title>Your Impact</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p>Every contribution brings us closer to a better playing experience for our entire tennis community. Thank you for being part of this journey!</p>
+
+        <div class="impact-points">
+          <div class="impact-point">
+            <mat-icon>check</mat-icon>
+            <span>Improved playing surface for all members</span>
+          </div>
+          <div class="impact-point">
+            <mat-icon>check</mat-icon>
+            <span>Enhanced safety and performance</span>
+          </div>
+          <div class="impact-point">
+            <mat-icon>check</mat-icon>
+            <span>Increased property value</span>
+          </div>
+          <div class="impact-point">
+            <mat-icon>check</mat-icon>
+            <span>Better tournament hosting capabilities</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Contributors List -->
+    <mat-card class="contributors-card">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>people</mat-icon>
+        <mat-card-title>Our Contributors</mat-card-title>
+        <mat-card-subtitle>Thank you to everyone who has contributed!</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="contributors.length === 0">
+          <mat-icon class="empty-icon">volunteer_activism</mat-icon>
+          <p class="empty-message">No contributions yet</p>
+          <p class="empty-submessage">Be the first to contribute to our court resurfacing project!</p>
+        </div>
+
+        <!-- Contributors List -->
+        <div class="contributors-list" *ngIf="contributors.length > 0">
+          <div class="contributor-item" *ngFor="let contributor of contributors">
+            <div class="contributor-info">
+              <div class="contributor-avatar">
+                <mat-icon>person</mat-icon>
+              </div>
+              <div class="contributor-details">
+                <div class="contributor-name">{{ contributor.contributorName }}</div>
+                <div class="contributor-date">{{ contributor.createdAt | date: 'MMM d, yyyy' }}</div>
+              </div>
+            </div>
+            <div class="contributor-amount-section">
+              <div class="contributor-amount">{{ formatCurrency(contributor.amount) }}</div>
+              <span class="status-badge" [ngClass]="getStatusBadgeClass(contributor.status)">
+                {{ getStatusLabel(contributor.status) }}
+              </span>
+            </div>
+
+            <!-- Admin Actions -->
+            <div class="contributor-actions" *ngIf="authService.isAdmin()">
+              <button mat-icon-button [matMenuTriggerFor]="menu" class="menu-button">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu">
+                <button mat-menu-item (click)="editContribution(contributor)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit</span>
+                </button>
+                <button mat-menu-item (click)="deleteContribution(contributor)" class="delete-menu-item">
+                  <mat-icon>delete</mat-icon>
+                  <span>Delete</span>
+                </button>
+              </mat-menu>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

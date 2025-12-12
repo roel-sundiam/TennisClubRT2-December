@@ -3,7 +3,6 @@ import { query } from 'express-validator';
 import User from '../models/User';
 import Reservation from '../models/Reservation';
 import Payment from '../models/Payment';
-import CoinTransaction from '../models/CoinTransaction';
 import Poll from '../models/Poll';
 import Expense from '../models/Expense';
 import { AuthenticatedRequest } from '../middleware/auth';
@@ -96,40 +95,10 @@ export const getDashboardStats = asyncHandler(async (req: AuthenticatedRequest, 
         }
       }
     ]),
-    
-    // Coin transactions
-    CoinTransaction.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate, $lte: endDate },
-          status: 'completed'
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalCoinsEarned: {
-            $sum: {
-              $cond: [
-                { $in: ['$type', ['earned', 'purchased', 'refunded', 'bonus']] },
-                '$amount',
-                0
-              ]
-            }
-          },
-          totalCoinsSpent: {
-            $sum: {
-              $cond: [
-                { $in: ['$type', ['spent', 'penalty']] },
-                '$amount',
-                0
-              ]
-            }
-          }
-        }
-      }
-    ]),
-    
+
+    // Coin transactions - DEPRECATED: Coin system removed
+    Promise.resolve([{ totalCoinsEarned: 0, totalCoinsSpent: 0 }]),
+
     // Active polls
     Poll.countDocuments({
       status: 'active'
@@ -571,28 +540,8 @@ export const getCoinReport = asyncHandler(async (req: AuthenticatedRequest, res:
   end.setHours(23, 59, 59, 999);
 
   const reports = await Promise.all([
-    // Coin transactions over time
-    CoinTransaction.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: start, $lte: end },
-          status: 'completed'
-        }
-      },
-      {
-        $group: {
-          _id: {
-            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-            type: '$type'
-          },
-          amount: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { '_id.date': 1 }
-      }
-    ]),
+    // Coin transactions over time - DEPRECATED: Coin system removed
+    Promise.resolve([]),
     
     // Coin balance distribution
     User.aggregate([
@@ -623,48 +572,8 @@ export const getCoinReport = asyncHandler(async (req: AuthenticatedRequest, res:
       }
     ]),
     
-    // Top coin earners
-    CoinTransaction.aggregate([
-      {
-        $match: {
-          type: { $in: ['earned', 'bonus', 'purchased'] },
-          status: 'completed',
-          createdAt: { $gte: start, $lte: end }
-        }
-      },
-      {
-        $group: {
-          _id: '$userId',
-          totalEarned: { $sum: '$amount' },
-          transactionCount: { $sum: 1 }
-        }
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      {
-        $unwind: '$user'
-      },
-      {
-        $project: {
-          _id: 1,
-          totalEarned: 1,
-          transactionCount: 1,
-          userName: '$user.fullName'
-        }
-      },
-      {
-        $sort: { totalEarned: -1 }
-      },
-      {
-        $limit: 10
-      }
-    ])
+    // Top coin earners - DEPRECATED: Coin system removed
+    Promise.resolve([])
   ]);
 
   return res.status(200).json({
@@ -860,6 +769,37 @@ export const getCourtReceiptsReport = asyncHandler(async (req: AuthenticatedRequ
 // Helper function to format currency without commas
 function formatCurrency(amount: number): string {
   return `₱${amount.toFixed(2)}`;
+}
+
+// Helper function to calculate App Service Fee liability (accrued vs paid)
+async function calculateServiceFeeLiability() {
+  const serviceFeePercentage = 0.10; // 10% service fee
+
+  // Calculate total accrued from recorded payments (excluding coins and membership fees)
+  const serviceablePayments = await Payment.find({
+    status: 'record',
+    paymentMethod: { $ne: 'coins' },
+    paymentType: { $ne: 'membership_fee' }
+  });
+
+  const totalAccrued = serviceablePayments.reduce((sum: number, payment: any) => {
+    return sum + (payment.amount * serviceFeePercentage);
+  }, 0);
+
+  // Calculate total paid from App Service Fee expenses
+  const developerPayments = await Expense.find({
+    category: 'App Service Fee'
+  });
+
+  const totalPaid = developerPayments.reduce((sum: number, expense: any) => {
+    return sum + expense.amount;
+  }, 0);
+
+  return {
+    totalAccrued: Math.round(totalAccrued * 100) / 100,
+    totalPaid: Math.round(totalPaid * 100) / 100,
+    remainingLiability: Math.round((totalAccrued - totalPaid) * 100) / 100
+  };
 }
 
 // Get court usage report with static data from screenshots
@@ -1088,60 +1028,56 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
     // Replace JSON disbursements with database expenses
     financialData.disbursementsExpenses = databaseDisbursements;
     
-    console.log(`🔍 Before App Service Fee check - disbursements count: ${financialData.disbursementsExpenses.length}`);
-    const hasAppServiceFee = financialData.disbursementsExpenses.find((item: any) => item.description === 'App Service Fee');
-    console.log(`🔍 App Service Fee exists in database expenses: ${hasAppServiceFee ? 'YES' : 'NO'}`);
-    
-    // Calculate App Service Fee from completed payments and add to disbursements if not already present
+    console.log(`🔍 Disbursements count: ${financialData.disbursementsExpenses.length}`);
+
+    // Calculate App Service Fee Liability (accrued vs paid model)
+    let serviceFeeLiability;
     try {
-      const serviceFeePercentage = 0.10; // 10% service fee
-      
-      // Get only recorded payments (excluding coins) - App Service Fee only applies to recorded payments
-      const serviceablePayments = await Payment.find({
-        status: 'record',
-        paymentMethod: { $ne: 'coins' }
-      });
-      
-      // Calculate total service fees
-      const totalServiceFees = serviceablePayments.reduce((sum: number, payment: any) => {
-        return sum + (payment.amount * serviceFeePercentage);
-      }, 0);
-      
-      // Check if App Service Fee already exists in disbursements
-      const appServiceFeeIndex = financialData.disbursementsExpenses.findIndex(
-        (item: any) => item.description === 'App Service Fee'
-      );
-      
-      if (appServiceFeeIndex !== -1) {
-        // Update existing App Service Fee
-        financialData.disbursementsExpenses[appServiceFeeIndex].amount = Math.round(totalServiceFees * 100) / 100;
-      } else {
-        // Add new App Service Fee entry
-        financialData.disbursementsExpenses.push({
-          description: 'App Service Fee',
-          amount: Math.round(totalServiceFees * 100) / 100
-        });
+      serviceFeeLiability = await calculateServiceFeeLiability();
+
+      console.log(`💰 Service Fee Liability calculated:`);
+      console.log(`   - Total Accrued: ₱${serviceFeeLiability.totalAccrued.toFixed(2)}`);
+      console.log(`   - Total Paid: ₱${serviceFeeLiability.totalPaid.toFixed(2)}`);
+      console.log(`   - Remaining Liability: ₱${serviceFeeLiability.remainingLiability.toFixed(2)}`);
+
+      // If developer has been paid (totalPaid > 0), include it in disbursements
+      if (serviceFeeLiability.totalPaid > 0) {
+        const developerPaymentIndex = financialData.disbursementsExpenses.findIndex(
+          (item: any) => item.description === 'App Service Fee'
+        );
+
+        if (developerPaymentIndex !== -1) {
+          // Update existing entry
+          financialData.disbursementsExpenses[developerPaymentIndex].amount = serviceFeeLiability.totalPaid;
+        } else {
+          // Add new entry
+          financialData.disbursementsExpenses.push({
+            description: 'App Service Fee',
+            amount: serviceFeeLiability.totalPaid
+          });
+        }
+
+        console.log(`📝 Added App Service Fee to disbursements: ₱${serviceFeeLiability.totalPaid.toFixed(2)}`);
       }
-      
-      // Recalculate totals
+
+      // Recalculate totals (excluding any old "App Service Fee" entries)
       financialData.totalDisbursements = financialData.disbursementsExpenses.reduce(
         (sum: number, item: any) => sum + item.amount, 0
       );
       financialData.netIncome = financialData.totalReceipts - financialData.totalDisbursements;
       financialData.fundBalance = financialData.beginningBalance.amount + financialData.netIncome;
-      
-      console.log(`💰 Updated App Service Fee in financial report: ₱${totalServiceFees.toFixed(2)} from ${serviceablePayments.length} serviceable payments (completed + recorded)`);
-      
+
     } catch (error) {
-      console.warn('⚠️ Could not calculate App Service Fee for financial report:', error);
+      console.warn('⚠️ Could not calculate Service Fee Liability:', error);
     }
 
     // Calculate recorded payments and add to Tennis Court Usage Receipts
     try {
-      // Get recorded payments from database
+      // Get recorded payments from database (excluding membership fees)
       const recordedPayments = await Payment.find({
         status: 'record',
-        paymentMethod: { $ne: 'coins' }
+        paymentMethod: { $ne: 'coins' },
+        paymentType: { $ne: 'membership_fee' }
       });
 
       const totalRecordedAmount = recordedPayments.reduce((sum: number, payment: any) => sum + payment.amount, 0);
@@ -1216,11 +1152,65 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
       console.warn('⚠️ Could not calculate credit balances for financial report:', error);
     }
 
+    // Calculate membership fees from database and update Annual Membership Fees line items
+    try {
+      // Get all membership payments from database, grouped by year
+      const membershipPayments = await Payment.find({
+        type: 'membership'
+      });
+
+      // Group by membership year and calculate totals
+      const membershipByYear = membershipPayments.reduce((acc: any, payment: any) => {
+        const year = payment.membershipYear;
+        if (!acc[year]) {
+          acc[year] = 0;
+        }
+        acc[year] += payment.amount;
+        return acc;
+      }, {});
+
+      console.log(`💳 Membership fees by year:`, membershipByYear);
+
+      // Update each Annual Membership Fees line item in receipts
+      for (const [year, amount] of Object.entries(membershipByYear)) {
+        const membershipDescription = `Annual Membership Fees ${year}`;
+        const membershipIndex = financialData.receiptsCollections.findIndex((item: any) =>
+          item.description === membershipDescription
+        );
+
+        if (membershipIndex !== -1) {
+          // Update existing line item
+          financialData.receiptsCollections[membershipIndex].amount = amount as number;
+          console.log(`🧮 Updated ${membershipDescription}: ₱${amount}`);
+        } else {
+          // Add new line item for this year
+          financialData.receiptsCollections.push({
+            description: membershipDescription,
+            amount: amount as number
+          });
+          console.log(`➕ Added ${membershipDescription}: ₱${amount}`);
+        }
+      }
+
+      // Recalculate totals with updated membership fees
+      financialData.totalReceipts = financialData.receiptsCollections.reduce(
+        (sum: number, item: any) => sum + item.amount, 0
+      );
+      financialData.netIncome = financialData.totalReceipts - financialData.totalDisbursements;
+      financialData.fundBalance = financialData.beginningBalance.amount + financialData.netIncome;
+
+      console.log(`📊 Updated totals with membership fees: receipts ₱${financialData.totalReceipts}, net income ₱${financialData.netIncome}, fund balance ₱${financialData.fundBalance}`);
+
+    } catch (error) {
+      console.warn('⚠️ Could not calculate membership fees for financial report:', error);
+    }
+
     // Financial data is updated directly in recordPayment/unrecordPayment functions
     // App Service Fee is now calculated and included in the disbursements
     // Tennis Court Usage Receipts now includes recorded payments from database
     // Credit Balances now includes total prepaid credits from all users
-    
+    // Annual Membership Fees now calculated from membership payments in database
+
     // Debug: Log financial statement loaded
     console.log('📊 Financial statement loaded for:', financialData.clubName);
     console.log('💰 Beginning Balance:', `₱${financialData.beginningBalance.amount.toLocaleString()}`);
@@ -1233,6 +1223,13 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
       'Pragma': 'no-cache',
       'Expires': '0'
     });
+
+    // Add liabilities to financial data if calculated
+    if (serviceFeeLiability) {
+      financialData.liabilities = {
+        appServiceFee: serviceFeeLiability
+      };
+    }
 
     return res.status(200).json({
       success: true,
