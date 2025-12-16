@@ -170,12 +170,6 @@ interface CourtUsageData {
           <div class="statement-section disbursements-section">
             <div class="section-header">
               <div class="section-title">DISBURSEMENTS/EXPENSES</div>
-              <button mat-icon-button
-                      (click)="switchToExpenseTab()"
-                      matTooltip="Manage Expenses (Edit/Delete)"
-                      class="manage-expenses-btn">
-                <mat-icon>edit</mat-icon>
-              </button>
             </div>
             <div class="section-items">
               <div class="line-item" *ngFor="let item of financialData.disbursementsExpenses; let last = last">
