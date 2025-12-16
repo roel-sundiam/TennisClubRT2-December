@@ -200,11 +200,31 @@ export const deleteExpense = asyncHandler(async (req: AuthenticatedRequest, res:
 
 // Get expense categories
 export const getExpenseCategories = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const categories = await Expense.distinct('category');
-  
+  // Predefined categories that should always be available
+  const predefinedCategories = [
+    'App Service Fee',
+    'Court Maintenance',
+    'Court Service',
+    'Delivery Fee',
+    'Financial Donation',
+    'Mineral Water',
+    'Purchase - Lights',
+    'Purchase - Miscellaneous',
+    'Purchase - Tennis Net',
+    'Tennis Score Board',
+    'Tournament Expense',
+    'Water System Project Expense'
+  ];
+
+  // Get additional categories from database
+  const dbCategories = await Expense.distinct('category');
+
+  // Combine and deduplicate
+  const allCategories = [...new Set([...predefinedCategories, ...dbCategories])];
+
   return res.status(200).json({
     success: true,
-    data: categories.sort()
+    data: allCategories.sort()
   });
 });
 
