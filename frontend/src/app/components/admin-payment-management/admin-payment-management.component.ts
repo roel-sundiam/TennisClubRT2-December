@@ -19,6 +19,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { PaymentEditDialogComponent } from './payment-edit-dialog/payment-edit-dialog.component';
+import { environment } from '../../../environments/environment';
 
 interface Payment {
   _id: string;
@@ -89,7 +90,7 @@ interface PaymentSummary {
   styleUrl: './admin-payment-management.component.scss'
 })
 export class AdminPaymentManagementComponent implements OnInit {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = environment.apiUrl;
 
   // Data
   payments: Payment[] = [];

@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
 
 export interface PaymentEditDialogData {
   payment: any;
@@ -408,7 +409,7 @@ export interface PaymentEditDialogData {
   `]
 })
 export class PaymentEditDialogComponent implements OnInit {
-  private apiUrl = 'http://localhost:3000/api';
+  private apiUrl = environment.apiUrl;
   editForm: FormGroup;
   isSubmitting = false;
 
