@@ -1192,8 +1192,22 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
         }
       }
 
+      // Remove any Annual Membership Fees line items that don't have database payments
+      financialData.receiptsCollections = financialData.receiptsCollections.filter((item: any) => {
+        const isMembershipFee = item.description.startsWith('Annual Membership Fees');
+        if (isMembershipFee) {
+          const year = item.description.match(/\d{4}/)?.[0];
+          const hasPayment = year && membershipByYear[year];
+          if (!hasPayment) {
+            console.log(`🗑️  Removed ${item.description}: No payments in database`);
+            return false; // Remove this item
+          }
+        }
+        return true; // Keep all other items
+      });
+
       if (Object.keys(membershipByYear).length === 0) {
-        console.log(`ℹ️ No membership payments found in database - keeping JSON baseline values`);
+        console.log(`ℹ️ No membership payments found in database`);
       }
 
       // Recalculate totals with updated membership fees
