@@ -286,9 +286,37 @@ import { environment } from '../../../environments/environment';
             </mat-card-actions>
           </mat-card>
 
+          <!-- Photo Gallery -->
+          <mat-card class="action-card" data-icon="photo_library" data-title="Photo Gallery"
+                   (click)="navigateTo('/gallery')"
+                   (touchstart)="handleTouchStart($event)"
+                   (touchend)="handleTouchEnd($event, '/gallery')">
+            <!-- Mobile Icon -->
+            <div class="mobile-card-icon">
+              <mat-icon>photo_library</mat-icon>
+            </div>
+            <div class="mobile-card-title">Photo Gallery</div>
+
+            <!-- Desktop Content -->
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="action-icon">photo_library</mat-icon>
+              <mat-card-title>Photo Gallery</mat-card-title>
+              <mat-card-subtitle>View club photos and memories</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <p>Browse photos from club events, tournaments, and activities.</p>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-raised-button class="info-btn" (click)="navigateTo('/gallery')">
+                <mat-icon>photo_library</mat-icon>
+                View Gallery
+              </button>
+            </mat-card-actions>
+          </mat-card>
+
           <!-- Credit Management (Admin only for now) -->
-          <mat-card class="action-card" data-icon="account_balance" data-title="Credit Management" 
-                   (click)="navigateTo('/credits')" 
+          <mat-card class="action-card" data-icon="account_balance" data-title="Credit Management"
+                   (click)="navigateTo('/credits')"
                    (touchstart)="handleTouchStart($event)"
                    (touchend)="handleTouchEnd($event, '/credits')" *ngIf="isAdmin">
             <!-- Mobile Icon -->
@@ -627,6 +655,31 @@ import { environment } from '../../../environments/environment';
                 <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/financial-report')">
                   <mat-icon>account_balance</mat-icon>
                   View Report
+                </button>
+              </mat-card-actions>
+            </mat-card>
+
+            <!-- Gallery Upload (Superadmin Only) -->
+            <mat-card class="action-card admin-card superadmin-card" data-icon="add_photo_alternate" data-title="Upload Gallery Photo" (click)="navigateTo('/admin/gallery-upload')" *ngIf="isSuperAdmin">
+              <!-- Mobile Icon -->
+              <div class="mobile-card-icon">
+                <mat-icon>add_photo_alternate</mat-icon>
+              </div>
+              <div class="mobile-card-title">Upload Gallery Photo</div>
+
+              <!-- Desktop Content -->
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="action-icon admin-icon">add_photo_alternate</mat-icon>
+                <mat-card-title>Upload Gallery Photo</mat-card-title>
+                <mat-card-subtitle>Add photos to club gallery</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>Upload and manage photos for the public gallery.</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/gallery-upload')">
+                  <mat-icon>add_photo_alternate</mat-icon>
+                  Upload Photo
                 </button>
               </mat-card-actions>
             </mat-card>

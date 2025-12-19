@@ -33,6 +33,8 @@ import { TournamentManagementComponent } from './components/tournament-managemen
 import { AdminPaymentManagementComponent } from './components/admin-payment-management/admin-payment-management.component';
 import { AdminResurfacingContributionsComponent } from './components/admin-resurfacing-contributions/admin-resurfacing-contributions.component';
 import { ResurfacingContributionsComponent } from './components/resurfacing-contributions/resurfacing-contributions.component';
+import { GalleryComponent } from './components/gallery/gallery.component';
+import { AdminGalleryUploadComponent } from './components/admin-gallery-upload/admin-gallery-upload.component';
 import { authGuard, loginGuard, adminGuard, superadminGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -141,10 +143,21 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   // Rules and Regulations
-  { 
-    path: 'rules', 
+  {
+    path: 'rules',
     component: RulesAndRegulationsComponent,
     canActivate: [authGuard]
+  },
+  // Gallery (members only viewing, superadmin upload)
+  {
+    path: 'gallery',
+    component: GalleryComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'admin/gallery-upload',
+    component: AdminGalleryUploadComponent,
+    canActivate: [authGuard, superadminGuard]
   },
   // Court Usage Report
   { 

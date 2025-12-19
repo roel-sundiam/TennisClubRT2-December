@@ -28,6 +28,7 @@
     "restore": "npx ts-node src/scripts/restoreDatabase.ts",
     "restore:dry-run": "npx ts-node src/scripts/restoreDatabase.ts -- --dry-run",
     "cleanup-orphaned-payments": "npx ts-node src/scripts/cleanupOrphanedPayments.ts",
+    "test-supabase": "npx ts-node src/scripts/test-supabase-connection.ts",
     "clear-reservations-payments": "npx ts-node src/scripts/clearReservationsAndPayments.ts",
     "replicate-to-test": "npx ts-node src/scripts/replicateToTestDatabase.ts",
     "migrate-players": "npx ts-node src/scripts/migrateUsersToPlayers.ts",
@@ -43,12 +44,15 @@
     "migrate-tournaments-completed": "npx ts-node src/scripts/migrateTournamentsToCompleted.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.88.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.7.5",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
+    "@types/multer": "^2.0.0",
     "@types/node": "^20.14.12",
+    "@types/sharp": "^0.31.1",
     "@types/socket.io": "^3.0.1",
     "@types/web-push": "^3.6.4",
     "axios": "^1.11.0",
@@ -65,6 +69,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.20.0",
     "mongoose": "^8.5.2",
+    "multer": "^2.0.2",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.1",
     "typescript": "^5.5.4",
     "web-push": "^3.6.7"

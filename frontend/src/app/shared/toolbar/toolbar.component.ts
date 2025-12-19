@@ -142,7 +142,12 @@ import { Subscription } from 'rxjs';
             <mat-icon>leaderboard</mat-icon>
             <span>Rankings</span>
           </button>
-          
+
+          <button mat-button class="mobile-nav-item" (click)="navigateAndClose('/gallery')">
+            <mat-icon>photo_library</mat-icon>
+            <span>Photo Gallery</span>
+          </button>
+
           <!-- Admin Section -->
           <div class="mobile-nav-section" *ngIf="isAdmin">
             <div class="section-header">
@@ -183,6 +188,11 @@ import { Subscription } from 'rxjs';
             <button mat-button class="mobile-nav-item admin-item" *ngIf="isSuperAdmin" (click)="navigateAndClose('/admin/manual-court-usage')">
               <mat-icon>edit_calendar</mat-icon>
               <span>Manual Court Usage</span>
+            </button>
+
+            <button mat-button class="mobile-nav-item admin-item" *ngIf="isSuperAdmin" (click)="navigateAndClose('/admin/gallery-upload')">
+              <mat-icon>add_photo_alternate</mat-icon>
+              <span>Upload Gallery Photo</span>
             </button>
           </div>
           

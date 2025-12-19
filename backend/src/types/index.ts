@@ -553,3 +553,52 @@ export interface FinancialStatementData {
     appServiceFee: ServiceFeeLiability;
   };
 }
+
+// Gallery Image Types
+export interface GalleryImage {
+  _id: string;
+  title: string;
+  description?: string;
+  fileName: string;
+  storagePath: string;
+  publicUrl: string;
+  thumbnailUrl?: string;
+  fileSize: number;
+  mimeType: 'image/jpeg' | 'image/jpg' | 'image/png';
+  width?: number;
+  height?: number;
+  uploadedBy: string;
+  uploader?: User;
+  isVisible: boolean;
+  viewCount: number;
+  tags?: string[];
+  eventDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UploadGalleryImageRequest {
+  title: string;
+  description?: string;
+  tags?: string[];
+  eventDate?: string;
+}
+
+export interface UpdateGalleryImageRequest {
+  title?: string;
+  description?: string;
+  isVisible?: boolean;
+  tags?: string[];
+  eventDate?: string;
+}
+
+export interface GalleryImagesResponse {
+  success: boolean;
+  data: GalleryImage[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    limit: number;
+  };
+}

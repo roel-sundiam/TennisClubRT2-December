@@ -1,0 +1,267 @@
+<div class="upload-container">
+  <!-- Upload Section -->
+  <mat-card class="upload-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>add_photo_alternate</mat-icon>
+        Upload New Photo
+      </mat-card-title>
+      <mat-card-subtitle>Add a new photo to the club gallery</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- File Upload Section -->
+      <div class="file-upload-section">
+        <input
+          type="file"
+          #fileInput
+          hidden
+          accept="image/jpeg,image/jpg,image/png"
+          multiple
+          (change)="onFileSelected($event)"
+        />
+
+        <div *ngIf="previewUrls.length === 0" class="upload-placeholder" (click)="fileInput.click()">
+          <mat-icon>cloud_upload</mat-icon>
+          <p>Click to select images</p>
+          <small>JPG or PNG, max 5MB each, up to 10 files</small>
+        </div>
+
+        <div *ngIf="previewUrls.length > 0" class="preview-grid">
+          <div class="preview-header">
+            <span>{{ previewUrls.length }} image{{ previewUrls.length > 1 ? 's' : '' }} selected</span>
+            <button mat-button (click)="fileInput.click()">
+              <mat-icon>add</mat-icon>
+              Add More
+            </button>
+            <button mat-button color="warn" (click)="removeAllFiles()">
+              <mat-icon>delete</mat-icon>
+              Remove All
+            </button>
+          </div>
+
+          <div class="preview-images">
+            <div *ngFor="let preview of previewUrls" class="preview-item">
+              <img [src]="preview.url" [alt]="preview.file.name" class="preview-thumbnail" />
+              <button mat-icon-button class="remove-preview-btn" (click)="removeFile(preview.file)">
+                <mat-icon>close</mat-icon>
+              </button>
+              <div class="preview-filename">{{ preview.file.name }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Fields -->
+      <div class="form-fields">
+        <!-- Title Selection -->
+        <div class="title-selection" *ngIf="availableTitles.length > 0">
+          <mat-checkbox [(ngModel)]="useExistingTitle" (change)="onUseExistingTitleChange()">
+            Add to existing title group
+          </mat-checkbox>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width" *ngIf="useExistingTitle && availableTitles.length > 0">
+          <mat-label>Select existing title</mat-label>
+          <mat-select [(ngModel)]="selectedExistingTitle" (selectionChange)="onExistingTitleSelect()">
+            <mat-option *ngFor="let existingTitle of availableTitles" [value]="existingTitle">
+              {{ existingTitle }} ({{ getGroupImageCount(existingTitle) }} {{ getGroupImageCount(existingTitle) === 1 ? 'image' : 'images' }})
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width" *ngIf="!useExistingTitle">
+          <mat-label>New title</mat-label>
+          <input matInput [(ngModel)]="title" placeholder="Enter photo title" required />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description (optional)</mat-label>
+          <textarea
+            matInput
+            [(ngModel)]="description"
+            placeholder="Enter photo description"
+            rows="3"
+          ></textarea>
+        </mat-form-field>
+
+        <div class="tags-section">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Add tags (optional)</mat-label>
+            <input
+              matInput
+              [(ngModel)]="tagInput"
+              (keyup.enter)="addTag()"
+              placeholder="Type a tag and press Enter"
+            />
+            <button mat-icon-button matSuffix (click)="addTag()" [disabled]="!tagInput.trim()">
+              <mat-icon>add</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <div class="tags-list" *ngIf="tags.length > 0">
+            <mat-chip-set>
+              <mat-chip *ngFor="let tag of tags" (removed)="removeTag(tag)">
+                {{ tag }}
+                <button matChipRemove>
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip>
+            </mat-chip-set>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <mat-progress-bar *ngIf="uploading" mode="indeterminate"></mat-progress-bar>
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="upload()"
+        [disabled]="uploading || selectedFiles.length === 0 || (!useExistingTitle && !title.trim()) || (useExistingTitle && !selectedExistingTitle)"
+      >
+        <mat-icon>cloud_upload</mat-icon>
+        {{ uploading ? 'Uploading...' : (selectedFiles.length > 1 ? 'Upload ' + selectedFiles.length + ' Images' : 'Upload') }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- Gallery Management Section -->
+  <mat-card class="management-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>photo_library</mat-icon>
+        Manage Gallery Images
+      </mat-card-title>
+      <mat-card-subtitle>Edit, hide, or delete existing photos</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading images...</p>
+      </div>
+
+      <!-- Grouped Images List -->
+      <div *ngIf="!loading && images.length > 0" class="grouped-images-list">
+        <mat-accordion multi>
+          <mat-expansion-panel *ngFor="let group of groupedImages | keyvalue" class="group-panel">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>photo_library</mat-icon>
+                <span class="group-title">{{ group.key }}</span>
+              </mat-panel-title>
+              <mat-panel-description>
+                {{ group.value.length }} {{ group.value.length === 1 ? 'image' : 'images' }}
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <!-- Images in this group -->
+            <div class="group-images">
+              <div *ngFor="let image of group.value" class="image-row" [class.editing]="editingImage?._id === image._id">
+                <!-- View Mode -->
+                <div *ngIf="editingImage?._id !== image._id" class="image-view">
+                  <div class="image-thumbnail">
+                    <img [src]="image.thumbnailUrl || image.publicUrl" [alt]="image.title" />
+                    <span class="visibility-badge" [class.hidden]="!image.isVisible">
+                      <mat-icon>{{ image.isVisible ? 'visibility' : 'visibility_off' }}</mat-icon>
+                    </span>
+                  </div>
+
+                  <div class="image-details">
+                    <p class="image-description" *ngIf="image.description">{{ image.description }}</p>
+                    <div class="image-meta">
+                      <span class="meta-item">
+                        <mat-icon>visibility</mat-icon>
+                        {{ image.viewCount || 0 }} views
+                      </span>
+                      <div class="image-tags" *ngIf="image.tags && image.tags.length > 0">
+                        <mat-chip-set>
+                          <mat-chip *ngFor="let tag of image.tags" class="small-chip">
+                            {{ tag }}
+                          </mat-chip>
+                        </mat-chip-set>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="image-actions">
+                    <button mat-icon-button (click)="toggleVisibility(image)" [title]="image.isVisible ? 'Hide image' : 'Show image'">
+                      <mat-icon>{{ image.isVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button color="primary" (click)="startEdit(image)" title="Edit image">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteImage(image)" title="Delete image">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <div *ngIf="editingImage?._id === image._id" class="image-edit">
+                  <div class="edit-form">
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Title</mat-label>
+                      <input matInput [(ngModel)]="editTitle" required />
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Description</mat-label>
+                      <textarea matInput [(ngModel)]="editDescription" rows="2"></textarea>
+                    </mat-form-field>
+
+                    <div class="tags-section">
+                      <mat-form-field appearance="outline" class="full-width">
+                        <mat-label>Tags</mat-label>
+                        <input
+                          matInput
+                          [(ngModel)]="editTagInput"
+                          (keyup.enter)="addEditTag()"
+                          placeholder="Type a tag and press Enter"
+                        />
+                        <button mat-icon-button matSuffix (click)="addEditTag()" [disabled]="!editTagInput.trim()">
+                          <mat-icon>add</mat-icon>
+                        </button>
+                      </mat-form-field>
+
+                      <div class="tags-list" *ngIf="editTags.length > 0">
+                        <mat-chip-set>
+                          <mat-chip *ngFor="let tag of editTags" (removed)="removeEditTag(tag)">
+                            {{ tag }}
+                            <button matChipRemove>
+                              <mat-icon>cancel</mat-icon>
+                            </button>
+                          </mat-chip>
+                        </mat-chip-set>
+                      </div>
+                    </div>
+
+                    <div class="edit-actions">
+                      <button mat-button (click)="cancelEdit()">Cancel</button>
+                      <button mat-raised-button color="primary" (click)="saveEdit()" [disabled]="!editTitle.trim()">
+                        <mat-icon>save</mat-icon>
+                        Save Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-expansion-panel>
+        </mat-accordion>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!loading && images.length === 0" class="empty-state">
+        <mat-icon>photo_library</mat-icon>
+        <h3>No images yet</h3>
+        <p>Upload your first photo to get started</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

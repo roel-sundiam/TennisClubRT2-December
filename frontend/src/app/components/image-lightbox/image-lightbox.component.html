@@ -1,0 +1,36 @@
+<div
+  class="lightbox-container"
+  (touchstart)="onTouchStart($event)"
+  (touchend)="onTouchEnd($event)"
+>
+  <!-- Close Button -->
+  <button mat-icon-button class="close-btn" (click)="close()">
+    <mat-icon>close</mat-icon>
+  </button>
+
+  <!-- Navigation Buttons -->
+  <button mat-icon-button class="nav-btn prev-btn" *ngIf="hasPrevious" (click)="previous()">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+
+  <button mat-icon-button class="nav-btn next-btn" *ngIf="hasNext" (click)="next()">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+
+  <!-- Image Display -->
+  <div class="image-container">
+    <img [src]="currentImage.publicUrl" [alt]="currentImage.title" class="lightbox-image" />
+  </div>
+
+  <!-- Image Info -->
+  <div class="image-details">
+    <h2 class="image-title">{{ currentImage.title }}</h2>
+    <p class="image-description" *ngIf="currentImage.description">
+      {{ currentImage.description }}
+    </p>
+    <div class="image-meta">
+      <span class="image-counter">{{ currentIndex + 1 }} / {{ images.length }}</span>
+      <span class="image-date">{{ currentImage.createdAt | date : 'mediumDate' }}</span>
+    </div>
+  </div>
+</div>

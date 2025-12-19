@@ -992,7 +992,7 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
   try {
     // Read data directly from JSON file for real-time updates
     const dataPath = path.join(__dirname, '../../data/financial-report.json');
-    
+
     if (!fs.existsSync(dataPath)) {
       return res.status(404).json({
         success: false,
@@ -1002,7 +1002,7 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
 
     const fileContent = fs.readFileSync(dataPath, 'utf8');
     const financialData = JSON.parse(fileContent);
-    
+
     // Load expenses from database and group by category
     const databaseExpenses = await Expense.find({}).sort({ date: 1 });
     
@@ -1192,19 +1192,9 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
         }
       }
 
-      // Remove any Annual Membership Fees line items that don't have database payments
-      financialData.receiptsCollections = financialData.receiptsCollections.filter((item: any) => {
-        const isMembershipFee = item.description.startsWith('Annual Membership Fees');
-        if (isMembershipFee) {
-          const year = item.description.match(/\d{4}/)?.[0];
-          const hasPayment = year && membershipByYear[year];
-          if (!hasPayment) {
-            console.log(`🗑️  Removed ${item.description}: No payments in database`);
-            return false; // Remove this item
-          }
-        }
-        return true; // Keep all other items
-      });
+      // Keep all Annual Membership Fees line items from JSON file
+      // Only update them if there are database payments, don't remove them
+      console.log(`ℹ️  Preserving all Annual Membership Fees line items from financial report JSON`);
 
       if (Object.keys(membershipByYear).length === 0) {
         console.log(`ℹ️ No membership payments found in database`);

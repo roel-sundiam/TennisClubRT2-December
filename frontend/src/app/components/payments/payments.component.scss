@@ -1349,11 +1349,11 @@
           font-size: 0.75rem;
           color: #6b7280;
           margin: 0;
-          line-height: 1.1;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          
+          line-height: 1.3;
+          white-space: normal; // Allow text wrapping for all paragraphs
+          overflow-wrap: break-word; // Break long words if needed
+          word-wrap: break-word; // Legacy support
+
           &.players-info {
             background: rgba(59, 130, 246, 0.08);
             border: 1px solid rgba(59, 130, 246, 0.15);
@@ -1361,12 +1361,7 @@
             border-radius: 8px;
             margin-top: 0.25rem;
             font-size: 0.7rem;
-            max-width: none; // Remove width restriction
-            white-space: normal; // Allow text wrapping
-            overflow: visible; // Allow text to show
-            text-overflow: unset; // Remove ellipsis
-            line-height: 1.3; // Better line spacing for wrapped text
-            
+
             .small-icon {
               font-size: 0.75rem;
               width: 0.75rem;
@@ -1622,15 +1617,14 @@
           
           p {
             font-size: 0.7rem;
-            
+            white-space: normal; // Allow text wrapping for all paragraphs
+            overflow-wrap: break-word; // Break long words if needed
+            word-wrap: break-word; // Legacy support
+            line-height: 1.3;
+
             &.players-info {
               font-size: 0.65rem;
               padding: 0.2rem 0.4rem;
-              max-width: none; // Remove width restriction for very small screens too
-              white-space: normal; // Allow text wrapping
-              overflow: visible; // Allow text to show
-              text-overflow: unset; // Remove ellipsis
-              line-height: 1.3; // Better line spacing
             }
           }
         }

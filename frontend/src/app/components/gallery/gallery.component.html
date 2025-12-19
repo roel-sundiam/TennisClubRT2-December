@@ -1,0 +1,183 @@
+<div class="gallery-container">
+  <!-- Header -->
+  <div class="gallery-header">
+    <h1 class="gallery-title">Photo Gallery</h1>
+    <p class="gallery-subtitle">Memories from our tennis community</p>
+  </div>
+
+  <!-- Featured Carousel -->
+  <div *ngIf="featuredImages.length > 0 && !loading" class="featured-carousel">
+    <h2 class="section-title">
+      <mat-icon>star</mat-icon>
+      Latest Photos
+    </h2>
+    <div class="carousel-container">
+      <button
+        class="carousel-nav prev"
+        (click)="prevSlide()"
+        *ngIf="featuredImages.length > 1"
+      >
+        <mat-icon>arrow_back_ios</mat-icon>
+      </button>
+
+      <div class="carousel-track">
+        <div
+          *ngFor="let image of featuredImages; let i = index"
+          class="carousel-slide"
+          [class.active]="i === currentSlideIndex"
+          (click)="openImage(image, i)"
+        >
+          <img
+            [src]="image.publicUrl"
+            [alt]="image.title"
+            class="carousel-image"
+            loading="eager"
+          />
+          <div class="carousel-caption">
+            <h3>{{ image.title }}</h3>
+            <p *ngIf="image.description">{{ image.description }}</p>
+          </div>
+        </div>
+      </div>
+
+      <button
+        class="carousel-nav next"
+        (click)="nextSlide()"
+        *ngIf="featuredImages.length > 1"
+      >
+        <mat-icon>arrow_forward_ios</mat-icon>
+      </button>
+
+      <!-- Carousel indicators -->
+      <div class="carousel-indicators" *ngIf="featuredImages.length > 1">
+        <button
+          *ngFor="let image of featuredImages; let i = index"
+          class="indicator"
+          [class.active]="i === currentSlideIndex"
+          (click)="goToSlide(i)"
+        ></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="gallery-controls">
+    <!-- Tags and View Mode -->
+    <div class="filter-row">
+      <!-- Tag Filter -->
+      <div class="tag-filter" *ngIf="availableTags.length > 0">
+        <mat-chip-set>
+          <mat-chip
+            *ngFor="let tag of availableTags"
+            [class.selected]="selectedTags.includes(tag)"
+            (click)="filterByTag(tag)"
+          >
+            {{ tag }}
+          </mat-chip>
+          <mat-chip *ngIf="selectedTags.length > 0" (click)="clearTagFilter()" class="clear-chip">
+            <mat-icon>clear</mat-icon>
+            Clear Filter
+          </mat-chip>
+        </mat-chip-set>
+      </div>
+
+      <!-- View Mode Toggle -->
+      <button mat-button class="view-toggle" (click)="toggleViewMode()">
+        <mat-icon>{{ viewMode === 'all' ? 'view_module' : 'grid_view' }}</mat-icon>
+        {{ viewMode === 'all' ? 'Group by Title' : 'Show All' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && images.length === 0" class="loading-container">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading gallery...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-raised-button (click)="loadImages(true)">Retry</button>
+  </div>
+
+  <!-- All Images View -->
+  <div *ngIf="!loading && viewMode === 'all' && images.length > 0" class="gallery-grid">
+    <div
+      *ngFor="let image of images; let i = index; trackBy: trackByImageId"
+      class="gallery-item"
+      (click)="openImage(image, i)"
+    >
+      <div class="image-wrapper">
+        <img
+          [src]="image.thumbnailUrl || image.publicUrl"
+          [alt]="image.title"
+          loading="lazy"
+          class="gallery-image"
+        />
+        <div class="image-overlay">
+          <div class="image-info">
+            <h3 class="image-title">{{ image.title }}</h3>
+            <p class="image-description" *ngIf="image.description">{{ image.description }}</p>
+            <div class="image-tags" *ngIf="image.tags && image.tags.length > 0">
+              <mat-chip-set>
+                <mat-chip *ngFor="let tag of image.tags" class="small-chip">
+                  {{ tag }}
+                </mat-chip>
+              </mat-chip-set>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grouped View -->
+  <div *ngIf="!loading && viewMode === 'grouped'" class="grouped-gallery">
+    <div class="gallery-grid">
+      <div
+        *ngFor="let group of groupedImages | keyvalue"
+        class="gallery-item group-thumbnail"
+        (click)="openTitleGroup(group.key)"
+      >
+        <div class="image-wrapper">
+          <img
+            [src]="group.value[0].thumbnailUrl || group.value[0].publicUrl"
+            [alt]="group.key"
+            loading="lazy"
+            class="gallery-image"
+          />
+          <div class="image-overlay">
+            <div class="image-info">
+              <mat-icon class="group-icon">photo_library</mat-icon>
+              <h3 class="image-title">{{ group.key | titlecase }}</h3>
+              <p class="group-count-badge">{{ group.value.length }} photo{{ group.value.length > 1 ? 's' : '' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load More Button -->
+  <div *ngIf="hasMore && !isLoadingMore && images.length > 0" class="load-more-container">
+    <button mat-raised-button (click)="loadMore()">Load More</button>
+  </div>
+
+  <!-- Loading More Indicator -->
+  <div *ngIf="isLoadingMore" class="loading-more">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && images.length === 0" class="empty-state">
+    <mat-icon>photo_library</mat-icon>
+    <h2>No photos yet</h2>
+    <p *ngIf="!isSuperAdmin">Check back soon for club photos!</p>
+    <p *ngIf="isSuperAdmin">Upload your first photo to get started</p>
+    <button mat-raised-button color="primary" *ngIf="isSuperAdmin" (click)="navigateToUpload()">
+      Upload Photo
+    </button>
+  </div>
+</div>
