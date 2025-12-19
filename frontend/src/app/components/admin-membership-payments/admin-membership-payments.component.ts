@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
@@ -873,38 +873,207 @@ export class AdminMembershipPaymentsComponent implements OnInit {
   }
 
   deletePayment(payment: MembershipPayment): void {
-    const confirmMessage = `Are you sure you want to delete this payment?\n\n` +
-      `Member: ${payment.userId.fullName}\n` +
-      `Year: ${payment.membershipYear}\n` +
-      `Amount: ₱${payment.amount.toFixed(2)}\n\n` +
-      `This action cannot be undone and will remove ${payment.membershipYear} from the member's paid years.`;
-
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    });
-
-    this.http.delete(
-      `${this.apiUrl}/payments/membership-fees/${payment._id}`,
-      { headers }
-    ).subscribe({
-      next: (response: any) => {
-        this.snackBar.open(response.message || 'Payment deleted successfully', 'Close', {
-          duration: 3000
-        });
-        this.loadPayments(); // Reload the list
-      },
-      error: (error) => {
-        console.error('Error deleting payment:', error);
-        this.snackBar.open(
-          error.error?.message || 'Failed to delete payment',
-          'Close',
-          { duration: 5000 }
-        );
+    const dialogRef = this.dialog.open(DeleteConfirmationDialog, {
+      width: '500px',
+      data: {
+        memberName: payment.userId.fullName,
+        year: payment.membershipYear,
+        amount: payment.amount
       }
     });
+
+    dialogRef.afterClosed().subscribe(confirmed => {
+      if (!confirmed) {
+        return;
+      }
+
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      });
+
+      this.http.delete(
+        `${this.apiUrl}/payments/membership-fees/${payment._id}`,
+        { headers }
+      ).subscribe({
+        next: (response: any) => {
+          this.snackBar.open(response.message || 'Payment deleted successfully', 'Close', {
+            duration: 3000
+          });
+          this.loadPayments(); // Reload the list
+        },
+        error: (error) => {
+          console.error('Error deleting payment:', error);
+          this.snackBar.open(
+            error.error?.message || 'Failed to delete payment',
+            'Close',
+            { duration: 5000 }
+          );
+        }
+      });
+    });
+  }
+}
+
+// Delete Confirmation Dialog Component
+@Component({
+  selector: 'delete-confirmation-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
+  template: `
+    <div class="delete-dialog">
+      <div class="dialog-header">
+        <mat-icon class="warning-icon">warning</mat-icon>
+        <h2 mat-dialog-title>Delete Payment Confirmation</h2>
+      </div>
+      <mat-dialog-content>
+        <p class="warning-text">Are you sure you want to delete this payment?</p>
+        <div class="payment-details">
+          <div class="detail-row">
+            <span class="label">Member:</span>
+            <span class="value">{{ data.memberName }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Year:</span>
+            <span class="value">{{ data.year }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Amount:</span>
+            <span class="value">₱{{ data.amount.toFixed(2) }}</span>
+          </div>
+        </div>
+        <p class="danger-text">
+          <mat-icon>error_outline</mat-icon>
+          This action cannot be undone and will remove {{ data.year }} from the member's paid years.
+        </p>
+      </mat-dialog-content>
+      <mat-dialog-actions align="end">
+        <button mat-button (click)="onCancel()" class="cancel-btn">
+          Cancel
+        </button>
+        <button mat-raised-button color="warn" (click)="onConfirm()" class="delete-btn">
+          <mat-icon>delete</mat-icon>
+          Delete Payment
+        </button>
+      </mat-dialog-actions>
+    </div>
+  `,
+  styles: [`
+    .delete-dialog {
+      padding: 8px;
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .warning-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: #ff9800;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    mat-dialog-content {
+      padding: 0 16px;
+      min-height: 200px;
+    }
+
+    .warning-text {
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 20px;
+    }
+
+    .payment-details {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      font-weight: 600;
+      color: #6c757d;
+    }
+
+    .value {
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    .danger-text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff3cd;
+      border-left: 4px solid #ff9800;
+      padding: 12px;
+      border-radius: 4px;
+      color: #856404;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .danger-text mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #ff9800;
+    }
+
+    mat-dialog-actions {
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .cancel-btn {
+      min-width: 100px;
+    }
+
+    .delete-btn {
+      min-width: 160px;
+    }
+
+    .delete-btn mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      margin-right: 8px;
+    }
+  `]
+})
+export class DeleteConfirmationDialog {
+  constructor(
+    public dialogRef: MatDialogRef<DeleteConfirmationDialog>,
+    @Inject(MAT_DIALOG_DATA) public data: { memberName: string; year: number; amount: number }
+  ) {}
+
+  onCancel(): void {
+    this.dialogRef.close(false);
+  }
+
+  onConfirm(): void {
+    this.dialogRef.close(true);
   }
 }
