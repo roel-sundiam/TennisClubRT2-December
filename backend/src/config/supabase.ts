@@ -3,12 +3,18 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Supabase configuration missing in environment variables');
+// Check if Supabase is configured
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
+
+if (!isSupabaseConfigured) {
+  console.warn('⚠️  Supabase configuration missing - Gallery upload feature will be disabled');
+  console.warn('   Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to enable gallery uploads');
 }
 
-// Create Supabase client with service role key for admin operations
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+// Create Supabase client with service role key for admin operations (only if configured)
+export const supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 // Bucket name for gallery images
 export const GALLERY_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'tennis-club-gallery';
@@ -19,6 +25,9 @@ export const GALLERY_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'tennis-clu
  * @returns The public URL
  */
 export const getPublicUrl = (path: string): string => {
+  if (!supabase) {
+    throw new Error('Supabase is not configured');
+  }
   const { data } = supabase.storage.from(GALLERY_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 };
@@ -29,6 +38,10 @@ export const getPublicUrl = (path: string): string => {
  * @returns Promise with success/error
  */
 export const deleteFromStorage = async (path: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) {
+    return { success: false, error: 'Supabase is not configured' };
+  }
+
   try {
     const { error } = await supabase.storage.from(GALLERY_BUCKET).remove([path]);
 

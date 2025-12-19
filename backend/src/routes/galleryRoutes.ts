@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import GalleryImage from '../models/GalleryImage';
 import { AuthenticatedRequest, authenticateToken, requireSuperAdmin } from '../middleware/auth';
 import { upload, handleMulterError } from '../middleware/upload';
-import { supabase, GALLERY_BUCKET, getPublicUrl, deleteFromStorage } from '../config/supabase';
+import { supabase, GALLERY_BUCKET, getPublicUrl, deleteFromStorage, isSupabaseConfigured } from '../config/supabase';
 import { UploadGalleryImageRequest, UpdateGalleryImageRequest } from '../types';
 
 const router = express.Router();
@@ -164,6 +164,15 @@ router.post(
       return res.status(401).json({
         success: false,
         error: 'Authentication required'
+      });
+    }
+
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured || !supabase) {
+      return res.status(503).json({
+        success: false,
+        error: 'Gallery upload feature is not configured',
+        message: 'Supabase storage is not configured. Please contact the administrator.'
       });
     }
 
@@ -370,6 +379,15 @@ router.delete(
         return res.status(404).json({
           success: false,
           error: 'Image not found'
+        });
+      }
+
+      // Check if Supabase is configured
+      if (!isSupabaseConfigured || !supabase) {
+        return res.status(503).json({
+          success: false,
+          error: 'Gallery delete feature is not configured',
+          message: 'Supabase storage is not configured. Please contact the administrator.'
         });
       }
 
