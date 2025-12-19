@@ -247,21 +247,33 @@
     height: 0.875rem;
   }
   
+  &.active {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+
+  &.inactive {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+    border: 1px solid rgba(107, 114, 128, 0.3);
+  }
+
   &.pending {
     background: rgba(245, 158, 11, 0.1);
     color: #d97706;
   }
-  
+
   &.approved {
     background: rgba(16, 185, 129, 0.1);
     color: #059669;
   }
-  
+
   &.paid {
     background: rgba(16, 185, 129, 0.1);
     color: #059669;
   }
-  
+
   &.unpaid {
     background: rgba(239, 68, 68, 0.1);
     color: #dc2626;

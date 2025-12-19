@@ -226,6 +226,10 @@ interface MemberResponse {
                     <th mat-header-cell *matHeaderCellDef>Status</th>
                     <td mat-cell *matCellDef="let member">
                       <div class="status-badges">
+                        <mat-chip [class]="member.isActive !== false ? 'status-chip active' : 'status-chip inactive'">
+                          <mat-icon>{{member.isActive !== false ? 'check_circle' : 'cancel'}}</mat-icon>
+                          {{member.isActive !== false ? 'Active' : 'Inactive'}}
+                        </mat-chip>
                         <mat-chip [class]="member.isApproved ? 'status-chip approved' : 'status-chip pending'">
                           <mat-icon>{{member.isApproved ? 'verified' : 'pending'}}</mat-icon>
                           {{member.isApproved ? 'Approved' : 'Pending'}}
