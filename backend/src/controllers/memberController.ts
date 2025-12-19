@@ -62,10 +62,10 @@ export const getMembers = asyncHandler(async (req: AuthenticatedRequest, res: Re
   }
 
   const total = await User.countDocuments(filter);
-  
+
   // Select only public fields for members directory
-  const publicFields = 'fullName username email gender profilePicture registrationDate lastLogin role coinBalance membershipFeesPaid';
-  
+  const publicFields = 'fullName username email gender profilePicture registrationDate lastLogin role coinBalance membershipFeesPaid isActive isApproved membershipYearsPaid';
+
   const members = await User.find(filter, publicFields)
     .sort(sortOption)
     .skip(skip)
@@ -412,7 +412,7 @@ export const deleteMember = asyncHandler(async (req: AuthenticatedRequest, res: 
     // Instead of deleting, mark as inactive
     const updatedMember = await User.findByIdAndUpdate(
       id,
-      { 
+      {
         isActive: false,
         deletedAt: new Date(),
         deletedBy: req.user?._id
@@ -433,6 +433,61 @@ export const deleteMember = asyncHandler(async (req: AuthenticatedRequest, res: 
     return res.status(500).json({
       success: false,
       error: 'Failed to delete member'
+    });
+  }
+});
+
+// Reactivate member (admin only)
+export const reactivateMember = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      error: 'Member ID is required'
+    });
+  }
+
+  // Check if user is admin
+  if (req.user?.role !== 'admin' && req.user?.role !== 'superadmin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied. Admin privileges required.'
+    });
+  }
+
+  try {
+    const member = await User.findById(id);
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        error: 'Member not found'
+      });
+    }
+
+    // Reactivate the member
+    const updatedMember = await User.findByIdAndUpdate(
+      id,
+      {
+        isActive: true,
+        $unset: { deletedAt: 1, deletedBy: 1 }
+      },
+      { new: true }
+    ).select('-password');
+
+    console.log(`✅ Member ${member.username} reactivated by ${req.user?.username}`);
+
+    return res.status(200).json({
+      success: true,
+      message: `Member ${member.fullName} has been reactivated`,
+      data: updatedMember
+    });
+
+  } catch (error) {
+    console.error('Error reactivating member:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to reactivate member'
     });
   }
 });

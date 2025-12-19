@@ -8,6 +8,7 @@ import {
   getMembersValidation,
   updateMemberApproval,
   deleteMember,
+  reactivateMember,
   getPendingMembers,
   resetMemberPassword
 } from '../controllers/memberController';
@@ -96,6 +97,13 @@ router.put('/:id/approval', authenticateToken, requireRole(['admin', 'superadmin
  * @access Private (Admin/SuperAdmin)
  */
 router.delete('/:id', authenticateToken, requireRole(['admin', 'superadmin']), preventImpersonationFor(['delete members']), deleteMember);
+
+/**
+ * @route PUT /api/members/:id/reactivate
+ * @desc Reactivate a deactivated member (admin only)
+ * @access Private (Admin/SuperAdmin)
+ */
+router.put('/:id/reactivate', authenticateToken, requireRole(['admin', 'superadmin']), preventImpersonationFor(['reactivate members']), reactivateMember);
 
 /**
  * @route PUT /api/members/:id/reset-password

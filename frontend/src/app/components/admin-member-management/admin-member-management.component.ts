@@ -286,10 +286,10 @@ interface MemberResponse {
                         </button>
                         <button
                           mat-icon-button
-                          color="warn"
-                          (click)="deactivateMember(member)"
-                          matTooltip="Deactivate Member">
-                          <mat-icon>delete</mat-icon>
+                          [color]="member.isActive !== false ? 'warn' : 'primary'"
+                          (click)="member.isActive !== false ? deactivateMember(member) : reactivateMember(member)"
+                          [matTooltip]="member.isActive !== false ? 'Deactivate Member' : 'Reactivate Member'">
+                          <mat-icon>{{member.isActive !== false ? 'person_remove' : 'person_add'}}</mat-icon>
                         </button>
                       </div>
                     </td>
@@ -473,7 +473,7 @@ export class AdminMemberManagementComponent implements OnInit {
         this.http.delete<any>(`${this.apiUrl}/members/${member._id}`, { headers })
           .subscribe({
             next: (response) => {
-              this.snackBar.open(`${member.fullName} has been deactivated`, 'Close', { 
+              this.snackBar.open(`${member.fullName} has been deactivated`, 'Close', {
                 duration: 3000,
                 panelClass: ['warning-snackbar']
               });
@@ -482,6 +482,44 @@ export class AdminMemberManagementComponent implements OnInit {
             error: (error) => {
               console.error('Error deactivating member:', error);
               this.snackBar.open('Failed to deactivate member', 'Close', { duration: 3000 });
+            }
+          });
+      }
+    });
+  }
+
+  reactivateMember(member: Member): void {
+    const dialogData: ConfirmationDialogData = {
+      title: 'Reactivate Member',
+      message: `Are you sure you want to reactivate ${member.fullName}? This will restore their access to the system.`,
+      confirmText: 'Reactivate',
+      cancelText: 'Cancel',
+      type: 'info',
+      icon: 'person_add'
+    };
+
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      width: '450px',
+      data: dialogData,
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        const headers = { 'Authorization': `Bearer ${this.authService.token}` };
+
+        this.http.put<any>(`${this.apiUrl}/members/${member._id}/reactivate`, {}, { headers })
+          .subscribe({
+            next: (response) => {
+              this.snackBar.open(`${member.fullName} has been reactivated`, 'Close', {
+                duration: 3000,
+                panelClass: ['success-snackbar']
+              });
+              this.loadAllMembers();
+            },
+            error: (error) => {
+              console.error('Error reactivating member:', error);
+              this.snackBar.open('Failed to reactivate member', 'Close', { duration: 3000 });
             }
           });
       }
