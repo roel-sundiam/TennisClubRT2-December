@@ -12,6 +12,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
@@ -64,7 +66,9 @@ interface MembershipPayment {
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatDatepickerModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    MatDialogModule,
+    MatTooltipModule
   ],
   template: `
     <div class="membership-payments-container">
@@ -275,6 +279,25 @@ interface MembershipPayment {
                   <th mat-header-cell *matHeaderCellDef>Notes</th>
                   <td mat-cell *matCellDef="let payment">
                     <span class="notes-text">{{ payment.notes || '-' }}</span>
+                  </td>
+                </ng-container>
+
+                <!-- Actions Column -->
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <td mat-cell *matCellDef="let payment">
+                    <button mat-icon-button color="primary"
+                            (click)="editPayment(payment)"
+                            matTooltip="Edit payment"
+                            class="action-btn">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn"
+                            (click)="deletePayment(payment)"
+                            matTooltip="Delete payment"
+                            class="action-btn">
+                      <mat-icon>delete</mat-icon>
+                    </button>
                   </td>
                 </ng-container>
 
@@ -571,6 +594,18 @@ interface MembershipPayment {
       margin-bottom: 16px;
     }
 
+    /* Action Buttons */
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      line-height: 36px;
+    }
+
+    .action-btn mat-icon {
+      font-size: 18px;
+      line-height: 18px;
+    }
+
     .no-data p {
       font-size: 18px;
       margin: 8px 0;
@@ -638,7 +673,7 @@ export class AdminMembershipPaymentsComponent implements OnInit {
   isSubmitting = false;
   filterYear: number | null = null;
   currentYear = new Date().getFullYear();
-  displayedColumns: string[] = ['member', 'year', 'amount', 'method', 'date', 'recordedBy', 'notes'];
+  displayedColumns: string[] = ['member', 'year', 'amount', 'method', 'date', 'recordedBy', 'notes', 'actions'];
   summary = {
     count: 0,
     totalAmount: 0,
@@ -650,7 +685,8 @@ export class AdminMembershipPaymentsComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {
     this.paymentForm = this.fb.group({
       userId: ['', Validators.required],
@@ -758,6 +794,7 @@ export class AdminMembershipPaymentsComponent implements OnInit {
 
     this.isSubmitting = true;
     const formValue = this.paymentForm.value;
+    const editingPaymentId = (this.paymentForm as any).editingPaymentId;
 
     // Format the payment date to ISO string
     const paymentData = {
@@ -767,22 +804,30 @@ export class AdminMembershipPaymentsComponent implements OnInit {
         : formValue.paymentDate
     };
 
-    this.http.post<any>(`${this.apiUrl}/payments/membership-fee`, paymentData, { headers: this.getAuthHeaders() })
-      .subscribe({
-        next: (response) => {
-          this.snackBar.open(response.message || 'Membership payment recorded successfully', 'Close', { duration: 3000 });
-          this.isSubmitting = false;
-          this.resetForm();
-          this.loadPayments();
-          this.loadMembers(); // Reload to get updated membershipYearsPaid
-        },
-        error: (error) => {
-          console.error('Error recording payment:', error);
-          const errorMessage = error.error?.message || 'Failed to record membership payment';
-          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-          this.isSubmitting = false;
-        }
-      });
+    // Check if we're editing an existing payment
+    const request = editingPaymentId
+      ? this.http.patch<any>(`${this.apiUrl}/payments/membership-fees/${editingPaymentId}`, paymentData, { headers: this.getAuthHeaders() })
+      : this.http.post<any>(`${this.apiUrl}/payments/membership-fee`, paymentData, { headers: this.getAuthHeaders() });
+
+    request.subscribe({
+      next: (response) => {
+        const message = editingPaymentId
+          ? 'Membership payment updated successfully'
+          : 'Membership payment recorded successfully';
+        this.snackBar.open(response.message || message, 'Close', { duration: 3000 });
+        this.isSubmitting = false;
+        this.resetForm();
+        delete (this.paymentForm as any).editingPaymentId; // Clear editing state
+        this.loadPayments();
+        this.loadMembers(); // Reload to get updated membershipYearsPaid
+      },
+      error: (error) => {
+        console.error('Error recording/updating payment:', error);
+        const errorMessage = error.error?.message || `Failed to ${editingPaymentId ? 'update' : 'record'} membership payment`;
+        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+        this.isSubmitting = false;
+      }
+    });
   }
 
   resetForm(): void {
@@ -803,5 +848,63 @@ export class AdminMembershipPaymentsComponent implements OnInit {
       'gcash': 'GCash'
     };
     return methodMap[method] || method;
+  }
+
+  editPayment(payment: MembershipPayment): void {
+    // Populate form with payment data for editing
+    this.paymentForm.patchValue({
+      userId: payment.userId._id,
+      membershipYear: payment.membershipYear,
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      paymentDate: new Date(payment.paymentDate),
+      notes: payment.notes || ''
+    });
+
+    // Store the payment ID for updating
+    (this.paymentForm as any).editingPaymentId = payment._id;
+
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    this.snackBar.open(`Editing payment for ${payment.userId.fullName}`, 'Close', {
+      duration: 3000
+    });
+  }
+
+  deletePayment(payment: MembershipPayment): void {
+    const confirmMessage = `Are you sure you want to delete this payment?\n\n` +
+      `Member: ${payment.userId.fullName}\n` +
+      `Year: ${payment.membershipYear}\n` +
+      `Amount: ₱${payment.amount.toFixed(2)}\n\n` +
+      `This action cannot be undone and will remove ${payment.membershipYear} from the member's paid years.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    });
+
+    this.http.delete(
+      `${this.apiUrl}/payments/membership-fees/${payment._id}`,
+      { headers }
+    ).subscribe({
+      next: (response: any) => {
+        this.snackBar.open(response.message || 'Payment deleted successfully', 'Close', {
+          duration: 3000
+        });
+        this.loadPayments(); // Reload the list
+      },
+      error: (error) => {
+        console.error('Error deleting payment:', error);
+        this.snackBar.open(
+          error.error?.message || 'Failed to delete payment',
+          'Close',
+          { duration: 5000 }
+        );
+      }
+    });
   }
 }

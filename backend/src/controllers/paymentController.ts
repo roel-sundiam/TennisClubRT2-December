@@ -2687,6 +2687,115 @@ export const getMembershipPaymentSummary = asyncHandler(async (req: Authenticate
   });
 });
 
+/**
+ * Update membership fee payment
+ * Admin/SuperAdmin can update any membership payment
+ */
+export const updateMembershipPayment = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const { amount, membershipYear, paymentMethod, paymentDate, notes } = req.body;
+
+  // Find the payment
+  const payment = await Payment.findById(id);
+
+  if (!payment) {
+    return res.status(404).json({
+      success: false,
+      message: 'Payment not found'
+    });
+  }
+
+  // Check if it's a membership fee payment
+  if (payment.paymentType !== 'membership_fee') {
+    return res.status(400).json({
+      success: false,
+      message: 'This endpoint is only for membership fee payments'
+    });
+  }
+
+  // Get the old year before updating
+  const oldYear = payment.membershipYear;
+  const userId = payment.userId;
+
+  // Update payment fields
+  if (amount !== undefined) payment.amount = amount;
+  if (membershipYear !== undefined) payment.membershipYear = membershipYear;
+  if (paymentMethod !== undefined) payment.paymentMethod = paymentMethod;
+  if (paymentDate !== undefined) payment.paymentDate = new Date(paymentDate);
+  if (notes !== undefined) payment.notes = notes;
+
+  await payment.save();
+
+  // If year changed, update user's membershipYearsPaid array
+  if (membershipYear !== undefined && oldYear !== membershipYear) {
+    await User.findByIdAndUpdate(
+      userId,
+      {
+        $pull: { membershipYearsPaid: oldYear },
+        $addToSet: { membershipYearsPaid: membershipYear }
+      }
+    );
+  }
+
+  // Populate and return updated payment
+  const updatedPayment = await Payment.findById(id)
+    .populate('userId', 'fullName username email membershipYearsPaid')
+    .populate('recordedBy', 'fullName username');
+
+  console.log(`💳 Membership payment updated: ${payment._id} by ${req.user!.username}`);
+
+  res.json({
+    success: true,
+    message: 'Membership payment updated successfully',
+    data: updatedPayment
+  });
+});
+
+/**
+ * Delete membership fee payment
+ * Admin/SuperAdmin only - removes payment and updates user's membershipYearsPaid
+ */
+export const deleteMembershipPayment = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  // Find the payment
+  const payment = await Payment.findById(id);
+
+  if (!payment) {
+    return res.status(404).json({
+      success: false,
+      message: 'Payment not found'
+    });
+  }
+
+  // Check if it's a membership fee payment
+  if (payment.paymentType !== 'membership_fee') {
+    return res.status(400).json({
+      success: false,
+      message: 'This endpoint is only for membership fee payments'
+    });
+  }
+
+  const userId = payment.userId;
+  const membershipYear = payment.membershipYear;
+
+  // Delete the payment
+  await Payment.findByIdAndDelete(id);
+
+  // Remove the year from user's membershipYearsPaid array
+  await User.findByIdAndUpdate(
+    userId,
+    { $pull: { membershipYearsPaid: membershipYear } }
+  );
+
+  console.log(`🗑️ Membership payment deleted: ${id} (Year: ${membershipYear}) by ${req.user!.username}`);
+
+  res.json({
+    success: true,
+    message: 'Membership payment deleted successfully'
+  });
+});
+
 // Update financial report to include membership fees
 async function updateFinancialReportMembershipFees(): Promise<void> {
   try {

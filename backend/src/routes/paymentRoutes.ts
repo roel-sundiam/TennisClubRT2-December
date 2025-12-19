@@ -22,6 +22,8 @@ import {
   recordMembershipFeePayment,
   getMembershipPayments,
   getMembershipPaymentSummary,
+  updateMembershipPayment,
+  deleteMembershipPayment,
   validateMembershipFeePayment
 } from '../controllers/paymentController';
 import { authenticateToken, requireRole, AuthenticatedRequest } from '../middleware/auth';
@@ -198,6 +200,30 @@ router.get(
   authenticateToken,
   requireRole(['admin', 'superadmin']),
   getMembershipPaymentSummary
+);
+
+/**
+ * @route PATCH /api/payments/membership-fees/:id
+ * @desc Update membership fee payment
+ * @access Private (Admin/SuperAdmin only)
+ */
+router.patch(
+  '/membership-fees/:id',
+  authenticateToken,
+  requireRole(['admin', 'superadmin']),
+  updateMembershipPayment
+);
+
+/**
+ * @route DELETE /api/payments/membership-fees/:id
+ * @desc Delete membership fee payment
+ * @access Private (Admin/SuperAdmin only)
+ */
+router.delete(
+  '/membership-fees/:id',
+  authenticateToken,
+  requireRole(['admin', 'superadmin']),
+  deleteMembershipPayment
 );
 
 /**
