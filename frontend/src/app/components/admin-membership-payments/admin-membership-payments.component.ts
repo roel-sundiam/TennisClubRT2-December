@@ -566,12 +566,22 @@ interface MembershipPayment {
       background: #f7fafc;
       color: #2d3748;
       font-weight: 600;
-      padding: 16px;
+      padding: 12px 16px;
+      font-size: 13px;
     }
 
     .payments-table td {
-      padding: 16px;
+      padding: 12px 16px;
       border-bottom: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+
+    .payments-table td strong {
+      font-size: 13px;
+    }
+
+    .payments-table .text-muted {
+      font-size: 11px;
     }
 
     .payments-table tr:hover {
