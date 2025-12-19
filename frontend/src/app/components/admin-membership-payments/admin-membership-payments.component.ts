@@ -307,10 +307,30 @@ interface MembershipPayment {
 
               <!-- Summary -->
               <div class="summary-section">
-                <h4>Summary</h4>
-                <p><strong>Total Payments:</strong> {{ summary.count }}</p>
-                <p><strong>Total Amount:</strong> ₱{{ summary.totalAmount.toFixed(2) }}</p>
-                <p *ngIf="summary.years.length > 0"><strong>Years:</strong> {{ summary.years.join(', ') }}</p>
+                <h4>Payment Summary</h4>
+                <div class="summary-grid">
+                  <div class="summary-card">
+                    <mat-icon class="summary-icon">receipt</mat-icon>
+                    <div class="summary-content">
+                      <p class="summary-label">Total Payments</p>
+                      <p class="summary-value">{{ summary.count }}</p>
+                    </div>
+                  </div>
+                  <div class="summary-card total-amount-card">
+                    <mat-icon class="summary-icon">payments</mat-icon>
+                    <div class="summary-content">
+                      <p class="summary-label">Total Amount</p>
+                      <p class="summary-value amount">₱{{ summary.totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) }}</p>
+                    </div>
+                  </div>
+                  <div class="summary-card" *ngIf="summary.years.length > 0">
+                    <mat-icon class="summary-icon">calendar_today</mat-icon>
+                    <div class="summary-content">
+                      <p class="summary-label">Years</p>
+                      <p class="summary-value years">{{ summary.years.join(', ') }}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -561,22 +581,86 @@ interface MembershipPayment {
     /* Summary Section */
     .summary-section {
       margin-top: 24px;
-      padding: 24px;
-      background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+      padding: 20px;
+      background: #f8f9fa;
       border-radius: 12px;
-      border: 2px solid #667eea30;
     }
 
     .summary-section h4 {
       margin: 0 0 16px 0;
-      color: #2d3748;
-      font-weight: 700;
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
     }
 
-    .summary-section p {
-      margin: 8px 0;
-      color: #4a5568;
-      font-size: 15px;
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .summary-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .summary-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .total-amount-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .total-amount-card .summary-icon,
+    .total-amount-card .summary-label,
+    .total-amount-card .summary-value {
+      color: white !important;
+    }
+
+    .summary-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: #667eea;
+    }
+
+    .summary-content {
+      flex: 1;
+    }
+
+    .summary-label {
+      margin: 0;
+      font-size: 13px;
+      color: #6c757d;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .summary-value {
+      margin: 4px 0 0 0;
+      font-size: 28px;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+
+    .summary-value.amount {
+      font-size: 32px;
+      letter-spacing: -0.5px;
+    }
+
+    .summary-value.years {
+      font-size: 18px;
+      font-weight: 600;
     }
 
     /* No Data State */
