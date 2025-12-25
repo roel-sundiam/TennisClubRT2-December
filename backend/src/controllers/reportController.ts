@@ -1003,6 +1003,15 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
     const fileContent = fs.readFileSync(dataPath, 'utf8');
     const financialData = JSON.parse(fileContent);
 
+    // Update period to show current date
+    const currentDate = new Date();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const currentMonth = monthNames[currentDate.getMonth()];
+    const currentDay = currentDate.getDate();
+    const currentYear = currentDate.getFullYear();
+    financialData.period = `COVERING January 1, ${currentYear} - ${currentMonth} ${currentDay}, ${currentYear}`;
+
     // Load expenses from database and group by category
     const databaseExpenses = await Expense.find({}).sort({ date: 1 });
     
@@ -1269,7 +1278,16 @@ export const forceRefreshFinancialReport = asyncHandler(async (req: Authenticate
     // Bypass cache and get fresh data from Google Sheets
     const freshData = await sheetsService.getFinancialReportData(true);
     console.log(`🔍 Fresh data from sheets - disbursements count: ${freshData.disbursementsExpenses.length}`);
-    
+
+    // Update period to show current date
+    const currentDate = new Date();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    const currentMonth = monthNames[currentDate.getMonth()];
+    const currentDay = currentDate.getDate();
+    const currentYear = currentDate.getFullYear();
+    freshData.period = `COVERING January 1, ${currentYear} - ${currentMonth} ${currentDay}, ${currentYear}`;
+
     // Calculate recorded payments to add to the baseline
     const Payment = (await import('../models/Payment')).default;
     const recordedPayments = await Payment.find({ 

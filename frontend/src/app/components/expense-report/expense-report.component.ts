@@ -100,7 +100,7 @@ interface ExpenseResponse {
           </div>
           <div class="summary-cards">
             <mat-card class="summary-card">
-              <mat-icon>attach_money</mat-icon>
+              <mat-icon>payments</mat-icon>
               <div class="summary-content">
                 <span class="summary-value">₱{{getTotalAmount() | number:'1.2-2'}}</span>
                 <span class="summary-label">Total Expenses</span>
