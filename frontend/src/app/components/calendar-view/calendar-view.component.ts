@@ -86,9 +86,9 @@ export class CalendarViewComponent implements OnInit {
             });
           }
 
-          // Show only confirmed, pending, blocked, and completed reservations
-          // Hide: cancelled (user cancelled) and no-show (didn't show up)
-          if (reservation.status === 'confirmed' || reservation.status === 'pending' || reservation.status === 'blocked' || reservation.status === 'completed') {
+          // Show: confirmed, pending, blocked, completed, and no-show (historical) reservations
+          // Hide: cancelled (user cancelled)
+          if (reservation.status === 'confirmed' || reservation.status === 'pending' || reservation.status === 'blocked' || reservation.status === 'completed' || reservation.status === 'no-show') {
             // For blocked reservations, show the block notes (full description) as title
             let title = '';
             let statusBadge = '';
@@ -102,6 +102,8 @@ export class CalendarViewComponent implements OnInit {
               statusBadge = '✔️ ';
             } else if (reservation.status === 'blocked') {
               statusBadge = '🚫 ';
+            } else if (reservation.status === 'no-show') {
+              statusBadge = '⏱️ ';  // Indicates historical/passed reservation
             }
 
             if (reservation.status === 'blocked') {
@@ -122,6 +124,11 @@ export class CalendarViewComponent implements OnInit {
               bgColor = '#ff9800'; // pending payment - orange
             } else if (paymentStatus === 'overdue') {
               bgColor = '#dc2626'; // overdue - red
+            }
+
+            // Override color for no-show status to show historical reservations in gray-blue
+            if (reservation.status === 'no-show') {
+              bgColor = '#94a3b8'; // light gray-blue (slate-400) for historical/no-show reservations
             }
 
             let borderColor = bgColor;
@@ -561,7 +568,7 @@ export class CalendarViewComponent implements OnInit {
         if (debugInfo.length >= 10) return; // Limit to 10 for readability
 
         const paymentStatus = reservation.paymentStatus || 'not_applicable';
-        const isVisible = reservation.status === 'confirmed' || reservation.status === 'pending' || reservation.status === 'blocked' || reservation.status === 'completed';
+        const isVisible = reservation.status === 'confirmed' || reservation.status === 'pending' || reservation.status === 'blocked' || reservation.status === 'completed' || reservation.status === 'no-show';
 
         if (isVisible) {
           visibleCount++;
