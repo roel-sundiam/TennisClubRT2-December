@@ -630,7 +630,9 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
         windSpeed: weather.windSpeed,
         icon: weather.icon,
         rainChance: weather.rainChance,
-        timestamp: weather.timestamp
+        timestamp: weather.timestamp,
+        lastFetched: new Date(),
+        isMockData: weather.isMockData || false
       };
     }
   } catch (error) {
@@ -1482,7 +1484,9 @@ export const blockCourt = asyncHandler(async (req: AuthenticatedRequest, res: Re
         windSpeed: weather.windSpeed,
         icon: weather.icon,
         rainChance: weather.rainChance,
-        timestamp: weather.timestamp
+        timestamp: weather.timestamp,
+        lastFetched: new Date(),
+        isMockData: weather.isMockData || false
       };
     }
   } catch (error) {

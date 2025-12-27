@@ -31,6 +31,7 @@ interface WeatherResponse {
   weather: WeatherData;
   suitability: WeatherSuitability;
   location: string;
+  isMockData?: boolean;
 }
 
 interface HourlyWeatherForecast {
@@ -350,6 +351,104 @@ interface ForecastResponse {
             </mat-card-content>
           </mat-card>
         </div>
+
+        <!-- Debug Info Panel -->
+        <mat-card class="debug-panel" *ngIf="showDebugInfo && currentWeather">
+          <mat-card-header>
+            <div class="debug-header">
+              <div>
+                <mat-icon>bug_report</mat-icon>
+                <span>Debug Information</span>
+              </div>
+              <button mat-icon-button (click)="showDebugInfo = !showDebugInfo" matTooltip="Hide debug info">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="debug-content">
+              <!-- Data Source -->
+              <div class="debug-item">
+                <div class="debug-label">
+                  <mat-icon [class.real-data]="!currentWeather.isMockData"
+                            [class.mock-data]="currentWeather.isMockData">
+                    {{ currentWeather.isMockData ? 'science' : 'cloud_done' }}
+                  </mat-icon>
+                  <strong>Data Source:</strong>
+                </div>
+                <div class="debug-value">
+                  <mat-chip [class.real-chip]="!currentWeather.isMockData"
+                            [class.mock-chip]="currentWeather.isMockData">
+                    {{ currentWeather.isMockData ? '⚠️ MOCK/SAMPLE DATA' : '✅ REAL OpenWeather API' }}
+                  </mat-chip>
+                </div>
+              </div>
+
+              <!-- Timezone -->
+              <div class="debug-item" *ngIf="hourlyForecast">
+                <div class="debug-label">
+                  <mat-icon>schedule</mat-icon>
+                  <strong>Timezone:</strong>
+                </div>
+                <div class="debug-value">{{ hourlyForecast.timezone || 'Asia/Manila' }}</div>
+              </div>
+
+              <!-- Location Coordinates -->
+              <div class="debug-item">
+                <div class="debug-label">
+                  <mat-icon>my_location</mat-icon>
+                  <strong>Coordinates:</strong>
+                </div>
+                <div class="debug-value">15.087°N, 120.6285°E</div>
+              </div>
+
+              <!-- Last Updated -->
+              <div class="debug-item" *ngIf="hourlyForecast">
+                <div class="debug-label">
+                  <mat-icon>update</mat-icon>
+                  <strong>Last Fetched:</strong>
+                </div>
+                <div class="debug-value">{{ hourlyForecast.generated | date:'medium' }}</div>
+              </div>
+
+              <!-- Current Time -->
+              <div class="debug-item">
+                <div class="debug-label">
+                  <mat-icon>access_time</mat-icon>
+                  <strong>Current Time (Manila):</strong>
+                </div>
+                <div class="debug-value">{{ getCurrentManilaTime() }}</div>
+              </div>
+
+              <!-- API Endpoint -->
+              <div class="debug-item">
+                <div class="debug-label">
+                  <mat-icon>api</mat-icon>
+                  <strong>API Endpoint:</strong>
+                </div>
+                <div class="debug-value api-url">{{apiUrl}}/weather</div>
+              </div>
+
+              <!-- Warning if Mock Data -->
+              <div class="debug-warning" *ngIf="currentWeather.isMockData">
+                <mat-icon>warning</mat-icon>
+                <div>
+                  <strong>Using Sample Data</strong>
+                  <p>Check WEATHER_API_KEY in backend/.env file to use real OpenWeather data</p>
+                </div>
+              </div>
+
+              <!-- Success if Real Data -->
+              <div class="debug-success" *ngIf="!currentWeather.isMockData">
+                <mat-icon>check_circle</mat-icon>
+                <div>
+                  <strong>Timezone Fix Active</strong>
+                  <p>Weather times are accurately displayed in Asia/Manila timezone (UTC+8)</p>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
       </div>
     </div>
   `,
@@ -363,8 +462,8 @@ export class WeatherComponent implements OnInit, OnDestroy {
   error: string | null = null;
   location = 'San Fernando, Pampanga';
   selectedView: 'hourly' | 'daily' = 'hourly';
-  
-  private apiUrl = environment.apiUrl;
+  showDebugInfo = false; // Debug panel hidden
+  apiUrl = environment.apiUrl; // Public for template access
 
   constructor(
     private http: HttpClient,
@@ -525,6 +624,14 @@ export class WeatherComponent implements OnInit, OnDestroy {
         day: 'numeric'
       });
     }
+  }
+
+  getCurrentManilaTime(): string {
+    return new Date().toLocaleString('en-PH', {
+      timeZone: 'Asia/Manila',
+      dateStyle: 'medium',
+      timeStyle: 'medium'
+    });
   }
 
   goBack(): void {

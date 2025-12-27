@@ -1,6 +1,8 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import weatherService from '../services/weatherService';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { shouldRefreshWeather, refreshReservationWeather } from '../services/weatherRefreshService';
+import Reservation from '../models/Reservation';
 
 const router = Router();
 
@@ -24,7 +26,8 @@ router.get('/current', authenticateToken, async (req, res) => {
     return res.json({
       weather,
       suitability,
-      location: 'San Fernando, Pampanga'
+      location: 'San Fernando, Pampanga',
+      isMockData: weather.isMockData || false
     });
   } catch (error) {
     console.error('Error in GET /weather/current:', error);
@@ -139,12 +142,73 @@ router.get('/datetime/:date/:hour', authenticateToken, async (req, res) => {
       timeSlot: `${targetHour}:00 - ${targetHour + 1}:00`,
       weather,
       suitability,
-      location: 'San Fernando, Pampanga'
+      location: 'San Fernando, Pampanga',
+      isMockData: weather.isMockData || false
     });
   } catch (error) {
     console.error('Error in GET /weather/datetime:', error);
     return res.status(500).json({
       message: 'Internal server error while fetching weather data'
+    });
+  }
+});
+
+/**
+ * @route POST /api/weather/refresh/:reservationId
+ * @desc Refresh weather forecast for a specific reservation
+ * @access Private
+ */
+router.post('/refresh/:reservationId', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { reservationId } = req.params;
+
+    if (!reservationId) {
+      return res.status(400).json({
+        message: 'Reservation ID is required'
+      });
+    }
+
+    // Find the reservation
+    const reservation = await Reservation.findById(reservationId);
+    if (!reservation) {
+      return res.status(404).json({
+        message: 'Reservation not found'
+      });
+    }
+
+    // Verify user owns the reservation or is admin
+    if (!req.user) {
+      return res.status(401).json({
+        message: 'Authentication required'
+      });
+    }
+
+    if (reservation.userId.toString() !== req.user._id.toString() &&
+        req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        message: 'You do not have permission to refresh this reservation\'s weather'
+      });
+    }
+
+    // Check if refresh is needed
+    if (!shouldRefreshWeather(reservation)) {
+      return res.json({
+        message: 'Weather data is still fresh',
+        weatherForecast: reservation.weatherForecast
+      });
+    }
+
+    // Refresh weather
+    const updated = await refreshReservationWeather(reservationId);
+
+    return res.json({
+      message: 'Weather forecast updated successfully',
+      weatherForecast: updated.weatherForecast
+    });
+  } catch (error) {
+    console.error('Error refreshing weather:', error);
+    return res.status(500).json({
+      message: 'Failed to refresh weather forecast'
     });
   }
 });

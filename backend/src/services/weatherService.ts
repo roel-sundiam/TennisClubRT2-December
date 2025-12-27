@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { utcToManila, createManilaDateTime, nowInManila } from '../utils/timezone.util';
+import cacheService from './cacheService';
 
 export interface WeatherData {
   temperature: number;
@@ -8,6 +10,7 @@ export interface WeatherData {
   icon: string;
   rainChance?: number; // Precipitation probability as percentage
   timestamp: Date;
+  isMockData?: boolean; // Flag to indicate if this is mock/sample data
 }
 
 export interface WeatherForecast {
@@ -67,6 +70,15 @@ class WeatherService {
    * Get current weather for the tennis club location
    */
   async getCurrentWeather(): Promise<WeatherData | null> {
+    const cacheKey = `weather:current:${this.LOCATION.lat},${this.LOCATION.lon}`;
+
+    // Check cache first
+    const cached = cacheService.get<WeatherData>(cacheKey);
+    if (cached) {
+      console.log('☁️  Returning cached current weather');
+      return cached;
+    }
+
     try {
       if (!this.API_KEY) {
         return this.getMockCurrentWeather();
@@ -77,7 +89,7 @@ class WeatherService {
       );
 
       const data = response.data;
-      return {
+      const weatherData: WeatherData = {
         temperature: Math.round(data.main?.temp || 25),
         description: data.weather?.[0]?.description || 'Clear',
         humidity: data.main?.humidity || 60,
@@ -86,6 +98,11 @@ class WeatherService {
         rainChance: data.pop ? Math.round(data.pop * 100) : undefined, // Convert probability to percentage
         timestamp: new Date()
       };
+
+      // Cache for 5 minutes (300 seconds)
+      cacheService.set(cacheKey, weatherData, 300);
+
+      return weatherData;
     } catch (error) {
       console.error('Error fetching current weather:', error);
       return this.getMockCurrentWeather();
@@ -106,16 +123,16 @@ class WeatherService {
       );
 
       const forecasts = response.data.list;
-      const targetDate = new Date(date);
-      targetDate.setHours(hour, 0, 0, 0);
+      const targetManilaTime = createManilaDateTime(date, hour);
+      const targetTimestamp = targetManilaTime.toSeconds();
 
-      // Find the closest forecast to the target datetime
+      // Find the closest forecast to the target datetime using UTC timestamps
       const closestForecast = forecasts.reduce((closest: any, forecast: any) => {
-        const forecastDate = new Date(forecast.dt * 1000);
-        const closestDate = new Date(closest?.dt * 1000 || 0);
-        
-        return Math.abs(forecastDate.getTime() - targetDate.getTime()) < 
-               Math.abs(closestDate.getTime() - targetDate.getTime()) ? forecast : closest;
+        const forecastTimestamp = forecast.dt;
+        const closestTimestamp = closest?.dt || 0;
+
+        return Math.abs(forecastTimestamp - targetTimestamp) <
+               Math.abs(closestTimestamp - targetTimestamp) ? forecast : closest;
       });
 
       if (closestForecast) {
@@ -141,6 +158,15 @@ class WeatherService {
    * Get hourly weather forecast for next 48 hours during court operating hours
    */
   async getHourlyForecast(): Promise<HourlyWeatherForecast[]> {
+    const cacheKey = `weather:hourly:${this.LOCATION.lat},${this.LOCATION.lon}`;
+
+    // Check cache first
+    const cached = cacheService.get<HourlyWeatherForecast[]>(cacheKey);
+    if (cached) {
+      console.log('☁️  Returning cached hourly forecast');
+      return cached;
+    }
+
     try {
       if (!this.API_KEY) {
         return this.getMockHourlyForecast();
@@ -154,11 +180,12 @@ class WeatherService {
       const hourlyForecasts: HourlyWeatherForecast[] = [];
 
       forecasts.forEach((forecast: any) => {
-        const date = new Date(forecast.dt * 1000);
-        const hour = date.getHours();
+        const manilaTime = utcToManila(forecast.dt);
+        const hour = manilaTime.hour;
 
         // Only include court operating hours (5 AM - 10 PM)
         if (hour >= 5 && hour <= 22) {
+          const date = manilaTime.toJSDate();
           const weatherData: WeatherData = {
             temperature: Math.round(forecast.main?.temp || 25),
             description: forecast.weather?.[0]?.description || 'Clear',
@@ -173,7 +200,7 @@ class WeatherService {
 
           hourlyForecasts.push({
             datetime: date.toISOString(),
-            date: date.toISOString().split('T')[0] || '',
+            date: manilaTime.toISODate() || '',
             hour,
             timeSlot: `${hour.toString().padStart(2, '0')}:00 - ${(hour + 1).toString().padStart(2, '0')}:00`,
             temperature: weatherData.temperature,
@@ -188,7 +215,12 @@ class WeatherService {
       });
 
       // Return next 48 hours of court operating time slots
-      return hourlyForecasts.slice(0, 48);
+      const result = hourlyForecasts.slice(0, 48);
+
+      // Cache for 10 minutes (600 seconds)
+      cacheService.set(cacheKey, result, 600);
+
+      return result;
     } catch (error) {
       console.error('Error fetching hourly forecast:', error);
       return this.getMockHourlyForecast();
@@ -199,6 +231,15 @@ class WeatherService {
    * Get 5-day weather forecast for schedule display
    */
   async getFiveDayForecast(): Promise<WeatherForecast[]> {
+    const cacheKey = `weather:forecast:${this.LOCATION.lat},${this.LOCATION.lon}`;
+
+    // Check cache first
+    const cached = cacheService.get<WeatherForecast[]>(cacheKey);
+    if (cached) {
+      console.log('☁️  Returning cached 5-day forecast');
+      return cached;
+    }
+
     try {
       if (!this.API_KEY) {
         return this.getMockFiveDayForecast();
@@ -212,9 +253,9 @@ class WeatherService {
       const dailyForecasts: { [key: string]: WeatherForecast } = {};
 
       forecasts.forEach((forecast: any) => {
-        const date = new Date(forecast.dt * 1000);
-        const dateStr = date.toISOString().split('T')[0];
-        const hour = date.getHours();
+        const manilaTime = utcToManila(forecast.dt);
+        const dateStr = manilaTime.toISODate();
+        const hour = manilaTime.hour;
 
         if (!dateStr) return; // Safety check
 
@@ -242,7 +283,12 @@ class WeatherService {
         }
       });
 
-      return Object.values(dailyForecasts).slice(0, 5);
+      const result = Object.values(dailyForecasts).slice(0, 5);
+
+      // Cache for 10 minutes (600 seconds)
+      cacheService.set(cacheKey, result, 600);
+
+      return result;
     } catch (error) {
       console.error('Error fetching 5-day forecast:', error);
       return this.getMockFiveDayForecast();
@@ -307,7 +353,8 @@ class WeatherService {
       windSpeed: 5 + Math.floor(Math.random() * 15),
       icon: icons[iconIndex]!,
       rainChance: Math.floor(Math.random() * 101), // 0-100% rain chance for mock data
-      timestamp: new Date()
+      timestamp: new Date(),
+      isMockData: true
     };
   }
 
@@ -325,7 +372,8 @@ class WeatherService {
       windSpeed: 8 + Math.floor(Math.random() * 12),
       icon: hour >= 6 && hour <= 18 ? '01d' : '01n',
       rainChance: Math.floor(Math.random() * 101), // 0-100% rain chance for mock data
-      timestamp: new Date()
+      timestamp: new Date(),
+      isMockData: true
     };
   }
 
@@ -334,17 +382,13 @@ class WeatherService {
    */
   private getMockHourlyForecast(): HourlyWeatherForecast[] {
     const hourlyForecasts: HourlyWeatherForecast[] = [];
-    const now = new Date();
-    let currentHour = new Date(now);
-    
-    // Round to next hour
-    currentHour.setMinutes(0, 0, 0);
-    currentHour.setHours(currentHour.getHours() + 1);
+    const now = nowInManila();
+    let currentHour = now.plus({ hours: 1 }).startOf('hour');
 
     // Generate 48 hours of forecasts during operating hours
     let addedHours = 0;
     while (addedHours < 48) {
-      const hour = currentHour.getHours();
+      const hour = currentHour.hour;
       
       // Only include court operating hours (5 AM - 10 PM)
       if (hour >= 5 && hour <= 22) {
@@ -359,14 +403,15 @@ class WeatherService {
           windSpeed: 8 + Math.floor(Math.random() * 12),
           icon: hour >= 6 && hour <= 18 ? '01d' : '01n',
           rainChance: Math.floor(Math.random() * 101),
-          timestamp: new Date(currentHour)
+          timestamp: currentHour.toJSDate(),
+          isMockData: true
         };
 
         const suitability = this.isWeatherSuitableForTennis(weatherData);
 
         hourlyForecasts.push({
-          datetime: currentHour.toISOString(),
-          date: currentHour.toISOString().split('T')[0] || '',
+          datetime: currentHour.toISO() || '',
+          date: currentHour.toISODate() || '',
           hour,
           timeSlot: `${hour.toString().padStart(2, '0')}:00 - ${(hour + 1).toString().padStart(2, '0')}:00`,
           temperature: weatherData.temperature,
@@ -380,12 +425,12 @@ class WeatherService {
         
         addedHours++;
       }
-      
+
       // Move to next hour
-      currentHour.setHours(currentHour.getHours() + 1);
-      
-      // Safety check to prevent infinite loop
-      if (currentHour.getTime() - now.getTime() > 7 * 24 * 60 * 60 * 1000) break;
+      currentHour = currentHour.plus({ hours: 1 });
+
+      // Safety check to prevent infinite loop (7 days)
+      if (currentHour.diff(now, 'days').days > 7) break;
     }
 
     return hourlyForecasts;

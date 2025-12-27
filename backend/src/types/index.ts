@@ -140,6 +140,8 @@ export interface CourtReservation {
     icon: string;
     rainChance?: number;
     timestamp: Date;
+    lastFetched?: Date;
+    isMockData?: boolean;
   };
   tournamentTier: '100' | '250' | '500';
   matchResults?: Array<{

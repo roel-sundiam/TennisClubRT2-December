@@ -81,7 +81,9 @@ const reservationSchema = new Schema<IReservationDocument>({
     windSpeed: { type: Number },
     icon: { type: String },
     rainChance: { type: Number }, // Precipitation probability as percentage
-    timestamp: { type: Date }
+    timestamp: { type: Date },
+    lastFetched: { type: Date }, // When weather was last updated
+    isMockData: { type: Boolean, default: false } // Flag for mock/sample data
   },
   tournamentTier: {
     type: String,
