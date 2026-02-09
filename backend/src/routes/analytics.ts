@@ -613,8 +613,11 @@ router.get('/activity-history', authenticateToken, requireAdmin, async (req, res
 
     const matchConditions: any = {};
     
+    // Filter out authentication/login events (they clutter the activity table)
+    matchConditions.action = { $ne: 'auth' };
+    
     if (userId) matchConditions.userId = userId;
-    if (action) matchConditions.action = action;
+    if (action) matchConditions.action = action; // Override if specifically requested
     if (component) matchConditions.component = component;
     
     if (dateFrom || dateTo) {

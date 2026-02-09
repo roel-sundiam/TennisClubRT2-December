@@ -1,0 +1,463 @@
+<div class="superadmin-dashboard">
+  <!-- Modern Header -->
+  <div class="modern-header">
+    <div class="header-content">
+      <button (click)="goBack()" class="back-btn" aria-label="Go back">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+        </svg>
+      </button>
+      <div class="header-text">
+        <h1 class="page-title">
+          <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+          </svg>
+          Superadmin Dashboard
+        </h1>
+        <p class="page-subtitle">Real-time club monitoring and analytics</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-refresh" (click)="refreshData()" [disabled]="loading">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+          Refresh
+        </button>
+        <div class="toggle-container">
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="autoRefreshEnabled" (change)="toggleAutoRefresh($event.target!==null && $event.target.checked)" [disabled]="loading">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">
+            Auto-refresh
+            <span *ngIf="autoRefreshEnabled" class="countdown">({{countdown}}s)</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && !dashboardData" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading dashboard data...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-container">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+    </svg>
+    <p>{{ error }}</p>
+    <button class="btn btn-primary" (click)="refreshData()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+      </svg>
+      Retry
+    </button>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="dashboardData && !loading" class="dashboard-content">
+    <!-- Court Status Section -->
+    <div class="court-status-card full-width">
+      <div class="card-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM6.5 9L10 5.5 13.5 9H11v4H9V9H6.5zm11 6L14 18.5 10.5 15H13v-4h2v4h2.5z"/>
+        </svg>
+        <div>
+          <h2>Court Status</h2>
+          <p>Current and upcoming reservations</p>
+        </div>
+      </div>
+      
+      <div class="court-status-grid">
+        <!-- Currently Playing -->
+        <div class="status-section current-section">
+          <h3>
+            <svg class="status-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            Currently Playing
+          </h3>
+          
+          <div *ngIf="dashboardData.courtStatus.current" class="reservation-info">
+            <div class="info-row">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              <span class="member-name">{{ dashboardData.courtStatus.current.userId.fullName }}</span>
+            </div>
+            <div class="info-row">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+              </svg>
+              <span>{{ getTimeSlotLabel(dashboardData.courtStatus.current.timeSlot) }} - {{ getTimeSlotLabel(dashboardData.courtStatus.current.endTimeSlot) }}</span>
+            </div>
+            <div class="info-row">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+              </svg>
+              <span>{{ dashboardData.courtStatus.current.players.length }} player(s)</span>
+            </div>
+            <div *ngIf="dashboardData.courtStatus.current.players.length > 0" class="players-list">
+              <strong>Players:</strong>
+              <span *ngFor="let player of getPlayerNames(dashboardData.courtStatus.current.players); let i = index">
+                {{ player }}<span *ngIf="i < getPlayerNames(dashboardData.courtStatus.current.players).length - 1">, </span>
+              </span>
+            </div>
+            <span class="status-badge" [ngClass]="'status-' + dashboardData.courtStatus.current.status">
+              {{ dashboardData.courtStatus.current.status }}
+            </span>
+          </div>
+          
+          <div *ngIf="!dashboardData.courtStatus.current" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+            </svg>
+            <p>No active reservations</p>
+          </div>
+        </div>
+
+        <!-- Up Next -->
+        <div class="status-section next-section">
+          <h3>
+            <svg class="status-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+            </svg>
+            Up Next
+          </h3>
+          
+          <div *ngIf="dashboardData.courtStatus.next" class="reservation-info">
+            <div class="info-row">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              <span class="member-name">{{ dashboardData.courtStatus.next.userId.fullName }}</span>
+            </div>
+            <div class="info-row">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+              </svg>
+              <span>{{ formatDate(dashboardData.courtStatus.next.date) }} at {{ getTimeSlotLabel(dashboardData.courtStatus.next.timeSlot) }}</span>
+            </div>
+            <div class="info-row">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+              </svg>
+              <span>{{ dashboardData.courtStatus.next.players.length }} player(s)</span>
+            </div>
+            <div *ngIf="dashboardData.courtStatus.next.players.length > 0" class="players-list">
+              <strong>Players:</strong>
+              <span *ngFor="let player of getPlayerNames(dashboardData.courtStatus.next.players); let i = index">
+                {{ player }}<span *ngIf="i < getPlayerNames(dashboardData.courtStatus.next.players).length - 1">, </span>
+              </span>
+            </div>
+            <span class="status-badge" [ngClass]="'status-' + dashboardData.courtStatus.next.status">
+              {{ dashboardData.courtStatus.next.status }}
+            </span>
+          </div>
+          
+          <div *ngIf="!dashboardData.courtStatus.next" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+            </svg>
+            <p>No upcoming reservations</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Recent Reservations -->
+      <div class="section-card wide-card">
+        <div class="card-header">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+          </svg>
+          <div>
+            <h2>Recent Reservations</h2>
+            <p>Last 5 court bookings</p>
+          </div>
+        </div>
+        
+        <div class="card-content">
+          <div *ngIf="dashboardData.recentReservations.length > 0" class="table-wrapper">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Players</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let reservation of dashboardData.recentReservations">
+                  <td>{{ reservation.userId.fullName }}</td>
+                  <td>{{ formatDate(reservation.date) }}</td>
+                  <td>{{ getTimeSlotLabel(reservation.timeSlot) }} - {{ getTimeSlotLabel(reservation.endTimeSlot) }}</td>
+                  <td>{{ reservation.players.length }}</td>
+                  <td><strong>₱{{ reservation.totalFee || 0 }}</strong></td>
+                  <td>
+                    <span class="status-badge" [ngClass]="'status-' + reservation.status">
+                      {{ reservation.status }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div *ngIf="dashboardData.recentReservations.length === 0" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+            </svg>
+            <p>No recent reservations</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Payments -->
+      <div class="section-card">
+        <div class="card-header">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+          </svg>
+          <div>
+            <h2>Recent Payments</h2>
+            <p>Last 5 completed transactions</p>
+          </div>
+        </div>
+        
+        <div class="card-content">
+          <div *ngIf="dashboardData.recentPayments.length > 0" class="payments-list">
+            <div *ngFor="let payment of dashboardData.recentPayments" class="payment-item">
+              <div class="payment-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path [attr.d]="getPaymentMethodIconPath(payment.paymentMethod)"/>
+                </svg>
+              </div>
+              <div class="payment-details">
+                <div class="payment-member">{{ payment.userId.fullName }}</div>
+                <div class="payment-description">{{ payment.description }}</div>
+                <div class="payment-date">{{ formatDateTime(payment.paymentDate) }}</div>
+              </div>
+              <div class="payment-amount">
+                <strong>₱{{ payment.amount }}</strong>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="dashboardData.recentPayments.length === 0" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zm-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm13-6v11c0 1.1-.9 2-2 2H4v-2h17V7h2z"/>
+            </svg>
+            <p>No recent payments</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page Visits -->
+      <div class="section-card wide-card">
+        <div class="card-header">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2.5 2.1h-15V5h15v14.1zm0-16.1h-15c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+          </svg>
+          <div>
+            <h2>Recent Page Visits</h2>
+            <p>Last 20 user activities</p>
+          </div>
+        </div>
+        
+        <div class="card-content">
+          <div *ngIf="dashboardData.recentPageVisits.length > 0" class="table-wrapper">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Action</th>
+                  <th>Component</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let visit of dashboardData.recentPageVisits">
+                  <td>{{ visit.userId?.fullName || 'Unknown' }}</td>
+                  <td><strong>{{ visit.action }}</strong></td>
+                  <td>{{ visit.component }}</td>
+                  <td>{{ formatDateTime(visit.timestamp) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div *ngIf="dashboardData.recentPageVisits.length === 0" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2.5 2.1h-15V5h15v14.1zm0-16.1h-15c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
+            </svg>
+            <p>No recent user activity</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tennis Balls Purchase -->
+      <div class="section-card">
+        <div class="card-header">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM6.5 9L10 5.5 13.5 9H11v4H9V9H6.5zm11 6L14 18.5 10.5 15H13v-4h2v4h2.5z"/>
+          </svg>
+          <div>
+            <h2>Tennis Balls Purchase</h2>
+            <p>Most recent purchase</p>
+          </div>
+        </div>
+        
+        <div class="card-content">
+          <div *ngIf="dashboardData.lastTennisBallPurchase" class="tennis-balls-info">
+            <div class="purchase-member">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              <strong>{{ dashboardData.lastTennisBallPurchase.userId.fullName }}</strong>
+            </div>
+            <div class="purchase-details">
+              <div class="detail-row">
+                <span class="label">Date:</span>
+                <span>{{ formatDate(dashboardData.lastTennisBallPurchase.date) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Time:</span>
+                <span>{{ getTimeSlotLabel(dashboardData.lastTennisBallPurchase.timeSlot) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Quantity:</span>
+                <span>{{ dashboardData.lastTennisBallPurchase.tennisBalls.quantity }} can(s)</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Cost per can:</span>
+                <span>₱{{ dashboardData.lastTennisBallPurchase.tennisBalls.costPerCan }}</span>
+              </div>
+              <div class="detail-row total">
+                <span class="label">Total Cost:</span>
+                <span><strong>₱{{ dashboardData.lastTennisBallPurchase.tennisBalls.totalCost }}</strong></span>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="!dashboardData.lastTennisBallPurchase" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM6.5 9L10 5.5 13.5 9H11v4H9V9H6.5zm11 6L14 18.5 10.5 15H13v-4h2v4h2.5z"/>
+            </svg>
+            <p>No tennis ball purchases</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Members with Credits -->
+      <div class="section-card">
+        <div class="card-header">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+          </svg>
+          <div>
+            <h2>Members with Credits</h2>
+            <p>Overpayments and refunds</p>
+          </div>
+        </div>
+        
+        <div class="card-content">
+          <div *ngIf="dashboardData.membersWithOverpayments.length > 0" class="table-wrapper">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Email</th>
+                  <th>Credit Balance</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let member of dashboardData.membersWithOverpayments">
+                  <td>
+                    <div class="member-info">
+                      <strong>{{ member.fullName }}</strong>
+                      <small>{{ member.username }}</small>
+                    </div>
+                  </td>
+                  <td>{{ member.email }}</td>
+                  <td><span class="credit-amount">₱{{ member.creditBalance }}</span></td>
+                  <td>
+                    <button class="btn-icon" (click)="navigateToCreditManagement(member._id)" title="Manage Credits">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div *ngIf="dashboardData.membersWithOverpayments.length === 0" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+            <p>No members with credit balance</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Latest Feedback -->
+      <div class="section-card">
+        <div class="card-header">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
+          </svg>
+          <div>
+            <h2>Latest Feedback</h2>
+            <p>Recent suggestions and complaints</p>
+          </div>
+        </div>
+        
+        <div class="card-content">
+          <div *ngIf="dashboardData.latestFeedback.length > 0" class="feedback-list">
+            <div *ngFor="let feedback of dashboardData.latestFeedback" class="feedback-item" (click)="navigateToSuggestions()">
+              <div class="feedback-header">
+                <span class="feedback-type" [ngClass]="feedback.type === 'complaint' ? 'type-complaint' : 'type-suggestion'">
+                  {{ feedback.type }}
+                </span>
+                <span *ngIf="feedback.priority !== 'low'" class="feedback-priority" [ngClass]="'priority-' + feedback.priority">
+                  {{ feedback.priority }}
+                </span>
+              </div>
+              <div class="feedback-title">{{ feedback.title }}</div>
+              <div class="feedback-description">{{ feedback.description }}</div>
+              <div class="feedback-meta">
+                <span>{{ feedback.userId.fullName }}</span>
+                <span>•</span>
+                <span>{{ formatDateTime(feedback.createdAt) }}</span>
+              </div>
+              <span class="status-badge" [ngClass]="'status-' + feedback.status">
+                {{ feedback.status }}
+              </span>
+            </div>
+          </div>
+          <div *ngIf="dashboardData.latestFeedback.length === 0" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+            </svg>
+            <p>No recent feedback</p>
+          </div>
+        </div>
+        
+        <div *ngIf="dashboardData.latestFeedback.length > 0" class="card-actions">
+          <button class="btn btn-link" (click)="navigateToSuggestions()">
+            View All Feedback
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

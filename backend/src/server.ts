@@ -42,6 +42,7 @@ import impersonationRoutes from './routes/impersonation';
 import galleryRoutes from './routes/galleryRoutes';
 import announcementRoutes from './routes/announcementRoutes';
 import systemSettingsRoutes from './routes/systemSettingsRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
 import fs from 'fs';
 import path from 'path';
 
@@ -267,6 +268,7 @@ app.use('/api/impersonation', impersonationRoutes); // Admin impersonation route
 app.use('/api/gallery', galleryRoutes); // Image gallery routes (public viewing, superadmin upload)
 app.use('/api/announcements', announcementRoutes); // Announcement system routes
 app.use('/api/system-settings', systemSettingsRoutes); // System settings (tennis ball pricing, etc.)
+app.use('/api/dashboard', dashboardRoutes); // Superadmin dashboard data endpoint
 console.log('📥 All routes registered');
 
 // 404 handler
@@ -343,3 +345,4 @@ startServer();
 export default app;// trigger restart
 // trigger restart
 // trigger restart
+//

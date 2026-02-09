@@ -1,0 +1,563 @@
+<div class="report-container">
+  <!-- Modern Header -->
+  <div class="modern-header">
+    <div class="header-content">
+      <button (click)="goBack()" class="back-btn" aria-label="Go back">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+        </svg>
+      </button>
+      <div class="header-text">
+        <h1 class="page-title">
+          <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+          </svg>
+          Payment Management
+        </h1>
+        <p class="page-subtitle">Streamlined payment approval and recording workflow</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <div class="filter-card">
+      <div class="filter-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
+        </svg>
+        <span>Filter Options</span>
+      </div>
+      <form [formGroup]="dateRangeForm" class="filter-form">
+        <div class="date-inputs">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input 
+              type="date" 
+              formControlName="startDate" 
+              class="form-input"
+              [value]="dateRangeForm.get('startDate')?.value | date:'yyyy-MM-dd'"
+              (change)="onStartDateChange($event)">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input 
+              type="date" 
+              formControlName="endDate" 
+              class="form-input"
+              [value]="dateRangeForm.get('endDate')?.value | date:'yyyy-MM-dd'"
+              (change)="onEndDateChange($event)">
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button type="button" class="btn btn-primary" (click)="loadReport()" [disabled]="loading">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+            </svg>
+            Update Report
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="openRecordedPaymentsModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-13 5l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+            </svg>
+            View Recorded
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="resetDateRange()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/>
+            </svg>
+            Reset
+          </button>
+          <button type="button" class="btn btn-export" (click)="exportToCSV()" [disabled]="!reportData || reportData.payments.length === 0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+            </svg>
+            Export CSV
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading payment data...</p>
+  </div>
+
+  <!-- Report Content -->
+  <div *ngIf="!loading && reportData">
+    <!-- Stats Section -->
+    <div class="stats-section">
+      <h2 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+        </svg>
+        Overview & Analytics
+      </h2>
+
+      <div class="stats-grid">
+        <!-- Total Payments -->
+        <div class="stat-card total-card">
+          <div class="stat-icon total-bg">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Total Payments</div>
+            <div class="stat-value">₱{{reportData.summary.totalAmount.toFixed(2)}}</div>
+            <div class="stat-meta">{{reportData.summary.totalPayments}} transactions</div>
+          </div>
+        </div>
+
+        <!-- Pending -->
+        <div class="stat-card pending-card">
+          <div class="stat-icon pending-bg">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Pending Approval</div>
+            <div class="stat-value">{{reportData.summary.pendingPayments}}</div>
+            <div class="stat-meta">Awaiting review</div>
+          </div>
+          <span class="stat-badge pending-badge">Action Required</span>
+        </div>
+
+        <!-- Approved -->
+        <div class="stat-card approved-card">
+          <div class="stat-icon approved-bg">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Approved</div>
+            <div class="stat-value">{{reportData.summary.completedPayments}}</div>
+            <div class="stat-meta">Ready to record</div>
+          </div>
+          <span class="stat-badge approved-badge">Ready</span>
+        </div>
+
+        <!-- Recorded -->
+        <div class="stat-card recorded-card">
+          <div class="stat-icon recorded-bg">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-13 5l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Recorded</div>
+            <div class="stat-value">{{reportData.summary.recordedPayments}}</div>
+            <div class="stat-meta">Fully processed</div>
+          </div>
+          <span class="stat-badge recorded-badge">Complete</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revenue Section -->
+    <div class="revenue-section">
+      <h2 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M4 10h3v7H4v-7zm6-2h3v9h-3V8zm6-3h3v12h-3V5z"/>
+        </svg>
+        Revenue Distribution
+      </h2>
+
+      <div class="revenue-grid">
+        <div class="revenue-card">
+          <div class="revenue-header">
+            <div class="revenue-icon service-fee-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
+              </svg>
+            </div>
+            <div class="revenue-info">
+              <div class="revenue-title">App Service Fees</div>
+              <div class="revenue-subtitle">10% commission</div>
+            </div>
+          </div>
+          <div class="revenue-amount service-fee-amount">
+            ₱{{reportData.summary.totalServiceFees?.toFixed(2) || '0.00'}}
+          </div>
+          <div class="revenue-footer">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <span>Platform maintenance & development</span>
+          </div>
+        </div>
+
+        <div class="revenue-card">
+          <div class="revenue-header">
+            <div class="revenue-icon court-revenue-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+              </svg>
+            </div>
+            <div class="revenue-info">
+              <div class="revenue-title">Court Revenue</div>
+              <div class="revenue-subtitle">90% to club</div>
+            </div>
+          </div>
+          <div class="revenue-amount court-revenue-amount">
+            ₱{{reportData.summary.totalCourtRevenue?.toFixed(2) || '0.00'}}
+          </div>
+          <div class="revenue-footer">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <span>Direct earnings for tennis club</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Methods Section -->
+    <div class="payment-methods-section">
+      <h2 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+        </svg>
+        Payment Methods Breakdown
+      </h2>
+
+      <div class="methods-container">
+        <div class="methods-grid">
+          <div *ngFor="let method of reportData.paymentMethodBreakdown" class="method-card">
+            <div class="method-icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>
+            </div>
+            <div class="method-details">
+              <div class="method-name">{{formatPaymentMethod(method.paymentMethod)}}</div>
+              <div class="method-count">{{method.count}} payments</div>
+            </div>
+            <div class="method-amount">₱{{method.totalAmount.toFixed(2)}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payments Table Section -->
+    <div class="table-section">
+      <h2 class="section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+        </svg>
+        Payment Records
+      </h2>
+
+      <div class="table-card">
+        <div class="tabs">
+          <button 
+            class="tab-btn" 
+            [class.active]="activeTab === 'active'"
+            (click)="activeTab = 'active'">
+            Active Payments
+          </button>
+          <button 
+            class="tab-btn" 
+            [class.active]="activeTab === 'credits'"
+            (click)="activeTab = 'credits'">
+            Credit Purchases
+          </button>
+          <button 
+            class="tab-btn" 
+            [class.active]="activeTab === 'archived'"
+            (click)="activeTab = 'archived'">
+            Archived Payments
+          </button>
+        </div>
+
+        <div class="tab-content">
+          <!-- Active Payments Tab -->
+          <div *ngIf="activeTab === 'active'" class="payments-table-container">
+            <div class="table-wrapper" *ngIf="getActivePayments().length > 0">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Payment Date</th>
+                    <th>Reference #</th>
+                    <th>Member</th>
+                    <th>Reservation</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let payment of getActivePayments()">
+                    <td>
+                      <span *ngIf="payment.paymentDate">{{formatDate(payment.paymentDate)}}</span>
+                      <span *ngIf="!payment.paymentDate" class="no-date">Not paid</span>
+                    </td>
+                    <td>{{payment.referenceNumber}}</td>
+                    <td>
+                      <div class="member-info">
+                        <strong>{{payment.memberName}}</strong>
+                        <small>@{{payment.memberUsername}}</small>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="reservation-info">
+                        <div>{{formatDate(payment.reservationDate)}}</div>
+                        <div class="time-slot">
+                          {{payment.timeSlotDisplay}}
+                          <span *ngIf="payment.isPeakHour" class="badge peak-badge">Peak</span>
+                          <span *ngIf="payment.isOpenPlayEvent" class="badge open-play-badge">Open Play</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{formatPaymentMethod(payment.paymentMethod)}}</td>
+                    <td>
+                      <div 
+                        class="amount-display"
+                        [class.editable]="canEditPayment(payment)"
+                        (click)="handleAmountClick(payment)"
+                        [title]="getAmountTitle(payment)">
+                        <strong>₱{{payment.amount.toFixed(2)}}</strong>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="status-badge" [ngClass]="'status-' + payment.status">
+                        {{payment.status | titlecase}}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="action-btns">
+                        <button 
+                          *ngIf="payment.status === 'pending'"
+                          class="btn btn-sm btn-approve"
+                          [disabled]="processing.includes(payment._id)"
+                          (click)="approvePayment(payment)">
+                          {{processing.includes(payment._id) ? 'Processing...' : 'Approve'}}
+                        </button>
+                        <button 
+                          *ngIf="payment.status === 'completed'"
+                          class="btn btn-sm btn-record"
+                          [disabled]="processing.includes(payment._id)"
+                          (click)="recordPayment(payment)">
+                          {{processing.includes(payment._id) ? 'Processing...' : 'Record'}}
+                        </button>
+                        <button 
+                          *ngIf="payment.status === 'completed'"
+                          class="btn btn-sm btn-cancel"
+                          [disabled]="processing.includes(payment._id)"
+                          (click)="cancelPayment(payment)">
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div *ngIf="getActivePayments().length === 0" class="no-data">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
+              </svg>
+              <h3>No active payments found</h3>
+              <p>No payments awaiting approval or recording for the selected date range.</p>
+            </div>
+          </div>
+
+          <!-- Credit Purchases Tab -->
+          <div *ngIf="activeTab === 'credits'" class="payments-table-container">
+            <div class="table-wrapper" *ngIf="getCreditDeposits().length > 0">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Request Date</th>
+                    <th>Member</th>
+                    <th>Amount</th>
+                    <th>Payment Method</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let deposit of getCreditDeposits()">
+                    <td>
+                      <div>{{formatDate(deposit.createdAt)}}</div>
+                      <small>{{formatTimeFromDate(deposit.createdAt)}}</small>
+                    </td>
+                    <td>
+                      <div class="member-info">
+                        <strong>{{getUserFullName(deposit.userId)}}</strong>
+                        <small>@{{getUserUsername(deposit.userId)}}</small>
+                      </div>
+                    </td>
+                    <td><strong>₱{{deposit.amount.toFixed(2)}}</strong></td>
+                    <td>{{getPaymentMethodLabel(deposit.metadata?.paymentMethod)}}</td>
+                    <td>
+                      <span class="status-badge" [ngClass]="'status-' + deposit.status">
+                        {{deposit.status | titlecase}}
+                      </span>
+                    </td>
+                    <td>
+                      <button 
+                        *ngIf="deposit.status === 'pending' || deposit.status === 'completed'"
+                        class="btn btn-sm btn-record"
+                        (click)="recordCreditDeposit(deposit)"
+                        [disabled]="loading">
+                        Record
+                      </button>
+                      <span *ngIf="deposit.status === 'recorded'" class="recorded-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                        </svg>
+                        Recorded
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div *ngIf="getCreditDeposits().length === 0" class="no-data">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+              </svg>
+              <p>No credit purchases found for the selected date range.</p>
+            </div>
+          </div>
+
+          <!-- Archived Payments Tab -->
+          <div *ngIf="activeTab === 'archived'" class="payments-table-container">
+            <div class="table-wrapper" *ngIf="getArchivedPayments().length > 0">
+              <table class="modern-table">
+                <thead>
+                  <tr>
+                    <th>Payment Date</th>
+                    <th>Reference #</th>
+                    <th>Member</th>
+                    <th>Reservation</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Recorded Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let payment of getArchivedPayments()">
+                    <td>
+                      <span *ngIf="payment.paymentDate">{{formatDate(payment.paymentDate)}}</span>
+                      <span *ngIf="!payment.paymentDate" class="no-date">Not paid</span>
+                    </td>
+                    <td>{{payment.referenceNumber}}</td>
+                    <td>
+                      <div class="member-info">
+                        <strong>{{payment.memberName}}</strong>
+                        <small>@{{payment.memberUsername}}</small>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="reservation-info">
+                        <div>{{formatDate(payment.reservationDate)}}</div>
+                        <div>{{payment.timeSlotDisplay}}</div>
+                      </div>
+                    </td>
+                    <td><strong>₱{{payment.amount.toFixed(2)}}</strong></td>
+                    <td>{{formatPaymentMethod(payment.paymentMethod)}}</td>
+                    <td>
+                      <span class="status-badge" [ngClass]="'status-' + payment.status">
+                        {{getStatusLabel(payment.status)}}
+                      </span>
+                    </td>
+                    <td>
+                      <span *ngIf="payment.recordedAt">{{formatDate(payment.recordedAt)}}</span>
+                      <span *ngIf="!payment.recordedAt" class="no-date">-</span>
+                    </td>
+                    <td>
+                      <button 
+                        *ngIf="payment.status === 'record'"
+                        class="btn btn-sm btn-warn"
+                        (click)="unrecordPayment(payment._id)"
+                        [disabled]="processing.includes(payment._id)">
+                        {{processing.includes(payment._id) ? 'Unrecording...' : 'Unrecord'}}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div *ngIf="getArchivedPayments().length === 0" class="no-data">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/>
+              </svg>
+              <h3>No archived payments found</h3>
+              <p>No archived payments found for the selected date range.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recorded Payments Modal -->
+<div *ngIf="showRecordedModal" class="modal-overlay" (click)="closeRecordedModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M23 12l-2.44-2.78.34-3.68-3.61-.82-1.89-3.18L12 3 8.6 1.54 6.71 4.72l-3.61.81.34 3.68L1 12l2.44 2.78-.34 3.69 3.61.82 1.89 3.18L12 21l3.4 1.46 1.89-3.18 3.61-.82-.34-3.68L23 12zm-13 5l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+        </svg>
+        Recorded Payments
+      </h2>
+      <button class="close-btn" (click)="closeRecordedModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div *ngIf="loadingRecordedPayments" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading recorded payments...</p>
+      </div>
+      <div *ngIf="!loadingRecordedPayments && recordedPayments.length === 0" class="no-data">
+        <p>No recorded payments found.</p>
+      </div>
+      <div *ngIf="!loadingRecordedPayments && recordedPayments.length > 0" class="table-wrapper">
+        <table class="modern-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Member</th>
+              <th>Date</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Payment Method</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let payment of recordedPayments">
+              <td>{{formatDateTime(payment.recordedAt || payment.paymentDate)}}</td>
+              <td>{{payment.memberName}}</td>
+              <td>{{formatDate(payment.reservationDate)}}</td>
+              <td>{{formatTime(payment.timeSlot)}}</td>
+              <td>{{formatTime(payment.timeSlot + 1)}}</td>
+              <td>{{formatPaymentMethod(payment.paymentMethod)}}</td>
+              <td><strong>₱{{payment.amount.toFixed(2)}}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="exportRecordedToCSV()" [disabled]="recordedPayments.length === 0">
+        Export CSV
+      </button>
+      <button class="btn btn-primary" (click)="closeRecordedModal()">Close</button>
+    </div>
+  </div>
+</div>

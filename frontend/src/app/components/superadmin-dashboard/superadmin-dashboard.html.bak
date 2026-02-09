@@ -1,0 +1,410 @@
+<div class="superadmin-dashboard">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="header-left">
+      <h1>
+        <mat-icon>dashboard</mat-icon>
+        Superadmin Dashboard
+      </h1>
+      <p class="subtitle">Real-time club monitoring and analytics</p>
+    </div>
+    <div class="header-right">
+      <button mat-raised-button color="primary" (click)="refreshData()" [disabled]="loading">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <mat-slide-toggle
+        [(ngModel)]="autoRefreshEnabled"
+        (change)="toggleAutoRefresh($event.checked)"
+        [disabled]="loading">
+        Auto-refresh
+        <span *ngIf="autoRefreshEnabled" class="countdown">({{countdown}}s)</span>
+      </mat-slide-toggle>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && !dashboardData" class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Loading dashboard data...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-raised-button color="primary" (click)="refreshData()">
+      <mat-icon>refresh</mat-icon>
+      Retry
+    </button>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="dashboardData && !loading" class="dashboard-content">
+    <!-- Court Status Section (Full Width) -->
+    <mat-card class="court-status-card full-width">
+      <mat-card-header>
+        <mat-icon mat-card-avatar>sports_tennis</mat-icon>
+        <mat-card-title>Court Status</mat-card-title>
+        <mat-card-subtitle>Current and upcoming reservations</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="court-status-grid">
+          <!-- Currently Playing -->
+          <div class="status-section current">
+            <h3>
+              <mat-icon class="status-icon active">play_circle</mat-icon>
+              Currently Playing
+            </h3>
+            <div *ngIf="dashboardData.courtStatus.current" class="reservation-info">
+              <div class="member-name">
+                <mat-icon>person</mat-icon>
+                {{ dashboardData.courtStatus.current.userId.fullName }}
+              </div>
+              <div class="time-info">
+                <mat-icon>schedule</mat-icon>
+                {{ getTimeSlotLabel(dashboardData.courtStatus.current.timeSlot) }} -
+                {{ getTimeSlotLabel(dashboardData.courtStatus.current.endTimeSlot) }}
+              </div>
+              <div class="players-info">
+                <mat-icon>groups</mat-icon>
+                {{ dashboardData.courtStatus.current.players.length }} player(s)
+              </div>
+              <div class="players-list" *ngIf="dashboardData.courtStatus.current.players.length > 0">
+                <strong>Players:</strong>
+                <span *ngFor="let player of getPlayerNames(dashboardData.courtStatus.current.players); let i = index">
+                  {{ player }}<span *ngIf="i < getPlayerNames(dashboardData.courtStatus.current.players).length - 1">, </span>
+                </span>
+              </div>
+              <mat-chip [color]="getStatusColor(dashboardData.courtStatus.current.status)">
+                {{ dashboardData.courtStatus.current.status }}
+              </mat-chip>
+            </div>
+            <div *ngIf="!dashboardData.courtStatus.current" class="empty-state">
+              <mat-icon>event_busy</mat-icon>
+              <p>No active reservations</p>
+            </div>
+          </div>
+
+          <!-- Up Next -->
+          <div class="status-section next">
+            <h3>
+              <mat-icon class="status-icon upcoming">upcoming</mat-icon>
+              Up Next
+            </h3>
+            <div *ngIf="dashboardData.courtStatus.next" class="reservation-info">
+              <div class="member-name">
+                <mat-icon>person</mat-icon>
+                {{ dashboardData.courtStatus.next.userId.fullName }}
+              </div>
+              <div class="time-info">
+                <mat-icon>schedule</mat-icon>
+                {{ formatDate(dashboardData.courtStatus.next.date) }} at
+                {{ getTimeSlotLabel(dashboardData.courtStatus.next.timeSlot) }}
+              </div>
+              <div class="players-info">
+                <mat-icon>groups</mat-icon>
+                {{ dashboardData.courtStatus.next.players.length }} player(s)
+              </div>
+              <div class="players-list" *ngIf="dashboardData.courtStatus.next.players.length > 0">
+                <strong>Players:</strong>
+                <span *ngFor="let player of getPlayerNames(dashboardData.courtStatus.next.players); let i = index">
+                  {{ player }}<span *ngIf="i < getPlayerNames(dashboardData.courtStatus.next.players).length - 1">, </span>
+                </span>
+              </div>
+              <mat-chip [color]="getStatusColor(dashboardData.courtStatus.next.status)">
+                {{ dashboardData.courtStatus.next.status }}
+              </mat-chip>
+            </div>
+            <div *ngIf="!dashboardData.courtStatus.next" class="empty-state">
+              <mat-icon>event_available</mat-icon>
+              <p>No upcoming reservations</p>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Grid for Remaining Sections -->
+    <div class="dashboard-grid">
+      <!-- Recent Reservations -->
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>event_note</mat-icon>
+          <mat-card-title>Recent Reservations</mat-card-title>
+          <mat-card-subtitle>Last 5 court bookings</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="dashboardData.recentReservations.length > 0" class="table-container">
+            <table mat-table [dataSource]="dashboardData.recentReservations">
+              <ng-container matColumnDef="member">
+                <th mat-header-cell *matHeaderCellDef>Member</th>
+                <td mat-cell *matCellDef="let reservation">
+                  {{ reservation.userId.fullName }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>Date</th>
+                <td mat-cell *matCellDef="let reservation">
+                  {{ formatDate(reservation.date) }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="time">
+                <th mat-header-cell *matHeaderCellDef>Time</th>
+                <td mat-cell *matCellDef="let reservation">
+                  {{ getTimeSlotLabel(reservation.timeSlot) }} -
+                  {{ getTimeSlotLabel(reservation.endTimeSlot) }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="players">
+                <th mat-header-cell *matHeaderCellDef>Players</th>
+                <td mat-cell *matCellDef="let reservation">
+                  {{ reservation.players.length }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="amount">
+                <th mat-header-cell *matHeaderCellDef>Amount</th>
+                <td mat-cell *matCellDef="let reservation">
+                  ₱{{ reservation.totalFee || 0 }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Status</th>
+                <td mat-cell *matCellDef="let reservation">
+                  <mat-chip [color]="getStatusColor(reservation.status)">
+                    {{ reservation.status }}
+                  </mat-chip>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="reservationColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: reservationColumns;"></tr>
+            </table>
+          </div>
+          <div *ngIf="dashboardData.recentReservations.length === 0" class="empty-state">
+            <mat-icon>event_busy</mat-icon>
+            <p>No recent reservations</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Recent Payments -->
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>payments</mat-icon>
+          <mat-card-title>Recent Payments</mat-card-title>
+          <mat-card-subtitle>Last 5 completed transactions</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="dashboardData.recentPayments.length > 0" class="payments-list">
+            <div *ngFor="let payment of dashboardData.recentPayments" class="payment-item">
+              <div class="payment-icon">
+                <mat-icon [matTooltip]="payment.paymentMethod">
+                  {{ getPaymentMethodIcon(payment.paymentMethod) }}
+                </mat-icon>
+              </div>
+              <div class="payment-details">
+                <div class="payment-member">{{ payment.userId.fullName }}</div>
+                <div class="payment-description">{{ payment.description }}</div>
+                <div class="payment-date">{{ formatDateTime(payment.paymentDate) }}</div>
+              </div>
+              <div class="payment-amount">
+                <strong>₱{{ payment.amount }}</strong>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="dashboardData.recentPayments.length === 0" class="empty-state">
+            <mat-icon>receipt_long</mat-icon>
+            <p>No recent payments</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Latest Feedback -->
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>feedback</mat-icon>
+          <mat-card-title>Latest Feedback</mat-card-title>
+          <mat-card-subtitle>Recent suggestions and complaints</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="dashboardData.latestFeedback.length > 0" class="feedback-list">
+            <div *ngFor="let feedback of dashboardData.latestFeedback"
+                 class="feedback-item"
+                 (click)="navigateToSuggestions()">
+              <div class="feedback-header">
+                <mat-chip class="feedback-type"
+                          [color]="feedback.type === 'complaint' ? 'warn' : 'primary'">
+                  {{ feedback.type }}
+                </mat-chip>
+                <mat-chip *ngIf="feedback.priority !== 'low'"
+                          [color]="getPriorityColor(feedback.priority)"
+                          class="feedback-priority">
+                  {{ feedback.priority }}
+                </mat-chip>
+              </div>
+              <div class="feedback-title">{{ feedback.title }}</div>
+              <div class="feedback-description">{{ feedback.description }}</div>
+              <div class="feedback-meta">
+                <span>{{ feedback.userId.fullName }}</span>
+                <span>•</span>
+                <span>{{ formatDateTime(feedback.createdAt) }}</span>
+              </div>
+              <mat-chip class="feedback-status" [color]="getStatusColor(feedback.status)">
+                {{ feedback.status }}
+              </mat-chip>
+            </div>
+          </div>
+          <div *ngIf="dashboardData.latestFeedback.length === 0" class="empty-state">
+            <mat-icon>feedback</mat-icon>
+            <p>No recent feedback</p>
+          </div>
+        </mat-card-content>
+        <mat-card-actions *ngIf="dashboardData.latestFeedback.length > 0">
+          <button mat-button color="primary" (click)="navigateToSuggestions()">
+            View All Feedback
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+
+      <!-- Tennis Balls Purchase -->
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>sports_tennis</mat-icon>
+          <mat-card-title>Tennis Balls Purchase</mat-card-title>
+          <mat-card-subtitle>Most recent purchase</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="dashboardData.lastTennisBallPurchase" class="tennis-balls-info">
+            <div class="purchase-member">
+              <mat-icon>person</mat-icon>
+              <strong>{{ dashboardData.lastTennisBallPurchase.userId.fullName }}</strong>
+            </div>
+            <div class="purchase-details">
+              <div class="detail-row">
+                <span class="label">Date:</span>
+                <span>{{ formatDate(dashboardData.lastTennisBallPurchase.date) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Time:</span>
+                <span>{{ getTimeSlotLabel(dashboardData.lastTennisBallPurchase.timeSlot) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Quantity:</span>
+                <span>{{ dashboardData.lastTennisBallPurchase.tennisBalls.quantity }} can(s)</span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Cost per can:</span>
+                <span>₱{{ dashboardData.lastTennisBallPurchase.tennisBalls.costPerCan }}</span>
+              </div>
+              <div class="detail-row total">
+                <span class="label">Total Cost:</span>
+                <span><strong>₱{{ dashboardData.lastTennisBallPurchase.tennisBalls.totalCost }}</strong></span>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="!dashboardData.lastTennisBallPurchase" class="empty-state">
+            <mat-icon>sports_tennis</mat-icon>
+            <p>No tennis ball purchases</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Page Visits -->
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>analytics</mat-icon>
+          <mat-card-title>Recent Page Visits</mat-card-title>
+          <mat-card-subtitle>Last 20 site activities</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="dashboardData.recentPageVisits.length > 0" class="page-visits-list">
+            <div *ngFor="let visit of dashboardData.recentPageVisits" class="visit-item">
+              <mat-icon class="visit-icon">visibility</mat-icon>
+              <div class="visit-details">
+                <div class="visit-user">
+                  <strong>{{ visit.userId?.fullName || 'Anonymous' }}</strong>
+                  <span *ngIf="visit.userId?.username" class="username-badge">@{{ visit.userId.username }}</span>
+                </div>
+                <div class="visit-page">
+                  <mat-icon class="page-icon">web</mat-icon>
+                  {{ visit.page }}
+                </div>
+                <div class="visit-time">{{ formatDateTime(visit.timestamp) }}</div>
+              </div>
+              <div *ngIf="visit.duration" class="visit-duration" matTooltip="Time spent on page">
+                <mat-icon>timer</mat-icon>
+                {{ (visit.duration / 1000).toFixed(0) }}s
+              </div>
+            </div>
+          </div>
+          <div *ngIf="dashboardData.recentPageVisits.length === 0" class="empty-state">
+            <mat-icon>analytics</mat-icon>
+            <p>No recent page visits</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Members with Overpayments -->
+      <mat-card class="section-card">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>account_balance_wallet</mat-icon>
+          <mat-card-title>Members with Credits</mat-card-title>
+          <mat-card-subtitle>Overpayments and refunds</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div *ngIf="dashboardData.membersWithOverpayments.length > 0" class="table-container">
+            <table mat-table [dataSource]="dashboardData.membersWithOverpayments">
+              <ng-container matColumnDef="member">
+                <th mat-header-cell *matHeaderCellDef>Member</th>
+                <td mat-cell *matCellDef="let member">
+                  <div class="member-info">
+                    <strong>{{ member.fullName }}</strong>
+                    <small>{{ member.username }}</small>
+                  </div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="email">
+                <th mat-header-cell *matHeaderCellDef>Email</th>
+                <td mat-cell *matCellDef="let member">{{ member.email }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="creditBalance">
+                <th mat-header-cell *matHeaderCellDef>Credit Balance</th>
+                <td mat-cell *matCellDef="let member">
+                  <span class="credit-amount">₱{{ member.creditBalance }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let member">
+                  <button mat-icon-button
+                          color="primary"
+                          (click)="navigateToCreditManagement(member._id)"
+                          matTooltip="Manage Credits">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="overpaymentColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: overpaymentColumns;"></tr>
+            </table>
+          </div>
+          <div *ngIf="dashboardData.membersWithOverpayments.length === 0" class="empty-state">
+            <mat-icon>check_circle</mat-icon>
+            <p>No members with credit balance</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

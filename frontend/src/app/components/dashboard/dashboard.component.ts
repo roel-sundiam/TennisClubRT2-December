@@ -831,6 +831,31 @@ import { environment } from '../../../environments/environment';
               </mat-card-actions>
             </mat-card>
 
+            <!-- Superadmin Dashboard (Superadmin Only) -->
+            <mat-card class="action-card admin-card superadmin-card" data-icon="dashboard" data-title="Superadmin Dashboard" (click)="navigateTo('/admin/superadmin-dashboard')" *ngIf="isSuperAdmin">
+              <!-- Mobile Icon -->
+              <div class="mobile-card-icon">
+                <mat-icon>dashboard</mat-icon>
+              </div>
+              <div class="mobile-card-title">Superadmin Dashboard</div>
+
+              <!-- Desktop Content -->
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="action-icon admin-icon">dashboard</mat-icon>
+                <mat-card-title>Superadmin Dashboard</mat-card-title>
+                <mat-card-subtitle>Real-time monitoring and analytics</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>Monitor court status, recent activities, member feedback, and club analytics in real-time.</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/superadmin-dashboard')">
+                  <mat-icon>dashboard</mat-icon>
+                  Open Dashboard
+                </button>
+              </mat-card-actions>
+            </mat-card>
+
             <!-- Manual Court Usage (Superadmin Only) -->
             <mat-card class="action-card admin-card superadmin-card" data-icon="edit_calendar" data-title="Manual Court Usage" (click)="navigateTo('/admin/manual-court-usage')" *ngIf="isAdmin">
               <!-- Mobile Icon -->
