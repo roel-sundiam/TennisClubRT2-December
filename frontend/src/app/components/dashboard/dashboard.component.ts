@@ -806,6 +806,31 @@ import { environment } from '../../../environments/environment';
               </mat-card-actions>
             </mat-card>
 
+            <!-- System Settings (Superadmin Only) -->
+            <mat-card class="action-card admin-card superadmin-card" data-icon="settings" data-title="System Settings" (click)="navigateTo('/admin/settings')" *ngIf="isSuperAdmin">
+              <!-- Mobile Icon -->
+              <div class="mobile-card-icon">
+                <mat-icon>settings</mat-icon>
+              </div>
+              <div class="mobile-card-title">System Settings</div>
+
+              <!-- Desktop Content -->
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="action-icon admin-icon">settings</mat-icon>
+                <mat-card-title>System Settings</mat-card-title>
+                <mat-card-subtitle>Configure system-wide settings</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>Manage tennis ball pricing and other system configuration options.</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/settings')">
+                  <mat-icon>settings</mat-icon>
+                  Configure Settings
+                </button>
+              </mat-card-actions>
+            </mat-card>
+
             <!-- Manual Court Usage (Superadmin Only) -->
             <mat-card class="action-card admin-card superadmin-card" data-icon="edit_calendar" data-title="Manual Court Usage" (click)="navigateTo('/admin/manual-court-usage')" *ngIf="isAdmin">
               <!-- Mobile Icon -->

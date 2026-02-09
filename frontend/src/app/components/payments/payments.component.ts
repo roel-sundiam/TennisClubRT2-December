@@ -24,6 +24,11 @@ interface Payment {
     players: string[];
     timeSlotDisplay: string;
     totalFee?: number;
+    tennisBalls?: {
+      quantity: number;
+      costPerCan: number;
+      totalCost: number;
+    };
   };
   pollId?: {
     _id: string;
@@ -92,6 +97,12 @@ interface Payment {
     // Pay on behalf metadata
     paidOnBehalf?: boolean;
     originalDebtor?: string;
+    // Tennis balls metadata
+    tennisBalls?: {
+      quantity: number;
+      costPerCan: number;
+      totalCost: number;
+    };
   };
   notes?: string;
 }
@@ -117,6 +128,11 @@ interface Reservation {
   totalFee: number;
   timeSlotDisplay: string;
   _groupedReservationIds?: string[]; // For grouped reservations
+  tennisBalls?: {
+    quantity: number;
+    costPerCan: number;
+    totalCost: number;
+  };
 }
 
 interface Notification {
@@ -401,6 +417,14 @@ interface Notification {
                       <span>Note:</span>
                       <span>Payment was cancelled before detailed tracking was available</span>
                     </div>
+                  </div>
+                </div>
+
+                <!-- Tennis Balls Details -->
+                <div *ngIf="payment.metadata?.tennisBalls && payment.metadata.tennisBalls.quantity > 0" class="tennis-balls-details">
+                  <div class="detail-row tennis-balls-info">
+                    <span>🎾 Tennis Balls:</span>
+                    <span class="tennis-balls-value">{{payment.metadata.tennisBalls.quantity}} {{ payment.metadata.tennisBalls.quantity === 1 ? 'can' : 'cans' }} @ ₱{{payment.metadata.tennisBalls.costPerCan}} = ₱{{payment.metadata.tennisBalls.totalCost}}</span>
                   </div>
                 </div>
               </div>
@@ -2316,14 +2340,22 @@ export class PaymentsComponent implements OnInit {
     let reserverAmount = calculatedFee; // Default to total fee if not found
     if (reserverMember) {
       reserverAmount = this.calculateMemberAmount(reservation, reserverMember);
-      console.log(`💰 Reserver's individual amount: ₱${reserverAmount}`);
+      console.log(`💰 Reserver's court fee share: ₱${reserverAmount}`);
     } else {
       console.log(`⚠️ Could not find reserver in members list, using total fee: ₱${reserverAmount}`);
     }
 
+    // Add tennis balls cost to reserver's amount (only reserver pays for balls)
+    if (reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+      const ballsCost = reservation.tennisBalls.totalCost;
+      reserverAmount += ballsCost;
+      console.log(`💰 Tennis balls cost (added to reserver only): ₱${ballsCost}`);
+      console.log(`💰 Reserver's total amount (court + balls): ₱${reserverAmount}`);
+    }
+
     this.paymentForm.patchValue({
       reservationId: reservation._id,
-      courtFee: reserverAmount // Set to reserver's amount only
+      courtFee: reserverAmount // Set to reserver's amount (court fee share + tennis balls)
     });
 
     // Load available members for "Pay for Others" feature
@@ -2426,9 +2458,10 @@ export class PaymentsComponent implements OnInit {
       reservationTotalFee: payment.reservationId.totalFee,
       reservationId: payment.reservationId._id,
       timeSlot: payment.reservationId.timeSlot,
-      players: payment.reservationId.players
+      players: payment.reservationId.players,
+      tennisBalls: payment.reservationId.tennisBalls
     });
-    
+
     // For existing payment records, show the payment form to allow users to select/confirm payment method
     // Convert the payment back to a reservation-like object for the form
     const reservationForForm: Reservation = {
@@ -2442,10 +2475,12 @@ export class PaymentsComponent implements OnInit {
       status: 'confirmed',
       paymentStatus: 'pending',
       totalFee: payment.reservationId.totalFee || payment.amount, // Use reservation's totalFee first
-      userId: payment.reservationId.userId // Pass the userId to identify the reserver
+      userId: payment.reservationId.userId, // Pass the userId to identify the reserver
+      tennisBalls: payment.reservationId.tennisBalls // Include tennis balls data
     };
-    
+
     console.log('🔍 DEBUG reservationForForm totalFee:', reservationForForm.totalFee);
+    console.log('🔍 DEBUG reservationForForm tennisBalls:', reservationForForm.tennisBalls);
     
     // Mark this as an existing payment update
     (reservationForForm as any).existingPaymentId = payment._id;

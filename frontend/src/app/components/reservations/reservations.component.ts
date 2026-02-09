@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormArray } fr
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { SystemSettingsService } from '../../services/system-settings.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { environment } from '../../../environments/environment';
 
@@ -412,6 +413,39 @@ interface Reservation {
             </div>
           </div>
 
+          <!-- Tennis Balls Section -->
+          <div class="tennis-balls-section" *ngIf="selectedStartTime && selectedEndTime">
+            <h3>🎾 Tennis Balls (Optional)</h3>
+            <p class="hint">New tennis balls available at ₱{{ tennisBallCostPerCan }} per can</p>
+
+            <div class="balls-selector">
+              <button
+                type="button"
+                class="quantity-btn"
+                [disabled]="tennisBallQuantity <= 0"
+                (click)="tennisBallQuantity = tennisBallQuantity - 1; calculateFee()">
+                <span class="material-icons">remove</span>
+              </button>
+
+              <div class="quantity-display">
+                <div class="quantity-value">{{ tennisBallQuantity }}</div>
+                <div class="quantity-label">{{ tennisBallQuantity === 1 ? 'can' : 'cans' }}</div>
+              </div>
+
+              <button
+                type="button"
+                class="quantity-btn"
+                [disabled]="tennisBallQuantity >= maxTennisBalls"
+                (click)="tennisBallQuantity = tennisBallQuantity + 1; calculateFee()">
+                <span class="material-icons">add</span>
+              </button>
+            </div>
+
+            <div class="balls-cost" *ngIf="tennisBallQuantity > 0">
+              <span>Tennis Balls Total: ₱{{ (tennisBallQuantity * tennisBallCostPerCan).toFixed(2) }}</span>
+              <small class="reserver-note">(Added to reserver's payment)</small>
+            </div>
+          </div>
 
           <!-- Fee Information -->
           <div class="fee-info" *ngIf="selectedStartTime && selectedEndTime && calculatedFee > 0">
@@ -618,10 +652,16 @@ export class ReservationsComponent implements OnInit, OnDestroy {
   // Stepper UI mode toggle
   useStepperUI = true; // Set to false to use original button UI
 
+  // Tennis balls configuration
+  tennisBallCostPerCan = 120; // Default, will be fetched from settings
+  tennisBallQuantity = 0;
+  maxTennisBalls = 10;
+
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
     private authService: AuthService,
+    private systemSettingsService: SystemSettingsService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -639,6 +679,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Load system settings (tennis ball pricing)
+    this.loadSystemSettings();
+
     // Check for overdue payments immediately on page load
     this.checkOverduePayments();
 
@@ -735,6 +778,14 @@ export class ReservationsComponent implements OnInit, OnDestroy {
             playersArray.push(this.fb.control(playerName, Validators.required));
           });
           console.log('🔍 Loaded players (legacy format):', playersArray.length);
+        }
+
+        // Load tennis balls data if present
+        if (reservation.tennisBalls && reservation.tennisBalls.quantity > 0) {
+          this.tennisBallQuantity = reservation.tennisBalls.quantity;
+          console.log(`🎾 Loaded tennis balls: ${this.tennisBallQuantity} cans`);
+        } else {
+          this.tennisBallQuantity = 0;
         }
 
         this.showSuccess(
@@ -1430,6 +1481,13 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       console.log(`🔍 Hour ${hour}: Base=₱${baseFee}, Guests=${guestCount}×₱${GUEST_FEE}, Total=₱${hourlyFee}`);
     }
 
+    // Add tennis balls cost (if any)
+    if (this.tennisBallQuantity > 0) {
+      const ballsCost = this.tennisBallQuantity * this.tennisBallCostPerCan;
+      totalFee += ballsCost;
+      console.log(`🎾 Tennis balls: ${this.tennisBallQuantity} cans × ₱${this.tennisBallCostPerCan} = ₱${ballsCost}`);
+    }
+
     // Round to nearest 10 pesos (e.g., 550 → 550, 183.33 → 190)
     this.calculatedFee = Math.ceil(totalFee / 10) * 10;
     console.log(`🔍 Final calculated fee: ₱${totalFee} → ₱${this.calculatedFee} (rounded)`);
@@ -1610,13 +1668,20 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       const playerName = control.value?.trim();
       if (playerName) {
         const isReserver = memberIndex === 0;
-        const amount = isReserver
+        let amount = isReserver
           ? baseFeePerMember + guestFeeTotal
           : baseFeePerMember;
 
         let breakdown = `Base share: ₱${baseFeePerMember.toFixed(2)}`;
         if (isReserver && guestFeeTotal > 0) {
           breakdown += ` + Guest fees: ₱${guestFeeTotal.toFixed(2)}`;
+        }
+
+        // Add tennis balls cost to reserver ONLY
+        if (isReserver && this.tennisBallQuantity > 0) {
+          const ballsCost = this.tennisBallQuantity * this.tennisBallCostPerCan;
+          amount += ballsCost;
+          breakdown += ` + Tennis balls (${this.tennisBallQuantity} cans): ₱${ballsCost.toFixed(2)}`;
         }
 
         result.push({
@@ -1723,7 +1788,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     const endTime = formValue.endTime;
     const duration = endTime - startTime;
 
-    const updateData = {
+    const updateData: any = {
       date: formValue.date,
       timeSlot: startTime,
       endTimeSlot: endTime,
@@ -1732,6 +1797,12 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       timeSlotDisplay: `${startTime}:00 - ${endTime}:00`,
       players: players,
     };
+
+    // Add tennis balls (always include, even if 0)
+    updateData.tennisBalls = {
+      quantity: this.tennisBallQuantity
+    };
+    console.log(`🎾 Including tennis balls in update: ${this.tennisBallQuantity} cans`);
 
     console.log('🔄 Updating reservation:', updateData);
 
@@ -1792,7 +1863,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     });
 
     // Create single reservation data with multi-hour support
-    const reservationData = {
+    const reservationData: any = {
       date: formValue.date,
       timeSlot: startTimeSlot,
       duration: totalDuration,
@@ -1804,6 +1875,14 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       paymentStatus: 'pending',
       status: 'pending',
     };
+
+    // Add tennis balls if quantity > 0
+    if (this.tennisBallQuantity > 0) {
+      reservationData.tennisBalls = {
+        quantity: this.tennisBallQuantity
+      };
+      console.log(`🎾 Including tennis balls in reservation: ${this.tennisBallQuantity} cans`);
+    }
 
     console.log(`🚀 Sending SINGLE reservation:`, reservationData);
 
@@ -2024,6 +2103,20 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     }
 
     return 'unknown';
+  }
+
+  // Load system settings (tennis ball pricing)
+  loadSystemSettings(): void {
+    this.systemSettingsService.getSettings().subscribe({
+      next: (response) => {
+        this.tennisBallCostPerCan = response.data.tennisBallCostPerCan;
+        console.log(`🎾 Loaded tennis ball cost: ₱${this.tennisBallCostPerCan} per can`);
+      },
+      error: (error) => {
+        console.error('Failed to load system settings, using default:', error);
+        // Keep default value of 120
+      }
+    });
   }
 
   // Overdue payment modal methods

@@ -5,6 +5,7 @@ import User from '../models/User';
 import CreditTransaction from '../models/CreditTransaction';
 import Poll from '../models/Poll';
 import Payment from '../models/Payment';
+import SystemSettings from '../models/SystemSettings';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { CreateReservationRequest, UpdateReservationRequest, CompleteReservationRequest } from '../types';
@@ -710,6 +711,24 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
   // Convert players to ReservationPlayer objects for December 2025 pricing
   const playerObjects = await convertPlayersToObjects(trimmedPlayers);
 
+  // Handle tennis balls if requested
+  let tennisBallsData: { quantity: number; costPerCan: number; totalCost: number } | undefined;
+  if (req.body.tennisBalls && req.body.tennisBalls.quantity > 0) {
+    const quantity = req.body.tennisBalls.quantity;
+
+    // Fetch current tennis ball cost from settings
+    const settings = await SystemSettings.findOne();
+    const costPerCan = settings?.tennisBallCostPerCan || 120; // Default ₱120 if not found
+
+    tennisBallsData = {
+      quantity,
+      costPerCan,
+      totalCost: quantity * costPerCan
+    };
+
+    console.log(`🎾 Tennis balls requested: ${quantity} cans × ₱${costPerCan} = ₱${tennisBallsData.totalCost}`);
+  }
+
   // Create reservation with new player format
   const reservation = new Reservation({
     userId: req.user._id,
@@ -722,6 +741,7 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     tournamentTier,
     totalFee: finalTotalFee,
     weatherForecast,
+    tennisBalls: tennisBallsData,
     paymentIds: [] // Will be populated with payment IDs
   });
 
@@ -759,7 +779,12 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
 
     for (const member of members) {
       const isReserver = member.userId === reserverId;
-      const paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+      let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+
+      // Add tennis balls cost to reserver's payment ONLY
+      if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+        paymentAmount += reservation.tennisBalls.totalCost;
+      }
 
       // Set due date to the day after reservation (payment enabled after playing)
       const paymentDueDate = new Date(reservationDate);
@@ -783,7 +808,12 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
           guestCount: guests.length,
           isReserver: isReserver,
           memberShare: Math.round(memberShare * 100) / 100,
-          guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0
+          guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
+          tennisBalls: {
+            quantity: reservation.tennisBalls?.quantity || 0,
+            costPerCan: reservation.tennisBalls?.costPerCan || 0,
+            totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
+          }
         }
       });
 
@@ -821,7 +851,7 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
 // Update reservation (with duration and payment recalculation)
 export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { date, timeSlot, endTimeSlot, duration, isMultiHour, players }: UpdateReservationRequest = req.body;
+  const { date, timeSlot, endTimeSlot, duration, isMultiHour, players, tennisBalls }: UpdateReservationRequest = req.body;
 
   const reservation = await Reservation.findById(id);
   
@@ -940,6 +970,26 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
     const playerObjects = await convertPlayersToObjects(trimmedPlayers);
     reservation.players = playerObjects;
 
+    // Handle tennis balls update
+    if (tennisBalls !== undefined) {
+      if (tennisBalls.quantity > 0) {
+        const settings = await SystemSettings.findOne();
+        const costPerCan = settings?.tennisBallCostPerCan || 120;
+
+        reservation.tennisBalls = {
+          quantity: tennisBalls.quantity,
+          costPerCan,
+          totalCost: tennisBalls.quantity * costPerCan
+        };
+
+        console.log(`🎾 Updated tennis balls: ${tennisBalls.quantity} cans × ₱${costPerCan} = ₱${reservation.tennisBalls.totalCost}`);
+      } else {
+        // Remove tennis balls if quantity is 0
+        reservation.tennisBalls = undefined;
+        console.log('🎾 Removed tennis balls from reservation');
+      }
+    }
+
     // Recalculate total fee (will be done by pre-save hook)
     reservation.totalFee = 0;
 
@@ -972,7 +1022,12 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
 
       for (const member of members) {
         const isReserver = member.userId === reserverId;
-        const paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+        let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+
+        // Add tennis balls cost to reserver's payment ONLY
+        if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+          paymentAmount += reservation.tennisBalls.totalCost;
+        }
 
         const paymentDueDate = new Date(reservation.date);
         paymentDueDate.setDate(paymentDueDate.getDate() + 1);
@@ -995,7 +1050,12 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
             guestCount: guests.length,
             isReserver: isReserver,
             memberShare: Math.round(memberShare * 100) / 100,
-            guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0
+            guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
+            tennisBalls: {
+              quantity: reservation.tennisBalls?.quantity || 0,
+              costPerCan: reservation.tennisBalls?.costPerCan || 0,
+              totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
+            }
           }
         });
 
@@ -1007,9 +1067,29 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
       await reservation.save({ validateBeforeSave: false });
       console.log(`✅ Created ${paymentIds.length} new payments for reservation ${id}`);
     }
-  } else if (!players && (endTimeSlot !== undefined || duration !== undefined)) {
-    // No player changes but duration/time changed - need to recalculate fee and update payments
-    console.log('🔄 Duration/time changed without player changes - recalculating fees');
+  } else if (!players && (endTimeSlot !== undefined || duration !== undefined || tennisBalls !== undefined)) {
+    // No player changes but duration/time/tennis balls changed - need to recalculate fee and update payments
+    console.log('🔄 Duration/time/tennis balls changed without player changes - recalculating fees');
+
+    // Handle tennis balls update
+    if (tennisBalls !== undefined) {
+      if (tennisBalls.quantity > 0) {
+        const settings = await SystemSettings.findOne();
+        const costPerCan = settings?.tennisBallCostPerCan || 120;
+
+        reservation.tennisBalls = {
+          quantity: tennisBalls.quantity,
+          costPerCan,
+          totalCost: tennisBalls.quantity * costPerCan
+        };
+
+        console.log(`🎾 Updated tennis balls: ${tennisBalls.quantity} cans × ₱${costPerCan} = ₱${reservation.tennisBalls.totalCost}`);
+      } else {
+        // Remove tennis balls if quantity is 0
+        reservation.tennisBalls = undefined;
+        console.log('🎾 Removed tennis balls from reservation');
+      }
+    }
 
     // Recalculate total fee (will be done by pre-save hook)
     reservation.totalFee = 0;
@@ -1051,7 +1131,12 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
       for (const member of members) {
         const memberUserId = typeof member === 'string' ? null : member.userId;
         const isReserver = memberUserId === reserverId;
-        const paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+        let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+
+        // Add tennis balls cost to reserver's payment ONLY
+        if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+          paymentAmount += reservation.tennisBalls.totalCost;
+        }
 
         const paymentDueDate = new Date(reservation.date);
         paymentDueDate.setDate(paymentDueDate.getDate() + 1);
@@ -1074,7 +1159,12 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
             guestCount: guests.length,
             isReserver: isReserver,
             memberShare: Math.round(memberShare * 100) / 100,
-            guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0
+            guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
+            tennisBalls: {
+              quantity: reservation.tennisBalls?.quantity || 0,
+              costPerCan: reservation.tennisBalls?.costPerCan || 0,
+              totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
+            }
           }
         });
 

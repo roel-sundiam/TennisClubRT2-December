@@ -5,15 +5,28 @@ import { Types } from 'mongoose';
 
 // Initialize web-push with VAPID keys
 // In production, these should be stored in environment variables
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'your-vapid-public-key-here';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'your-vapid-private-key-here';
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:your-email@tennisclub.com';
 
-webpush.setVapidDetails(
-  VAPID_EMAIL,
-  VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY
-);
+// Only initialize VAPID if keys are provided (for production)
+// Skip in development/local environments where push notifications aren't needed
+let vapidConfigured = false;
+try {
+  if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_PUBLIC_KEY.length > 20) {
+    webpush.setVapidDetails(
+      VAPID_EMAIL,
+      VAPID_PUBLIC_KEY,
+      VAPID_PRIVATE_KEY
+    );
+    vapidConfigured = true;
+    console.log('✅ Push notifications configured with VAPID keys');
+  } else {
+    console.log('⚠️  Push notifications disabled (no valid VAPID keys)');
+  }
+} catch (error) {
+  console.warn('⚠️  Push notifications disabled (invalid VAPID keys):', (error as Error).message);
+}
 
 interface NotificationPayload {
   title: string;
@@ -83,6 +96,12 @@ export class NotificationService {
     userId: string,
     payload: NotificationPayload
   ): Promise<void> {
+    // Skip if VAPID not configured (local development)
+    if (!vapidConfigured) {
+      console.log('⚠️  Skipping notification (VAPID not configured):', payload.title);
+      return;
+    }
+
     try {
       const subscriptions = await PushSubscription.find({
         userId: new Types.ObjectId(userId),

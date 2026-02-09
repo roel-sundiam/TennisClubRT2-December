@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 
-dotenv.config();
+// Note: dotenv is configured in server.ts before this module is used
+// Do not call dotenv.config() here to avoid conflicts
 
 export const connectDatabase = async (): Promise<void> => {
   try {
@@ -20,8 +20,9 @@ export const connectDatabase = async (): Promise<void> => {
     };
 
     await mongoose.connect(mongoUri, options);
-    
-    console.log('✅ Connected to MongoDB successfully');
+
+    const dbName = mongoose.connection.db?.databaseName || 'unknown';
+    console.log(`✅ Connected to MongoDB successfully - Database: ${dbName}`);
     
     // Handle connection events
     mongoose.connection.on('error', (error) => {

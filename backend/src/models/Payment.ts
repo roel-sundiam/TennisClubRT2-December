@@ -460,7 +460,7 @@ paymentSchema.statics.getPaymentsByUser = function(userId: string, status?: stri
   }
   
   return this.find(filter)
-    .populate('reservationId', 'date timeSlot players')
+    .populate('reservationId', 'date timeSlot players tennisBalls')
     .sort({ createdAt: -1 });
 };
 
@@ -472,7 +472,7 @@ paymentSchema.statics.getOverduePayments = function() {
     dueDate: { $lt: today }
   })
     .populate('userId', 'username fullName email')
-    .populate('reservationId', 'date timeSlot')
+    .populate('reservationId', 'date timeSlot tennisBalls')
     .sort({ dueDate: 1 });
 };
 

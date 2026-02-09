@@ -36,6 +36,7 @@ import { ResurfacingContributionsComponent } from './components/resurfacing-cont
 import { GalleryComponent } from './components/gallery/gallery.component';
 import { AdminGalleryUploadComponent } from './components/admin-gallery-upload/admin-gallery-upload.component';
 import { AnnouncementManagementComponent } from './pages/admin/announcement-management/announcement-management.component';
+import { AdminSystemSettingsComponent } from './components/admin-system-settings/admin-system-settings.component';
 import { authGuard, loginGuard, adminGuard, superadminGuard, treasurerGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -198,6 +199,7 @@ export const routes: Routes = [
   { path: 'admin/payments', component: AdminPaymentManagementComponent, canActivate: [authGuard, adminGuard] },
   { path: 'admin/resurfacing-contributions', component: AdminResurfacingContributionsComponent, canActivate: [authGuard, adminGuard] },
   { path: 'admin/announcements', component: AnnouncementManagementComponent, canActivate: [authGuard, superadminGuard] },
+  { path: 'admin/settings', component: AdminSystemSettingsComponent, canActivate: [authGuard, superadminGuard] },
   { path: 'resurfacing-contributions', component: ResurfacingContributionsComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '/calendar' }
 ];

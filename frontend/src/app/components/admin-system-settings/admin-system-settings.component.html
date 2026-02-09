@@ -1,0 +1,249 @@
+<div class="admin-settings-container">
+  <!-- Tennis Balls Statistics Card -->
+  <div class="stats-card" *ngIf="stats && !loadingStats">
+    <div class="card-header">
+      <div class="card-title">
+        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+        </svg>
+        Tennis Balls Statistics
+      </div>
+      <p class="card-subtitle">Overview of tennis balls purchased and revenue</p>
+    </div>
+
+    <div class="card-content">
+      <div class="stats-grid">
+        <!-- Total Cans Purchased -->
+        <div class="stat-item">
+          <div class="stat-icon purchased">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">Total Cans Purchased</div>
+            <div class="stat-value">{{ stats.totalCansPurchased }}</div>
+            <div class="stat-sub">{{ stats.totalReservationsWithBalls }} reservations</div>
+          </div>
+        </div>
+
+        <!-- Total Cans Paid -->
+        <div class="stat-item">
+          <div class="stat-icon paid">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">Cans Paid</div>
+            <div class="stat-value">{{ stats.totalCansPaid }}</div>
+            <div class="stat-sub">{{ stats.paidReservationsWithBalls }} reservations</div>
+          </div>
+        </div>
+
+        <!-- Pending Cans -->
+        <div class="stat-item">
+          <div class="stat-icon pending">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">Cans Pending Payment</div>
+            <div class="stat-value">{{ stats.totalCansPending }}</div>
+            <div class="stat-sub">Awaiting payment</div>
+          </div>
+        </div>
+
+        <!-- Total Revenue -->
+        <div class="stat-item">
+          <div class="stat-icon revenue">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.8 10.9c-2.27-.59-3-1.38-3-2.39 0-1.59 1.21-2.7 3.2-2.7 1.71 0 2.64.87 2.84 2.65l2.05-.16c-.3-1.96-1.61-3.09-3.69-3.09-2.45 0-4.3 1.45-4.3 3.58 0 2.04 1.27 2.89 3.7 3.59 2.33.67 3 1.5 3 2.72 0 1.88-1.35 2.72-3.72 2.72-2.09 0-3.58-.98-3.8-2.63L8.03 18c.31 1.91 1.82 3.08 4 3.08 1.42 0 2.66-.36 3.51-1.27.77-.85 1.27-2.1 1.27-3.7 0-2.26-1.39-3.02-3.7-3.6z"/>
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">Total Revenue (Paid)</div>
+            <div class="stat-value">₱{{ stats.totalRevenue.toLocaleString() }}</div>
+            <div class="stat-sub">From tennis balls sales</div>
+          </div>
+        </div>
+
+        <!-- Pending Revenue -->
+        <div class="stat-item">
+          <div class="stat-icon pending-revenue">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.99 5V1h-1v4H7v2h3.99V13c0 1.1.9 2 2 2h6v-2h-6V7h6V5h-6z"/>
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">Pending Revenue</div>
+            <div class="stat-value">₱{{ stats.pendingRevenue.toLocaleString() }}</div>
+            <div class="stat-sub">Unpaid reservations</div>
+          </div>
+        </div>
+
+        <!-- Current Price -->
+        <div class="stat-item">
+          <div class="stat-icon price">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c0-1.93-1.57-3.5-3.5-3.5S8.5 9.07 8.5 11s1.57 3.5 3.5 3.5 3.5-1.57 3.5-3.5z"/>
+            </svg>
+          </div>
+          <div class="stat-details">
+            <div class="stat-label">Current Price/Can</div>
+            <div class="stat-value">₱{{ stats.currentCostPerCan }}</div>
+            <div class="stat-sub">For new reservations</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Purchases List -->
+      <div class="purchases-section" *ngIf="stats.purchases && stats.purchases.length > 0">
+        <h3>
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          Tennis Balls Purchase History
+        </h3>
+
+        <div class="table-container">
+          <table class="purchases-table">
+            <thead>
+              <tr>
+                <th>Reserver</th>
+                <th>Date</th>
+                <th>Quantity</th>
+                <th>Price/Can</th>
+                <th>Total Cost</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let purchase of stats.purchases">
+                <td class="reserver-name">{{ purchase.reserverName }}</td>
+                <td class="date">{{ formatReservationDate(purchase.date) }}</td>
+                <td class="quantity">{{ purchase.quantity }} can<span *ngIf="purchase.quantity !== 1">s</span></td>
+                <td class="price">₱{{ purchase.costPerCan }}</td>
+                <td class="total-cost">₱{{ purchase.totalCost.toLocaleString() }}</td>
+                <td class="status">
+                  <span class="status-badge" [ngClass]="purchase.paymentStatus">
+                    {{ purchase.paymentStatus }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Stats -->
+  <div class="stats-card" *ngIf="loadingStats">
+    <div class="card-content">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading statistics...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-card">
+    <div class="card-header">
+      <div class="card-title">
+        <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.64l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.39-1.03-.74-1.63-.99L14.4 2.81c-.04-.25-.25-.43-.5-.43h-3.84c-.25 0-.46.18-.49.43l-.36 2.54c-.59.25-1.13.61-1.62.99l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.22-.07.49.12.64l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.64l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.39 1.03.74 1.63.99l.36 2.54c.05.25.25.43.5.43h3.84c.25 0 .46-.18.49-.43l.36-2.54c.59-.25 1.13-.61 1.62-.99l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.49-.12-.64l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+        System Settings
+      </div>
+      <p class="card-subtitle">Manage system-wide configuration</p>
+    </div>
+
+    <div class="card-content">
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading settings...</p>
+      </div>
+
+      <!-- Settings Form -->
+      <form [formGroup]="settingsForm" *ngIf="!loading" class="settings-form" (ngSubmit)="saveSettings()">
+        <!-- Tennis Ball Pricing Section -->
+        <div class="settings-section">
+          <div class="section-header">
+            <svg class="section-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+            </svg>
+            <h3>Tennis Ball Pricing</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="tennisBallCost">Cost per Can (₱)</label>
+            <input
+              id="tennisBallCost"
+              type="number"
+              formControlName="tennisBallCostPerCan"
+              placeholder="120"
+              min="50"
+              max="500"
+              step="10"
+              class="form-input"
+              [class.form-input-error]="settingsForm.get('tennisBallCostPerCan')?.invalid && settingsForm.get('tennisBallCostPerCan')?.touched"
+            />
+            <p class="form-hint">Price must be between ₱50 and ₱500, in multiples of ₱10</p>
+            <p class="form-error" *ngIf="settingsForm.get('tennisBallCostPerCan')?.invalid && settingsForm.get('tennisBallCostPerCan')?.touched">
+              {{ getTennisBallCostError() }}
+            </p>
+          </div>
+
+          <div class="info-box">
+            <svg class="info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <div class="info-text">
+              <p><strong>Important:</strong> This price will be used for all new reservations.</p>
+              <p>Existing reservations retain their original pricing (snapshot pricing).</p>
+              <p>The cost is added to the reserver's payment only.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="action-buttons">
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="settingsForm.invalid || saving"
+          >
+            <svg *ngIf="!saving" class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+            </svg>
+            <span class="spinner-mini" *ngIf="saving"></span>
+            {{ saving ? 'Saving...' : 'Save Settings' }}
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="loadSettings()"
+            [disabled]="saving"
+          >
+            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M1 4v6h6M23 20v-6h-6M20.54 5.23c-1.12-1.71-2.92-2.71-4.89-2.71-2.95 0-5.46 1.93-6.35 4.68H4.65c1.5-2.16 3.97-3.45 6.74-3.45 1.5 0 2.97.4 4.23 1.16l1.85-1.85C20.06 3.02 18.07 2 16.39 2 13.87 2 11.54 3 9.96 4.73m-7.08 13.54c1.12 1.71 2.92 2.71 4.89 2.71 2.95 0 5.46-1.93 6.35-4.68h3.74c-1.5 2.16-3.97 3.45-6.74 3.45-1.5 0-2.97-.4-4.23-1.16l-1.85 1.85c1.49 1.25 3.48 2.27 5.16 2.27 2.52 0 4.85-.99 6.43-2.72z"/>
+            </svg>
+            Reset
+          </button>
+        </div>
+
+        <!-- Last Updated Info -->
+        <div *ngIf="currentSettings" class="last-updated">
+          <svg class="small-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.99 5V1h-1v4H7v2h3.99V13c0 1.1.9 2 2 2h6v-2h-6V7h6V5h-6z"/>
+          </svg>
+          <span>Last updated: {{ formatDate(currentSettings.updatedAt) }}</span>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

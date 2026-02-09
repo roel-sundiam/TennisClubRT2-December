@@ -158,6 +158,12 @@ export interface CourtReservation {
   duration: number;
   endTimeSlot?: number; // Calculated automatically
   isMultiHour?: boolean; // Calculated automatically
+  // Tennis balls configuration
+  tennisBalls?: {
+    quantity: number;
+    costPerCan: number;
+    totalCost: number;
+  };
   // Court blocking fields
   blockReason?: 'maintenance' | 'private_event' | 'weather' | 'other';
   blockNotes?: string;
@@ -172,6 +178,9 @@ export interface CreateReservationRequest {
   duration?: number; // Default to 1 hour if not specified
   tournamentTier?: '100' | '250' | '500';
   totalFee?: number; // Fee calculated by frontend
+  tennisBalls?: {
+    quantity: number;
+  };
 }
 
 export interface UpdateReservationRequest {
@@ -182,6 +191,9 @@ export interface UpdateReservationRequest {
   isMultiHour?: boolean;
   timeSlotDisplay?: string;
   players?: string[];
+  tennisBalls?: {
+    quantity: number;
+  };
 }
 
 export interface Payment {

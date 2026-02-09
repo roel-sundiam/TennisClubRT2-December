@@ -361,7 +361,7 @@ router.get('/debug-user-payments', async (req: Request, res: Response) => {
     
     // Check all payments for superadmin user
     const allPayments = await Payment.find({ userId: superadmin._id.toString() })
-      .populate('reservationId', 'date timeSlot players')
+      .populate('reservationId', 'date timeSlot players tennisBalls')
       .sort({ createdAt: -1 });
       
     console.log('🔧 DEBUG: All payments found:', allPayments.map((p: any) => ({

@@ -43,6 +43,11 @@ interface Reservation {
   };
   blockReason?: 'maintenance' | 'private_event' | 'weather' | 'other';
   blockNotes?: string;
+  tennisBalls?: {
+    quantity: number;
+    costPerCan: number;
+    totalCost: number;
+  };
   createdAt: Date;
   updatedAt: Date;
   isHomeownerDay?: boolean; // Flag for Homeowner's Day entries
@@ -208,6 +213,12 @@ interface AvatarInfo {
                           <mat-icon class="detail-icon">payments</mat-icon>
                           <span class="detail-label">Fee per player:</span>
                           <span class="detail-value">₱{{(reservation.totalFee / getAllPlayers(reservation).length) | number:'1.0-0'}}</span>
+                        </div>
+
+                        <div class="detail-row" *ngIf="reservation.tennisBalls && reservation.tennisBalls.quantity > 0">
+                          <mat-icon class="detail-icon">sports_tennis</mat-icon>
+                          <span class="detail-label">Tennis balls:</span>
+                          <span class="detail-value">{{reservation.tennisBalls.quantity}} {{ reservation.tennisBalls.quantity === 1 ? 'can' : 'cans' }} @ ₱{{reservation.tennisBalls.costPerCan}} = ₱{{reservation.tennisBalls.totalCost}}</span>
                         </div>
                       </div>
                     </div>
@@ -396,6 +407,12 @@ interface AvatarInfo {
                             <span class="detail-label">Fee per player:</span>
                             <span class="detail-value">₱{{(reservation.totalFee / getAllPlayers(reservation).length) | number:'1.0-0'}}</span>
                           </div>
+
+                          <div class="detail-row" *ngIf="reservation.tennisBalls && reservation.tennisBalls.quantity > 0">
+                            <mat-icon class="detail-icon">sports_tennis</mat-icon>
+                            <span class="detail-label">Tennis balls:</span>
+                            <span class="detail-value">{{reservation.tennisBalls.quantity}} {{ reservation.tennisBalls.quantity === 1 ? 'can' : 'cans' }} @ ₱{{reservation.tennisBalls.costPerCan}} = ₱{{reservation.tennisBalls.totalCost}}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -552,6 +569,12 @@ interface AvatarInfo {
                           <mat-icon class="detail-icon">payments</mat-icon>
                           <span class="detail-label">Fee per player:</span>
                           <span class="detail-value">₱{{(reservation.totalFee / getAllPlayers(reservation).length) | number:'1.0-0'}}</span>
+                        </div>
+
+                        <div class="detail-row" *ngIf="reservation.tennisBalls && reservation.tennisBalls.quantity > 0">
+                          <mat-icon class="detail-icon">sports_tennis</mat-icon>
+                          <span class="detail-label">Tennis balls:</span>
+                          <span class="detail-value">{{reservation.tennisBalls.quantity}} {{ reservation.tennisBalls.quantity === 1 ? 'can' : 'cans' }} @ ₱{{reservation.tennisBalls.costPerCan}} = ₱{{reservation.tennisBalls.totalCost}}</span>
                         </div>
 
                         <div class="detail-row">
@@ -1242,8 +1265,9 @@ click "Try Again" below to reconnect.
         console.log('- Past:', this.pastReservations.length);
         console.log('- Weather data from backend:', this.upcomingReservations.filter(r => r.weatherForecast).length, 'reservations');
 
-        this.loading = false;
-        
+        // Don't set loading = false yet, keep it true until all initial data loads
+        // This prevents "No Reservations Found" from flashing before data loads
+
         // Load all reservations since it's now the first tab (without showing loading again)
         this.loadAllReservations(false);
 
@@ -1252,6 +1276,10 @@ click "Try Again" below to reconnect.
         if (user?.role === 'admin' || user?.role === 'superadmin') {
           console.log('✅ Admin user detected, loading admin reservations on init');
           this.loadAdminReservations(false);
+        } else {
+          // If not admin, set loading to false after all reservations load
+          // Admin loading will be handled by loadAdminReservations completion
+          this.loading = false;
         }
       },
       error: (error) => {
@@ -1377,15 +1405,14 @@ click "Try Again" below to reconnect.
         console.log('  - Mobile view (groupedAllReservations):', totalGrouped, 'items');
         console.log('  - Match:', this.allReservations.length === totalGrouped ? '✓' : '✗ MISMATCH!');
 
-        if (showLoading) {
-          this.loading = false;
-        }
+        // Always set loading to false when data loads complete
+        // This fixes the issue where "No Reservations Found" briefly appears
+        this.loading = false;
       },
       error: (error) => {
         console.error('Error loading all reservations:', error);
-        if (showLoading) {
-          this.loading = false;
-        }
+        // Always set loading to false on error too
+        this.loading = false;
         this.snackBar.open('Failed to load all reservations', 'Close', {
           duration: 3000,
           panelClass: ['error-snackbar']
@@ -1440,15 +1467,13 @@ click "Try Again" below to reconnect.
         console.log('📊 Admin Report loaded - Total:', this.adminReservations.length, 'Sorted (descending):', this.sortedAdminReservations.length);
         console.log('📊 Pending items:', this.pendingAdminReservations.length, 'Other items:', this.otherAdminReservations.length);
 
-        if (showLoading) {
-          this.loading = false;
-        }
+        // Always set loading to false when data loads complete
+        this.loading = false;
       },
       error: (error) => {
         console.error('Error loading admin reservations:', error);
-        if (showLoading) {
-          this.loading = false;
-        }
+        // Always set loading to false on error too
+        this.loading = false;
         this.snackBar.open('Failed to load admin report', 'Close', {
           duration: 3000,
           panelClass: ['error-snackbar']

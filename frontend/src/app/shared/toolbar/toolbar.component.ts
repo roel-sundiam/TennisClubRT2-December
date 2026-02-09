@@ -204,6 +204,11 @@ import { Subscription } from 'rxjs';
               <mat-icon>campaign</mat-icon>
               <span>Announcements</span>
             </button>
+
+            <button mat-button class="mobile-nav-item admin-item" *ngIf="isSuperAdmin" (click)="navigateAndClose('/admin/settings')">
+              <mat-icon>settings</mat-icon>
+              <span>System Settings</span>
+            </button>
           </div>
           
           <!-- Profile & Logout -->
@@ -415,7 +420,8 @@ export class ToolbarComponent implements OnInit, OnDestroy {
       '/admin/reports': 'Reports & Analytics',
       '/admin/polls': 'Poll Management',
       '/admin/block-court': 'Block Court',
-      '/admin/manual-court-usage': 'Manual Court Usage'
+      '/admin/manual-court-usage': 'Manual Court Usage',
+      '/admin/settings': 'System Settings'
     };
     return pathMap[path] || `Navigate to ${path}`;
   }

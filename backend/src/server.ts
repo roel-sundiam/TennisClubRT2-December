@@ -41,8 +41,33 @@ import resurfacingRoutes from './routes/resurfacingRoutes';
 import impersonationRoutes from './routes/impersonation';
 import galleryRoutes from './routes/galleryRoutes';
 import announcementRoutes from './routes/announcementRoutes';
+import systemSettingsRoutes from './routes/systemSettingsRoutes';
+import fs from 'fs';
+import path from 'path';
 
-dotenv.config();
+// Load environment variables
+// Check for .env.local first (for local development), then fall back to .env
+const envLocalPath = path.resolve(__dirname, '../.env.local');
+const envPath = path.resolve(__dirname, '../.env');
+
+console.log('🔍 Checking for environment files:');
+console.log('   .env.local path:', envLocalPath);
+console.log('   .env.local exists:', fs.existsSync(envLocalPath));
+console.log('   .env path:', envPath);
+console.log('   .env exists:', fs.existsSync(envPath));
+
+if (fs.existsSync(envLocalPath)) {
+  console.log('📋 Loading environment from .env.local (local development)');
+  dotenv.config({ path: envLocalPath });
+} else {
+  console.log('📋 Loading environment from .env (production)');
+  dotenv.config({ path: envPath });
+}
+
+// Log the MongoDB URI (masked for security)
+const mongoUri = process.env.MONGODB_URI || '';
+const maskedUri = mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
+console.log('🔗 MongoDB URI:', maskedUri);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -241,6 +266,7 @@ app.use('/api/resurfacing', resurfacingRoutes); // Resurfacing contribution rout
 app.use('/api/impersonation', impersonationRoutes); // Admin impersonation routes
 app.use('/api/gallery', galleryRoutes); // Image gallery routes (public viewing, superadmin upload)
 app.use('/api/announcements', announcementRoutes); // Announcement system routes
+app.use('/api/system-settings', systemSettingsRoutes); // System settings (tennis ball pricing, etc.)
 console.log('📥 All routes registered');
 
 // 404 handler
@@ -315,4 +341,5 @@ process.on('uncaughtException', (err: Error) => {
 startServer();
 
 export default app;// trigger restart
+// trigger restart
 // trigger restart

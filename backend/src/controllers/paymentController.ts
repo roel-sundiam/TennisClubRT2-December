@@ -464,7 +464,7 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
       Object.assign(existingPayment, updateData);
       await existingPayment.save();
       await existingPayment.populate('userId', 'username fullName email');
-      await existingPayment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+      await existingPayment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
       await existingPayment.populate('pollId', 'title openPlayEvent.eventDate openPlayEvent.startTime openPlayEvent.endTime');
       
       return res.status(200).json({
@@ -792,7 +792,7 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
         await existingPayment.populate('paidBy', 'username fullName email');
 
         if (!isManualPayment) {
-          await existingPayment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+          await existingPayment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
         }
 
         payment = existingPayment;
@@ -851,7 +851,7 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
         await payment.populate('paidBy', 'username fullName email');
 
         if (!isManualPayment) {
-          await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+          await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
 
           // Add payment ID to reservation
           if (!reservation!.paymentIds) {
@@ -958,7 +958,7 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
   await payment.populate('userId', 'username fullName email');
 
   if (!isManualPayment) {
-    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
     // Update reservation payment status - since payments are automatically completed, set to paid
     reservation!.paymentStatus = 'paid';
     await reservation!.save({ validateBeforeSave: false });
@@ -1100,7 +1100,7 @@ export const getPayment = asyncHandler(async (req: AuthenticatedRequest, res: Re
   
   const payment = await Payment.findById(id)
     .populate('userId', 'username fullName email')
-    .populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay')
+    .populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls')
     .populate('pollId', 'title openPlayEvent.eventDate openPlayEvent.startTime openPlayEvent.endTime');
   
   if (!payment) {
@@ -1197,7 +1197,7 @@ export const processPayment = asyncHandler(async (req: AuthenticatedRequest, res
 
     // Populate related data for response
     await payment.populate('userId', 'username fullName email');
-    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
     await payment.populate('pollId', 'title openPlayEvent.eventDate openPlayEvent.startTime openPlayEvent.endTime');
 
     console.log('💰 Payment processing completed successfully:', {
@@ -1491,7 +1491,7 @@ export const updatePayment = asyncHandler(async (req: AuthenticatedRequest, res:
   
   try {
     console.log('💰 Populating reservationId...');
-    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
     console.log('💰 reservationId populated successfully');
   } catch (error: any) {
     console.error('💰 ERROR during reservationId populate:', error);
@@ -1585,7 +1585,7 @@ export const cancelPayment = asyncHandler(async (req: AuthenticatedRequest, res:
   }
 
   await payment.populate('userId', 'username fullName email');
-  await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+  await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
   await payment.populate('pollId', 'title openPlayEvent.eventDate openPlayEvent.startTime openPlayEvent.endTime');
 
   return res.status(200).json({
@@ -1645,7 +1645,7 @@ export const getMyPayments = asyncHandler(async (req: AuthenticatedRequest, res:
       .populate('userId', 'username fullName email')
       .populate({
         path: 'reservationId',
-        select: 'userId date timeSlot endTimeSlot duration players status totalFee',
+        select: 'userId date timeSlot endTimeSlot duration players status totalFee tennisBalls',
         options: { virtuals: true }
       })
       .populate('pollId', 'title openPlayEvent.eventDate openPlayEvent.startTime openPlayEvent.endTime')
@@ -1889,7 +1889,7 @@ export const approvePayment = asyncHandler(async (req: AuthenticatedRequest, res
 
     // Populate related data for response
     await payment.populate('userId', 'username fullName email');
-    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
     await payment.populate('approvedBy', 'username fullName');
 
     console.log('✅ Payment approved successfully:', {
@@ -1979,7 +1979,7 @@ export const recordPayment = asyncHandler(async (req: AuthenticatedRequest, res:
 
     // Populate related data for response
     await payment.populate('userId', 'username fullName email');
-    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
     await payment.populate('approvedBy', 'username fullName');
     await payment.populate('recordedBy', 'username fullName');
 
@@ -2090,7 +2090,7 @@ export const unrecordPayment = asyncHandler(async (req: AuthenticatedRequest, re
 
     // Populate related data for response
     await payment.populate('userId', 'username fullName email');
-    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+    await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
     await payment.populate('approvedBy', 'username fullName');
 
     console.log('🔄 Payment unrecorded successfully:', {
@@ -2515,7 +2515,7 @@ export const payOnBehalf = asyncHandler(async (req: AuthenticatedRequest, res: R
   // Populate related data for response
   await payment.populate('userId', 'username fullName email');
   await payment.populate('paidBy', 'username fullName email');
-  await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay');
+  await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
 
   return res.status(201).json({
     success: true,

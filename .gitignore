@@ -95,3 +95,7 @@ frontend/public/_redirects
 # Backend data and exports
 backend/backups/
 backend/exports/
+
+# MongoDB backup files
+backup/
+*.json

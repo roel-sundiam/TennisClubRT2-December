@@ -134,6 +134,25 @@ const reservationSchema = new Schema<IReservationDocument>({
     type: Boolean,
     default: false,
     index: true
+  },
+  // Tennis balls configuration
+  tennisBalls: {
+    quantity: {
+      type: Number,
+      min: [0, 'Tennis ball quantity cannot be negative'],
+      max: [10, 'Maximum 10 cans per reservation'],
+      default: 0
+    },
+    costPerCan: {
+      type: Number,
+      min: [0, 'Cost per can cannot be negative'],
+      default: 0
+    },
+    totalCost: {
+      type: Number,
+      min: [0, 'Total cost cannot be negative'],
+      default: 0
+    }
   }
 }, {
   timestamps: true,
@@ -249,6 +268,11 @@ reservationSchema.pre('save', function(next) {
 
         totalFee += hourFee;
       }
+    }
+
+    // Add tennis balls cost to total (if any)
+    if (reservation.tennisBalls && reservation.tennisBalls.quantity > 0) {
+      totalFee += reservation.tennisBalls.totalCost;
     }
 
     // Round to nearest 10 pesos (e.g., 183.33 → 190)
