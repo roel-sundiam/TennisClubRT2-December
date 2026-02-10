@@ -119,7 +119,7 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         // Filter out auth actions (login/logout)
         {
           $match: {
-            action: { $ne: 'auth' }
+            action: { $nin: ['login', 'logout', 'auth'] }
           }
         },
         // Sort by most recent
@@ -148,7 +148,7 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
           }
         },
         // Unwind user array
-        { $unwind: { path: '$user', preserveNullAndEmptyArrays: false } },
+        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
         // Filter out superadmin users
         {
           $match: {
@@ -160,10 +160,10 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
           $project: {
             _id: 1,
             userId: {
-              _id: '$user._id',
-              fullName: '$user.fullName',
-              username: '$user.username',
-              role: '$user.role'
+              _id: { $ifNull: ['$user._id', null] },
+              fullName: { $ifNull: ['$user.fullName', 'Unknown User'] },
+              username: { $ifNull: ['$user.username', ''] },
+              role: { $ifNull: ['$user.role', ''] }
             },
             action: 1,
             component: 1,

@@ -560,6 +560,14 @@
   font-size: 0.8rem;
 }
 
+.details-cell {
+  max-width: 220px;
+  word-break: break-word;
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
 .modern-table tbody tr {
   transition: background 0.2s ease;
 }

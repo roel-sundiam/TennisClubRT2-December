@@ -318,6 +318,20 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
     });
   }
 
+  formatVisitDetails(visit: PageVisit): string {
+    const d = visit.details;
+    if (d) {
+      if (d.button && d.action)  return `${d.action.replace(/_/g, ' ')}: ${d.button.replace(/_/g, ' ')}`;
+      if (d.button)              return d.button.replace(/_/g, ' ');
+      if (d.from && d.to)        return d.to;
+      if (d.query !== undefined) return d.results !== undefined ? `search "${d.query}" (${d.results} results)` : `search "${d.query}"`;
+      if (d.filterType)          return `filter ${d.filterType}: ${d.filterValue}`;
+      if (d.fileName)            return `download ${d.fileName}`;
+      if (d.username)            return d.username;
+    }
+    return visit.component || '-';
+  }
+
   getPlayerNames(players: any[]): string[] {
     if (!players || players.length === 0) return [];
 
