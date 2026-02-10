@@ -601,6 +601,48 @@
   font-size: 1.05rem;
 }
 
+/* Overdue Payments */
+.overdue-amount {
+  font-weight: 700;
+  color: #ef4444;
+  font-size: 1.05rem;
+}
+
+.days-overdue-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  white-space: nowrap;
+}
+
+.overdue-row {
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.overdue-row:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.overdue-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.5rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* Status Badges */
 .status-badge {
   display: inline-block;

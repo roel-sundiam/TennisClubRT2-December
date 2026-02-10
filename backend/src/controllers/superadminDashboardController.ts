@@ -49,6 +49,10 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30); // 30 days back
 
+  // Cutoff for overdue payments: today at midnight (matches isOverdue() in admin-payment-management)
+  const overdueCutoff = new Date();
+  overdueCutoff.setHours(0, 0, 0, 0);
+
   try {
     // Execute all queries in parallel for optimal performance
     const [
@@ -58,7 +62,8 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
       latestFeedback,
       lastTennisBallPurchase,
       recentPageVisits,
-      membersWithOverpayments
+      membersWithOverpayments,
+      overduePayments
     ] = await Promise.all([
       // 1. Fetch ALL reservations for today (we'll filter for current/next in JavaScript)
       Reservation.find({
@@ -115,18 +120,17 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         .lean(),
 
       // 7. Recent page views (last 20, excluding superadmin users and login/register pages)
+      // NOTE: $lookup runs before $limit so superadmin visits don't consume the quota
       PageView.aggregate([
         // Filter out login/register pages and anonymous visits
         {
           $match: {
             userId: { $exists: true, $ne: '' },
-            page: { $nin: ['Login', 'Registration'] }
+            page: { $nin: ['Login', 'Registration', 'Superadmin Dashboard'] }
           }
         },
-        // Sort by most recent
+        // Sort by most recent (uses timestamp index)
         { $sort: { timestamp: -1 } },
-        // Limit to get enough results before filtering
-        { $limit: 100 },
         // Convert string userId to ObjectId for lookup
         {
           $addFields: {
@@ -150,7 +154,7 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         },
         // Unwind user array
         { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-        // Filter out superadmin users
+        // Filter out superadmin users BEFORE limiting
         {
           $match: {
             'user.role': { $ne: 'superadmin' }
@@ -183,7 +187,57 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
       })
         .sort({ creditBalance: -1 })
         .select('fullName username email creditBalance')
-        .lean()
+        .lean(),
+
+      // 9. Overdue payments — Payment records with status='pending' and dueDate before today,
+      //    aggregated by member (mirrors isOverdue() logic in admin-payment-management)
+      Payment.aggregate([
+        {
+          $match: {
+            status: 'pending',
+            dueDate: { $lt: overdueCutoff }
+          }
+        },
+        {
+          $group: {
+            _id: '$userId',
+            totalAmount: { $sum: '$amount' },
+            paymentCount: { $sum: 1 },
+            oldestDueDate: { $min: '$dueDate' }
+          }
+        },
+        // userId is stored as String in Payment model; convert to ObjectId for $lookup
+        {
+          $addFields: {
+            userObjectId: { $toObjectId: '$_id' }
+          }
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userObjectId',
+            foreignField: '_id',
+            as: 'user'
+          }
+        },
+        { $unwind: { path: '$user', preserveNullAndEmptyArrays: false } },
+        {
+          $project: {
+            _id: 1,
+            totalAmount: 1,
+            paymentCount: 1,
+            oldestDueDate: 1,
+            userId: {
+              _id: '$user._id',
+              fullName: '$user.fullName',
+              username: '$user.username',
+              email: '$user.email'
+            }
+          }
+        },
+        { $sort: { totalAmount: -1 } },
+        { $limit: 10 }
+      ])
     ]);
 
     console.log('📋 Today\'s Active Reservations:', todaysReservations.length);
@@ -264,7 +318,8 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         latestFeedback,
         lastTennisBallPurchase,
         recentPageVisits,
-        membersWithOverpayments
+        membersWithOverpayments,
+        overduePayments
       }
     });
   } catch (error: any) {

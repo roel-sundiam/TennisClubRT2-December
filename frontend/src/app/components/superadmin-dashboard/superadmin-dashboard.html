@@ -404,6 +404,69 @@
         </div>
       </div>
 
+      <!-- Overdue Payments -->
+      <div class="section-card wide-card">
+        <div class="card-header">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+          </svg>
+          <div>
+            <h2>Overdue Payments</h2>
+            <p>Pending payments past their due date</p>
+          </div>
+          <span *ngIf="dashboardData.overduePayments.length > 0" class="overdue-count-badge">
+            {{ dashboardData.overduePayments.length }}
+          </span>
+        </div>
+
+        <div class="card-content">
+          <div *ngIf="dashboardData.overduePayments.length > 0" class="table-wrapper">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Member</th>
+                  <th>Payments</th>
+                  <th>Total Amount</th>
+                  <th>Oldest Due Date</th>
+                  <th>Days Overdue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let member of dashboardData.overduePayments" class="overdue-row">
+                  <td>
+                    <div class="member-info">
+                      <strong>{{ member.userId.fullName }}</strong>
+                      <small>{{ member.userId.username }}</small>
+                    </div>
+                  </td>
+                  <td>{{ member.paymentCount }}</td>
+                  <td><span class="overdue-amount">₱{{ member.totalAmount }}</span></td>
+                  <td>{{ formatDate(member.oldestDueDate) }}</td>
+                  <td>
+                    <span class="days-overdue-badge">{{ getDaysOverdue(member.oldestDueDate) }} days</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div *ngIf="dashboardData.overduePayments.length === 0" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+            <p>No overdue payments</p>
+          </div>
+        </div>
+
+        <div *ngIf="dashboardData.overduePayments.length > 0" class="card-actions">
+          <button class="btn btn-link" (click)="navigateToPaymentManagement()">
+            View All Payments
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <!-- Latest Feedback -->
       <div class="section-card">
         <div class="card-header">

@@ -78,6 +78,14 @@ interface MemberWithCredit {
   creditBalance: number;
 }
 
+interface OverdueMemberInfo {
+  _id: string;
+  userId: UserInfo;
+  totalAmount: number;
+  paymentCount: number;
+  oldestDueDate: Date;
+}
+
 interface DashboardData {
   courtStatus: {
     current: CourtReservation | null;
@@ -89,6 +97,7 @@ interface DashboardData {
   lastTennisBallPurchase: TennisBallPurchase | null;
   recentPageVisits: PageVisit[];
   membersWithOverpayments: MemberWithCredit[];
+  overduePayments: OverdueMemberInfo[];
 }
 
 @Component({
@@ -241,6 +250,10 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
     this.router.navigate(['/admin/credits']);
   }
 
+  navigateToPaymentManagement() {
+    this.router.navigate(['/admin/payments']);
+  }
+
   // Helper methods
   getTimeSlotLabel(slot: number): string {
     const hour = slot % 12 || 12;
@@ -306,6 +319,12 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
       hour: 'numeric',
       minute: '2-digit'
     });
+  }
+
+  getDaysOverdue(dueDate: Date | string): number {
+    const due = new Date(dueDate);
+    const today = new Date();
+    return Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
   }
 
   formatDateTime(date: Date | string): string {
@@ -378,6 +397,13 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
     // Check for court status changes
     if (!oldData.courtStatus.current && newData.courtStatus.current) return true;
     if (!oldData.courtStatus.next && newData.courtStatus.next) return true;
+
+    // Check for new overdue payments
+    if (newData.overduePayments && oldData.overduePayments &&
+        newData.overduePayments.length > oldData.overduePayments.length) {
+      const oldIds = new Set(oldData.overduePayments.map(p => p._id));
+      if (newData.overduePayments.some(p => !oldIds.has(p._id))) return true;
+    }
 
     return false;
   }
