@@ -49,9 +49,13 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30); // 30 days back
 
-  // Cutoff for overdue payments: today at midnight (matches isOverdue() in admin-payment-management)
+  // Cutoff for overdue payments: midnight PHT (UTC+8), matching isOverdue() in admin-payment-management
+  // The frontend normalizes dueDate to midnight local time (PHT) before comparing, so we must use
+  // midnight PHT expressed as UTC here — otherwise server UTC midnight fires 8 hours too early.
+  const PHT_OFFSET_MS = 8 * 60 * 60 * 1000;
   const overdueCutoff = new Date();
-  overdueCutoff.setHours(0, 0, 0, 0);
+  overdueCutoff.setUTCHours(0, 0, 0, 0);                             // midnight UTC today
+  overdueCutoff.setTime(overdueCutoff.getTime() - PHT_OFFSET_MS);    // → midnight PHT today in UTC
 
   try {
     // Execute all queries in parallel for optimal performance
