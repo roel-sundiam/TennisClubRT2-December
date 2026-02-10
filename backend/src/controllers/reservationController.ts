@@ -49,7 +49,7 @@ function calculateStringSimilarity(str1: string, str2: string): number {
 // Helper function to convert player names to ReservationPlayer objects (December 2025)
 async function convertPlayersToObjects(playerNames: string[]): Promise<any[]> {
   // Get all members for matching
-  const allMembers = await User.find({ isApproved: true, role: { $in: ['member', 'admin', 'superadmin'] } });
+  const allMembers = await User.find({ isApproved: true, isActive: true, role: { $in: ['member', 'admin', 'superadmin'] } });
   const memberNames = allMembers.map(m => m.fullName.toLowerCase().trim());
   const memberMap = new Map(allMembers.map(m => [m.fullName.toLowerCase().trim(), m._id.toString()]));
 
