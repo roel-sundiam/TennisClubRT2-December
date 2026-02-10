@@ -278,16 +278,14 @@
                 <tr>
                   <th>Time</th>
                   <th>User</th>
-                  <th>Action</th>
-                  <th>Details</th>
+                  <th>Page</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let visit of dashboardData.recentPageVisits">
                   <td>{{ formatDateTime(visit.timestamp) }}</td>
                   <td>{{ visit.userId?.fullName || 'Unknown' }}</td>
-                  <td><strong>{{ visit.action }}</strong></td>
-                  <td class="details-cell">{{ formatVisitDetails(visit) }}</td>
+                  <td>{{ formatPageName(visit.page) }}</td>
                 </tr>
               </tbody>
             </table>

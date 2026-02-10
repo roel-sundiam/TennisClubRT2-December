@@ -3,7 +3,7 @@ import Reservation from '../models/Reservation';
 import Payment from '../models/Payment';
 import User from '../models/User';
 import Suggestion from '../models/Suggestion';
-import { UserActivity } from '../models/Analytics';
+import { PageView } from '../models/Analytics';
 import { asyncHandler } from '../middleware/errorHandler';
 import { nowInManila } from '../utils/timezone.util';
 
@@ -114,12 +114,13 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         .select('userId date timeSlot tennisBalls createdAt')
         .lean(),
 
-      // 7. Recent user activity (last 20, excluding superadmin and auth actions)
-      UserActivity.aggregate([
-        // Filter out auth actions (login/logout)
+      // 7. Recent page views (last 20, excluding superadmin users and login/register pages)
+      PageView.aggregate([
+        // Filter out login/register pages and anonymous visits
         {
           $match: {
-            action: { $nin: ['login', 'logout', 'auth'] }
+            userId: { $exists: true, $ne: '' },
+            page: { $nin: ['Login', 'Registration'] }
           }
         },
         // Sort by most recent
@@ -165,9 +166,8 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
               username: { $ifNull: ['$user.username', ''] },
               role: { $ifNull: ['$user.role', ''] }
             },
-            action: 1,
-            component: 1,
-            details: 1,
+            page: 1,
+            path: 1,
             timestamp: 1
           }
         },

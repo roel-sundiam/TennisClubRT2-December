@@ -65,9 +65,8 @@ interface TennisBallPurchase {
 interface PageVisit {
   _id: string;
   userId: UserInfo | null;
-  action: string;
-  component: string;
-  details?: any;
+  page: string;
+  path: string;
   timestamp: Date;
 }
 
@@ -318,18 +317,18 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
     });
   }
 
-  formatVisitDetails(visit: PageVisit): string {
-    const d = visit.details;
-    if (d) {
-      if (d.button && d.action)  return `${d.action.replace(/_/g, ' ')}: ${d.button.replace(/_/g, ' ')}`;
-      if (d.button)              return d.button.replace(/_/g, ' ');
-      if (d.from && d.to)        return d.to;
-      if (d.query !== undefined) return d.results !== undefined ? `search "${d.query}" (${d.results} results)` : `search "${d.query}"`;
-      if (d.filterType)          return `filter ${d.filterType}: ${d.filterValue}`;
-      if (d.fileName)            return `download ${d.fileName}`;
-      if (d.username)            return d.username;
+  formatPageName(page: string): string {
+    if (!page) return '-';
+    // If stored as a path (e.g. old DB records like '/calendar'), convert to readable name
+    if (page.startsWith('/')) {
+      return page
+        .replace(/^\/admin\//, 'Admin - ')
+        .replace(/^\//, '')
+        .split('-')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
     }
-    return visit.component || '-';
+    return page;
   }
 
   getPlayerNames(players: any[]): string[] {
