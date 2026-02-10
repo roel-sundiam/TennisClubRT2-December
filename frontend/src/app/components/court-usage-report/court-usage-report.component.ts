@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -53,25 +53,67 @@ interface CourtUsageData {
       <div class="page-header">
         <div class="header-content">
           <div class="title-section">
+            <button class="back-btn" (click)="goBack()">
+              <mat-icon>arrow_back</mat-icon>
+            </button>
             <mat-icon class="page-icon">analytics</mat-icon>
             <div>
               <h1>Court Usage Report</h1>
-              <p class="subtitle">Member contributions from recorded payments</p>
+              <p class="subtitle">Member contributions and recorded payments</p>
             </div>
           </div>
-          <div class="header-stats" *ngIf="!loading && reportData">
-            <div class="stat-item">
-              <mat-icon>people</mat-icon>
-              <span>Contributing Members</span>
+          <div class="header-actions">
+            <button mat-raised-button class="refresh-btn" (click)="refreshData()" [disabled]="loading">
+              <mat-icon>refresh</mat-icon>
+              Refresh
+            </button>
+            <div class="toggle-container">
+              <span class="toggle-label">Auto-refresh</span>
+              <div class="toggle-switch">
+                <input type="checkbox" id="autoRefresh" [checked]="autoRefreshEnabled" (change)="toggleAutoRefresh()">
+                <label for="autoRefresh"></label>
+              </div>
             </div>
-            <div class="stat-item">
-              <mat-icon>receipt_long</mat-icon>
-              <span>{{ reportData.summary.totalRecordedPayments }} Recorded Payments</span>
-            </div>
-            <div class="stat-item">
-              <mat-icon>monetization_on</mat-icon>
-              <span>{{ reportData.summary.totalRevenue }} Total Revenue</span>
-            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Dashboard -->
+      <div class="stats-dashboard" *ngIf="!loading && reportData">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <mat-icon>people</mat-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ reportData.summary.totalMembers }}</div>
+            <div class="stat-label">Contributing Members</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon payments">
+            <mat-icon>receipt_long</mat-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ reportData.summary.totalRecordedPayments }}</div>
+            <div class="stat-label">Recorded Payments</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon revenue">
+            <mat-icon>monetization_on</mat-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ reportData.summary.totalRevenue }}</div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon time">
+            <mat-icon>schedule</mat-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ getTimeAgo(reportData.summary.lastUpdated) }}</div>
+            <div class="stat-label">Last Updated</div>
           </div>
         </div>
       </div>
@@ -89,7 +131,10 @@ interface CourtUsageData {
           <div class="table-header">
             <div class="table-title">
               <mat-icon>table_chart</mat-icon>
-              <h2>Member Contributions</h2>
+              <h2>Member Contributions Details</h2>
+            </div>
+            <div class="table-info">
+              <span class="record-count">{{ reportData.rawData.length }} records</span>
             </div>
           </div>
           
@@ -149,7 +194,8 @@ export class CourtUsageReportComponent implements OnInit, OnDestroy {
   constructor(
     private http: HttpClient,
     private authService: AuthService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -240,6 +286,10 @@ export class CourtUsageReportComponent implements OnInit, OnDestroy {
 
   refreshData(): void {
     this.loadCourtUsageData();
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   getLastUpdated(): string {
