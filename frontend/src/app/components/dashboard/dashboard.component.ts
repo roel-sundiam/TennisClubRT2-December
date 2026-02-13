@@ -158,8 +158,8 @@ import { environment } from '../../../environments/environment';
             </mat-card-actions>
           </mat-card>
 
-          <!-- Open Play - PlaySquad Integration -->
-          <mat-card class="action-card" data-icon="how_to_vote" data-title="Open Play"
+          <!-- Open Play - PlaySquad Integration (hidden - remove *ngIf="false" to restore) -->
+          <mat-card *ngIf="false" class="action-card" data-icon="how_to_vote" data-title="Open Play"
                    (click)="openPlaySquadAutoLogin()"
                    (touchstart)="handleTouchStart($event)"
                    (touchend)="handleTouchEnd($event, 'open-play-squad')">

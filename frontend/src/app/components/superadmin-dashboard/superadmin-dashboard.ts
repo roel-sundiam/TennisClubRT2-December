@@ -86,6 +86,16 @@ interface OverdueMemberInfo {
   oldestDueDate: Date;
 }
 
+interface PendingMemberInfo {
+  _id: string;
+  fullName: string;
+  username: string;
+  email: string;
+  phone?: string;
+  isHomeowner?: boolean;
+  createdAt: Date;
+}
+
 interface DashboardData {
   courtStatus: {
     current: CourtReservation | null;
@@ -97,6 +107,7 @@ interface DashboardData {
   lastTennisBallPurchase: TennisBallPurchase | null;
   recentPageVisits: PageVisit[];
   membersWithOverpayments: MemberWithCredit[];
+  pendingMembers: PendingMemberInfo[];
   overduePayments: OverdueMemberInfo[];
 }
 
@@ -254,6 +265,10 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
     this.router.navigate(['/admin/payments']);
   }
 
+  navigateToMemberManagement() {
+    this.router.navigate(['/admin/members']);
+  }
+
   // Helper methods
   getTimeSlotLabel(slot: number): string {
     const hour = slot % 12 || 12;
@@ -405,6 +420,13 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
         newData.overduePayments.length > oldData.overduePayments.length) {
       const oldIds = new Set(oldData.overduePayments.map(p => p._id));
       if (newData.overduePayments.some(p => !oldIds.has(p._id))) return true;
+    }
+
+    // Check for new pending members
+    if (newData.pendingMembers && oldData.pendingMembers &&
+        newData.pendingMembers.length > oldData.pendingMembers.length) {
+      const oldIds = new Set(oldData.pendingMembers.map(m => m._id));
+      if (newData.pendingMembers.some(m => !oldIds.has(m._id))) return true;
     }
 
     return false;

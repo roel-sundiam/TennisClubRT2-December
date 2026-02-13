@@ -64,7 +64,8 @@ import { Subscription } from 'rxjs';
               <mat-icon>people</mat-icon>
               <span>Members</span>
             </button>
-            <button mat-button class="nav-item" (click)="openPlayClick()">
+            <!-- Open Play hidden - remove *ngIf="false" to restore -->
+            <button *ngIf="false" mat-button class="nav-item" (click)="openPlayClick()">
               <mat-icon>how_to_vote</mat-icon>
               <span>Open Play</span>
             </button>
@@ -133,7 +134,8 @@ import { Subscription } from 'rxjs';
             <span>Members Directory</span>
           </button>
 
-          <button mat-button class="mobile-nav-item" (click)="openPlayAndClose()">
+          <!-- Open Play hidden - remove *ngIf="false" to restore -->
+          <button *ngIf="false" mat-button class="mobile-nav-item" (click)="openPlayAndClose()">
             <mat-icon>how_to_vote</mat-icon>
             <span>Open Play</span>
           </button>

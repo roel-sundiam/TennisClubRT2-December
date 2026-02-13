@@ -10,7 +10,7 @@ import { PaymentAlertsComponent } from '../../components/payment-alerts/payment-
 import { PWAInstallPromptComponent } from '../../components/pwa-install-prompt/pwa-install-prompt.component';
 import { UpdateBannerComponent } from '../../components/update-banner/update-banner.component';
 import { ChatWindowComponent } from '../../components/chat-window/chat-window.component';
-import { ResurfacingBannerComponent } from '../../components/resurfacing-banner/resurfacing-banner.component';
+// import { ResurfacingBannerComponent } from '../../components/resurfacing-banner/resurfacing-banner.component'; // HIDDEN
 import { ImpersonationBannerComponent } from '../../components/impersonation-banner/impersonation-banner.component';
 import { ActivityNotificationComponent } from '../activity-notification/activity-notification.component';
 
@@ -25,7 +25,7 @@ import { ActivityNotificationComponent } from '../activity-notification/activity
     PWAInstallPromptComponent,
     UpdateBannerComponent,
     ChatWindowComponent,
-    ResurfacingBannerComponent,
+    // ResurfacingBannerComponent, // HIDDEN
     ImpersonationBannerComponent,
     ActivityNotificationComponent
   ],
@@ -35,7 +35,8 @@ import { ActivityNotificationComponent } from '../activity-notification/activity
       <app-toolbar *ngIf="isAuthenticated"></app-toolbar>
 
       <!-- Resurfacing Banner (only on authenticated pages) -->
-      <app-resurfacing-banner *ngIf="isAuthenticated && !isAuthLoading"></app-resurfacing-banner>
+      <!-- HIDDEN: uncomment to re-enable the banner -->
+      <!-- <app-resurfacing-banner *ngIf="isAuthenticated && !isAuthLoading"></app-resurfacing-banner> -->
 
       <!-- Impersonation Banner (only on authenticated pages) -->
       <app-impersonation-banner *ngIf="isAuthenticated"></app-impersonation-banner>

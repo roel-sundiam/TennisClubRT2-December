@@ -67,6 +67,7 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
       lastTennisBallPurchase,
       recentPageVisits,
       membersWithOverpayments,
+      pendingMembers,
       overduePayments
     ] = await Promise.all([
       // 1. Fetch ALL reservations for today (we'll filter for current/next in JavaScript)
@@ -193,7 +194,16 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         .select('fullName username email creditBalance')
         .lean(),
 
-      // 9. Overdue payments — Payment records with status='pending' and dueDate before today,
+      // 9. Pending members (registered but not yet approved)
+      User.find({
+        isApproved: false,
+        isActive: { $ne: false }
+      })
+        .sort({ createdAt: -1 })
+        .select('fullName username email phone isHomeowner createdAt')
+        .lean(),
+
+      // 10. Overdue payments — Payment records with status='pending' and dueDate before today,
       //    aggregated by member (mirrors isOverdue() logic in admin-payment-management)
       Payment.aggregate([
         {
@@ -323,6 +333,7 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         lastTennisBallPurchase,
         recentPageVisits,
         membersWithOverpayments,
+        pendingMembers,
         overduePayments
       }
     });

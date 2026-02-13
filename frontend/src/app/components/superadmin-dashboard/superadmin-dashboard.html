@@ -467,6 +467,68 @@
         </div>
       </div>
 
+      <!-- Pending Members -->
+      <div class="section-card wide-card">
+        <div class="card-header">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+          <div>
+            <h2>Pending Member Registrations</h2>
+            <p>New members awaiting approval</p>
+          </div>
+          <span *ngIf="dashboardData.pendingMembers.length > 0" class="overdue-count-badge">
+            {{ dashboardData.pendingMembers.length }}
+          </span>
+        </div>
+
+        <div class="card-content">
+          <div *ngIf="dashboardData.pendingMembers.length > 0" class="table-wrapper">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Full Name</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Homeowner</th>
+                  <th>Registered</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let member of dashboardData.pendingMembers">
+                  <td><strong>{{ member.fullName }}</strong></td>
+                  <td>{{ member.username }}</td>
+                  <td>{{ member.email }}</td>
+                  <td>{{ member.phone || '—' }}</td>
+                  <td>
+                    <span class="status-badge" [ngClass]="member.isHomeowner ? 'status-confirmed' : 'status-cancelled'">
+                      {{ member.isHomeowner ? 'Yes' : 'No' }}
+                    </span>
+                  </td>
+                  <td>{{ formatDateTime(member.createdAt) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div *ngIf="dashboardData.pendingMembers.length === 0" class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+            <p>No pending registrations</p>
+          </div>
+        </div>
+
+        <div *ngIf="dashboardData.pendingMembers.length > 0" class="card-actions">
+          <button class="btn btn-link" (click)="navigateToMemberManagement()">
+            Review Pending Members
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <!-- Latest Feedback -->
       <div class="section-card">
         <div class="card-header">
