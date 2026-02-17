@@ -589,7 +589,7 @@ interface Notification {
                       <!-- Desktop: Show QR Code -->
                       <div *ngIf="!isMobileDevice && gcashConfig.qrCodeUrl" class="qr-section">
                         <p class="instruction-text"><strong>Scan QR Code with GCash App:</strong></p>
-                        <img [src]="apiUrl + gcashConfig.qrCodeUrl"
+                        <img [src]="getApiBaseUrl() + gcashConfig.qrCodeUrl"
                              alt="GCash QR Code"
                              class="gcash-qr-code">
 
@@ -2955,6 +2955,13 @@ export class PaymentsComponent implements OnInit {
         console.error('Failed to load GCash config:', error);
       }
     });
+  }
+
+  /**
+   * Get API base URL without /api suffix for static files
+   */
+  getApiBaseUrl(): string {
+    return environment.apiBaseUrl;
   }
 
   /**
