@@ -1056,7 +1056,7 @@ export class PaymentsComponent implements OnInit {
   gcashConfig: { phoneNumber: string; accountName: string; qrCodeUrl: string | null; deepLinkUrl: string } | null = null;
   isMobileDevice = false;
 
-  private apiUrl = environment.apiUrl;
+  apiUrl = environment.apiUrl;
 
   constructor(
     private fb: FormBuilder,
