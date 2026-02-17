@@ -346,12 +346,19 @@
                           (click)="recordPayment(payment)">
                           {{processing.includes(payment._id) ? 'Processing...' : 'Record'}}
                         </button>
-                        <button 
+                        <button
+                          *ngIf="payment.status === 'completed'"
+                          class="btn btn-sm btn-warning"
+                          [disabled]="processing.includes(payment._id)"
+                          (click)="cancelPayment(payment)">
+                          Set to Pending
+                        </button>
+                        <button
                           *ngIf="payment.status === 'completed'"
                           class="btn btn-sm btn-cancel"
                           [disabled]="processing.includes(payment._id)"
-                          (click)="cancelPayment(payment)">
-                          Cancel
+                          (click)="failPayment(payment)">
+                          Failed
                         </button>
                       </div>
                     </td>
@@ -476,12 +483,19 @@
                       <span *ngIf="!payment.recordedAt" class="no-date">-</span>
                     </td>
                     <td>
-                      <button 
+                      <button
                         *ngIf="payment.status === 'record'"
                         class="btn btn-sm btn-warn"
                         (click)="unrecordPayment(payment._id)"
                         [disabled]="processing.includes(payment._id)">
                         {{processing.includes(payment._id) ? 'Unrecording...' : 'Unrecord'}}
+                      </button>
+                      <button
+                        *ngIf="payment.status === 'failed'"
+                        class="btn btn-sm btn-success"
+                        (click)="revertToCompleted(payment)"
+                        [disabled]="processing.includes(payment._id)">
+                        {{processing.includes(payment._id) ? 'Processing...' : 'Mark as Completed'}}
                       </button>
                     </td>
                   </tr>

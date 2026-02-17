@@ -24,7 +24,8 @@ import {
   getMembershipPaymentSummary,
   updateMembershipPayment,
   deleteMembershipPayment,
-  validateMembershipFeePayment
+  validateMembershipFeePayment,
+  getGCashConfig
 } from '../controllers/paymentController';
 import { authenticateToken, requireRole, requireFinancialAccess, AuthenticatedRequest } from '../middleware/auth';
 import { autoFixPaymentsMiddleware } from '../middleware/autoFixPayments';
@@ -147,6 +148,13 @@ router.get(
  * @access Private
  */
 router.get('/calculate', authenticateToken, calculatePaymentAmount);
+
+/**
+ * @route GET /api/payments/gcash-config
+ * @desc Get GCash payment configuration (QR code, phone number, deep link)
+ * @access Private
+ */
+router.get('/gcash-config', authenticateToken, getGCashConfig);
 
 /**
  * @route POST /api/payments/cleanup-duplicates

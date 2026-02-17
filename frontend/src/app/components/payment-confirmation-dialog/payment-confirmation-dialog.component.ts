@@ -10,7 +10,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { FormsModule } from '@angular/forms';
 
 export interface PaymentConfirmationData {
-  action: 'approve' | 'record' | 'cancel';
+  action: 'approve' | 'record' | 'cancel' | 'fail' | 'complete';
   paymentId: string;
   referenceNumber: string;
   memberName: string;
@@ -44,10 +44,10 @@ export interface PaymentConfirmationResult {
     <div class="confirmation-dialog">
       <div class="dialog-header">
         <mat-icon class="action-icon"
-                  [class.approve-icon]="data.action === 'approve'"
+                  [class.approve-icon]="data.action === 'approve' || data.action === 'complete'"
                   [class.record-icon]="data.action === 'record'"
-                  [class.cancel-icon]="data.action === 'cancel'">
-          {{data.action === 'approve' ? 'check_circle' : (data.action === 'cancel' ? 'cancel' : 'verified')}}
+                  [class.cancel-icon]="data.action === 'cancel' || data.action === 'fail'">
+          {{data.action === 'approve' || data.action === 'complete' ? 'check_circle' : (data.action === 'cancel' ? 'cancel' : (data.action === 'fail' ? 'error' : 'verified'))}}
         </mat-icon>
         <h2 mat-dialog-title>{{getActionTitle()}}</h2>
       </div>
@@ -100,7 +100,17 @@ export interface PaymentConfirmationResult {
 
         <div class="warning-message cancel-warning" *ngIf="data.action === 'cancel'">
           <mat-icon>warning</mat-icon>
-          <span>This payment will be cancelled and moved to the Archived Payments tab. The reservation payment status will be reverted to pending.</span>
+          <span>This payment will be set to pending status. The member will need to pay again.</span>
+        </div>
+
+        <div class="warning-message cancel-warning" *ngIf="data.action === 'fail'">
+          <mat-icon>error</mat-icon>
+          <span>This payment will be marked as failed and moved to the Archived Payments tab. This indicates the payment processing failed.</span>
+        </div>
+
+        <div class="warning-message" *ngIf="data.action === 'complete'" style="background: #e8f5e9; border: 1px solid #81c784; color: #2e7d32;">
+          <mat-icon style="color: #4caf50;">check_circle</mat-icon>
+          <span>This payment will be marked as completed and moved back to the Active Payments tab.</span>
         </div>
       </div>
 
@@ -114,7 +124,7 @@ export interface PaymentConfirmationResult {
           [color]="getConfirmButtonColor()"
           (click)="onConfirm()"
           class="confirm-button">
-          <mat-icon>{{data.action === 'approve' ? 'check' : (data.action === 'cancel' ? 'cancel' : 'verified')}}</mat-icon>
+          <mat-icon>{{data.action === 'approve' || data.action === 'complete' ? 'check' : (data.action === 'cancel' ? 'cancel' : (data.action === 'fail' ? 'error' : 'verified'))}}</mat-icon>
           {{getActionTitle()}}
         </button>
       </div>
@@ -305,7 +315,9 @@ export class PaymentConfirmationDialogComponent {
 
   getActionTitle(): string {
     if (this.data.action === 'approve') return 'Approve Payment';
-    if (this.data.action === 'cancel') return 'Cancel Payment';
+    if (this.data.action === 'cancel') return 'Set to Pending';
+    if (this.data.action === 'fail') return 'Mark as Failed';
+    if (this.data.action === 'complete') return 'Mark as Completed';
     return 'Record Payment';
   }
 
@@ -313,15 +325,19 @@ export class PaymentConfirmationDialogComponent {
     if (this.data.action === 'approve') {
       return `Are you sure you want to approve this payment? This will mark the payment as approved and ready to be recorded.`;
     } else if (this.data.action === 'cancel') {
-      return `Are you sure you want to cancel this payment? This will move the payment to the Archived Payments tab and revert the reservation payment status to pending.`;
+      return `Are you sure you want to set this payment to pending status? The member will need to pay again.`;
+    } else if (this.data.action === 'fail') {
+      return `Are you sure you want to mark this payment as failed? This indicates the payment processing failed.`;
+    } else if (this.data.action === 'complete') {
+      return `Are you sure you want to mark this payment as completed? This will move the payment back to the Active Payments tab.`;
     } else {
       return `Are you sure you want to record this payment? This will mark the payment as fully processed and recorded in the system.`;
     }
   }
 
   getConfirmButtonColor(): string {
-    if (this.data.action === 'approve') return 'primary';
-    if (this.data.action === 'cancel') return 'warn';
+    if (this.data.action === 'approve' || this.data.action === 'complete') return 'primary';
+    if (this.data.action === 'cancel' || this.data.action === 'fail') return 'warn';
     return 'accent';
   }
 

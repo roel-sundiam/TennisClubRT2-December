@@ -786,6 +786,7 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
         existingPayment.amount = memberAmount;
         existingPayment.paymentMethod = paymentMethod;
         existingPayment.status = 'completed';
+        existingPayment.paymentDate = existingPayment.paymentDate || new Date();
 
         await existingPayment.save();
         await existingPayment.populate('userId', 'username fullName email');
@@ -2068,6 +2069,7 @@ export const unrecordPayment = asyncHandler(async (req: AuthenticatedRequest, re
   try {
     // Revert payment status and clear recording info
     payment.status = 'completed';
+    payment.paymentDate = payment.paymentDate || new Date();
     payment.recordedBy = undefined;
     payment.recordedAt = undefined;
     
@@ -2943,6 +2945,55 @@ async function updateFinancialReportMembershipFees(): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * Get GCash Payment Configuration
+ * Returns GCash account details for payment instructions
+ */
+export const getGCashConfig = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  console.log('💳 GET /api/payments/gcash-config called');
+
+  // Debug: Show all GCash-related environment variables
+  console.log('🔍 Environment variables check:');
+  console.log('   GCASH_PHONE_NUMBER =', process.env.GCASH_PHONE_NUMBER);
+  console.log('   GCASH_ACCOUNT_NAME =', process.env.GCASH_ACCOUNT_NAME);
+  console.log('   GCASH_QR_CODE_PATH =', process.env.GCASH_QR_CODE_PATH);
+  console.log('   NODE_ENV =', process.env.NODE_ENV);
+
+  const phoneNumber = process.env.GCASH_PHONE_NUMBER || '';
+  const accountName = process.env.GCASH_ACCOUNT_NAME || '';
+  const qrCodePath = process.env.GCASH_QR_CODE_PATH || 'uploads/gcash-qr.png';
+
+  console.log('📞 Phone Number (after default):', phoneNumber);
+  console.log('👤 Account Name (after default):', accountName);
+  console.log('📂 QR Code Path (after default):', qrCodePath);
+
+  // Check if QR code file exists
+  const fullQrCodePath = path.join(__dirname, '../../', qrCodePath);
+  const qrCodeUrl = fs.existsSync(fullQrCodePath) ? `/uploads/gcash-qr.png` : null;
+
+  console.log('🖼️ QR Code URL:', qrCodeUrl);
+  console.log('📁 Full QR Path:', fullQrCodePath);
+  console.log('✅ File exists:', fs.existsSync(fullQrCodePath));
+
+  // Generate deep link URL for mobile
+  const cleanPhone = phoneNumber.replace(/\D/g, ''); // Remove non-digits
+  const deepLinkUrl = `gcash://pay?number=${cleanPhone}`;
+
+  const response = {
+    success: true,
+    data: {
+      phoneNumber,
+      accountName,
+      qrCodeUrl,
+      deepLinkUrl
+    }
+  };
+
+  console.log('📤 Sending response:', JSON.stringify(response, null, 2));
+
+  res.json(response);
+});
 
 // Validation rules for membership fee payment
 export const validateMembershipFeePayment = [

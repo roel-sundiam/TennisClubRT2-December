@@ -272,9 +272,17 @@ paymentSchema.pre('save', function(next) {
     }
   }
   
-  // Set payment date when status is completed (either newly created or status changed)
-  if ((payment.isNew || payment.isModified('status')) && payment.status === 'completed' && !payment.paymentDate) {
-    payment.paymentDate = new Date();
+  // Set payment date when status is completed or record
+  // This ensures all completed/record payments have paymentDate for reporting
+  if (!payment.paymentDate && ['completed', 'record'].includes(payment.status)) {
+    if (payment.isNew || payment.isModified('status')) {
+      // Status just changed or payment is new
+      payment.paymentDate = new Date();
+    } else if (payment.isModified()) {
+      // Payment is being modified but status wasn't changed - still ensure paymentDate exists
+      // Use recordedAt/approvedAt as fallback, or current time
+      payment.paymentDate = payment.recordedAt || payment.approvedAt || payment.updatedAt || new Date();
+    }
   }
   
   // Generate reference number if not provided

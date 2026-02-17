@@ -88,21 +88,20 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         .select('userId date timeSlot endTimeSlot players totalFee status createdAt')
         .lean(),
 
-      // 4. Last 5 completed payments (from last 30 days)
-      // NOTE: Using createdAt instead of paymentDate to match Court Receipts Report behavior
+      // 4. Last 5 completed payments (all time)
+      // Show the 5 most recent completed payments regardless of date
       Payment.find({
-        status: 'completed',
-        createdAt: { $gte: thirtyDaysAgo }
+        status: 'completed'
       })
-        .sort({ paymentDate: -1 })
+        .sort({ paymentDate: -1, createdAt: -1 })
         .limit(5)
         .populate('userId', 'fullName username')
-        .select('userId amount paymentMethod paymentDate description status')
+        .select('userId amount paymentMethod paymentDate description status createdAt')
         .lean()
         .then(payments => {
-          console.log('💰 Recent Payments Query Results (last 30 days by createdAt):', payments.length, 'payments');
+          console.log('💰 Recent Payments Query Results:', payments.length, 'payments');
           payments.forEach((p: any, i) => {
-            console.log(`  ${i + 1}. ${p.userId?.fullName || 'Unknown'} - ₱${p.amount} - Status: ${p.status} - Created: ${p.createdAt}`);
+            console.log(`  ${i + 1}. ${p.userId?.fullName || 'Unknown'} - ₱${p.amount} - Status: ${p.status} - PaymentDate: ${p.paymentDate || 'N/A'} - Created: ${p.createdAt}`);
           });
           return payments;
         }),

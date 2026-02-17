@@ -130,11 +130,10 @@ export class CourtReceiptsReportComponent implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {
-    // Set default date range to  last 30 days
+    // Set default date range to show all payments (from 2020 to today)
     const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
-    
+    const startDate = new Date('2020-01-01');
+
     this.dateRangeForm.patchValue({
       startDate: startDate,
       endDate: endDate
@@ -491,8 +490,8 @@ export class CourtReceiptsReportComponent implements OnInit {
       disableClose: true
     });
 
-    dialogRef.afterClosed().subscribe(confirmed => {
-      if (confirmed) {
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.confirmed) {
         this.executeCancelPayment(payment._id);
       }
     });
@@ -505,16 +504,112 @@ export class CourtReceiptsReportComponent implements OnInit {
       .subscribe({
         next: (response) => {
           if (response.success) {
-            this.showMessage('Payment cancelled', 'success');
+            this.showMessage('Payment set to pending', 'success');
             this.loadReport();
           } else {
-            this.showMessage(response.message || 'Failed to cancel payment', 'error');
+            this.showMessage(response.message || 'Failed to update payment', 'error');
           }
           this.processing = this.processing.filter(id => id !== paymentId);
         },
         error: (error) => {
-          console.error('Error cancelling payment:', error);
-          this.showMessage('Error cancelling payment', 'error');
+          console.error('Error updating payment:', error);
+          this.showMessage('Error updating payment', 'error');
+          this.processing = this.processing.filter(id => id !== paymentId);
+        }
+      });
+  }
+
+  failPayment(payment: PaymentRecord): void {
+    const dialogData: PaymentConfirmationData = {
+      action: 'fail',
+      paymentId: payment._id,
+      memberName: payment.memberName,
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      referenceNumber: payment.referenceNumber,
+      reservationDate: this.formatDate(payment.reservationDate),
+      timeSlot: payment.timeSlotDisplay
+    };
+
+    const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
+      width: '500px',
+      maxWidth: '90vw',
+      data: dialogData,
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.confirmed) {
+        this.executeFailPayment(payment._id);
+      }
+    });
+  }
+
+  private executeFailPayment(paymentId: string): void {
+    this.processing.push(paymentId);
+
+    this.http.put<any>(`${this.apiUrl}/payments/${paymentId}`, { status: 'failed' })
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.showMessage('Payment marked as failed', 'success');
+            this.loadReport();
+          } else {
+            this.showMessage(response.message || 'Failed to update payment', 'error');
+          }
+          this.processing = this.processing.filter(id => id !== paymentId);
+        },
+        error: (error) => {
+          console.error('Error marking payment as failed:', error);
+          this.showMessage('Error updating payment', 'error');
+          this.processing = this.processing.filter(id => id !== paymentId);
+        }
+      });
+  }
+
+  revertToCompleted(payment: PaymentRecord): void {
+    const dialogData: PaymentConfirmationData = {
+      action: 'complete',
+      paymentId: payment._id,
+      memberName: payment.memberName,
+      amount: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      referenceNumber: payment.referenceNumber,
+      reservationDate: this.formatDate(payment.reservationDate),
+      timeSlot: payment.timeSlotDisplay
+    };
+
+    const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
+      width: '500px',
+      maxWidth: '90vw',
+      data: dialogData,
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.confirmed) {
+        this.executeRevertToCompleted(payment._id);
+      }
+    });
+  }
+
+  private executeRevertToCompleted(paymentId: string): void {
+    this.processing.push(paymentId);
+
+    this.http.put<any>(`${this.apiUrl}/payments/${paymentId}`, { status: 'completed' })
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.showMessage('Payment marked as completed', 'success');
+            this.loadReport();
+          } else {
+            this.showMessage(response.message || 'Failed to update payment', 'error');
+          }
+          this.processing = this.processing.filter(id => id !== paymentId);
+        },
+        error: (error) => {
+          console.error('Error marking payment as completed:', error);
+          this.showMessage('Error updating payment', 'error');
           this.processing = this.processing.filter(id => id !== paymentId);
         }
       });

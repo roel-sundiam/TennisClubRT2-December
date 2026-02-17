@@ -602,14 +602,24 @@ export const getCourtReceiptsReport = asyncHandler(async (req: AuthenticatedRequ
   const serviceFeePercentage = 0.20;
 
   // Get all completed court payments with detailed breakdown
-  // Use paymentDate for filtering completed payments instead of createdAt
-  // This ensures newly completed payments appear immediately in the report
+  // Use effectivePaymentDate with fallback to handle payments without paymentDate
+  // This ensures ALL completed payments appear in the report
   const courtReceipts = await Payment.aggregate([
+    {
+      $addFields: {
+        // Use paymentDate if available, otherwise fall back to recordedAt, approvedAt, or updatedAt
+        effectivePaymentDate: {
+          $ifNull: [
+            '$paymentDate',
+            { $ifNull: ['$recordedAt', { $ifNull: ['$approvedAt', '$updatedAt'] }] }
+          ]
+        }
+      }
+    },
     {
       $match: {
         status: 'completed',
-        // Use paymentDate for filtering and ensure it exists
-        paymentDate: { $gte: start, $lte: end, $exists: true, $ne: null }
+        effectivePaymentDate: { $gte: start, $lte: end }
       }
     },
     {
@@ -658,7 +668,7 @@ export const getCourtReceiptsReport = asyncHandler(async (req: AuthenticatedRequ
     {
       $project: {
         _id: 1,
-        paymentDate: 1,
+        paymentDate: '$effectivePaymentDate',
         referenceNumber: 1,
         amount: 1,
         serviceFee: { $round: ['$serviceFee', 2] },
@@ -688,10 +698,19 @@ export const getCourtReceiptsReport = asyncHandler(async (req: AuthenticatedRequ
   // Calculate summary totals
   const summary = await Payment.aggregate([
     {
+      $addFields: {
+        effectivePaymentDate: {
+          $ifNull: [
+            '$paymentDate',
+            { $ifNull: ['$recordedAt', { $ifNull: ['$approvedAt', '$updatedAt'] }] }
+          ]
+        }
+      }
+    },
+    {
       $match: {
         status: 'completed',
-        // Use paymentDate for consistency with the main query
-        paymentDate: { $gte: start, $lte: end, $exists: true, $ne: null }
+        effectivePaymentDate: { $gte: start, $lte: end }
       }
     },
     {
@@ -717,10 +736,19 @@ export const getCourtReceiptsReport = asyncHandler(async (req: AuthenticatedRequ
   // Breakdown by payment method
   const paymentMethodBreakdown = await Payment.aggregate([
     {
+      $addFields: {
+        effectivePaymentDate: {
+          $ifNull: [
+            '$paymentDate',
+            { $ifNull: ['$recordedAt', { $ifNull: ['$approvedAt', '$updatedAt'] }] }
+          ]
+        }
+      }
+    },
+    {
       $match: {
         status: 'completed',
-        // Use paymentDate for consistency with the main query
-        paymentDate: { $gte: start, $lte: end, $exists: true, $ne: null }
+        effectivePaymentDate: { $gte: start, $lte: end }
       }
     },
     {

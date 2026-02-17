@@ -70,16 +70,23 @@ const mongoUri = process.env.MONGODB_URI || '';
 const maskedUri = mongoUri.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
 console.log('🔗 MongoDB URI:', maskedUri);
 
+// Log GCash configuration (for debugging)
+console.log('💳 GCash Configuration:');
+console.log('   GCASH_PHONE_NUMBER:', process.env.GCASH_PHONE_NUMBER || '(not set)');
+console.log('   GCASH_ACCOUNT_NAME:', process.env.GCASH_ACCOUNT_NAME || '(not set)');
+console.log('   GCASH_QR_CODE_PATH:', process.env.GCASH_QR_CODE_PATH || '(not set)');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Create HTTP server for Socket.IO integration
 const httpServer = createServer(app);
 
-// Security middleware
+// Security middleware (with CORS-friendly settings for uploads)
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Allow cross-origin requests for static files
 }));
 
 // Rate limiting (temporarily disabled for CORS debugging)
@@ -197,6 +204,10 @@ app.use(mongoSanitize());
 
 // Request logging
 app.use(requestLogger);
+
+// Serve static files from uploads directory (for GCash QR code, etc.)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+console.log('📁 Static file serving enabled for /uploads directory');
 
 // Health check endpoints
 app.get('/health', (req, res) => {

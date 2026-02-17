@@ -7,6 +7,8 @@ import { AuthService } from '../../services/auth.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { CancellationDialogComponent, CancellationDialogData } from '../cancellation-dialog/cancellation-dialog.component';
 import { environment } from '../../../environments/environment';
 import { canCancelReservation } from '../../utils/date-validation.util';
@@ -149,7 +151,9 @@ interface Notification {
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatIconModule
+    MatIconModule,
+    MatButtonModule,
+    MatSnackBarModule
   ],
   animations: [
     trigger('slideInOut', [
@@ -252,9 +256,8 @@ interface Notification {
                 <div class="field">
                   <label for="paymentMethod">Payment Method *</label>
                   <select id="paymentMethod" formControlName="paymentMethod">
-                    <option value="">Select payment method</option>
-                    <option value="cash">Cash</option>
                     <option value="gcash">GCash</option>
+                    <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank Transfer</option>
                   </select>
                   <small class="error" *ngIf="manualPaymentForm.get('paymentMethod')?.hasError('required') && manualPaymentForm.get('paymentMethod')?.touched">
@@ -566,14 +569,77 @@ interface Notification {
                 <div class="field">
                   <label for="paymentMethod">Payment Method *</label>
                   <select id="paymentMethod" formControlName="paymentMethod">
-                    <option value="">Select payment method</option>
-                    <option value="cash">Cash</option>
                     <option value="gcash">GCash</option>
+                    <option value="cash">Cash</option>
                     <option value="bank_transfer">Bank Transfer</option>
                   </select>
                   <small class="error" *ngIf="paymentForm.get('paymentMethod')?.hasError('required') && paymentForm.get('paymentMethod')?.touched">
                     Please select a payment method
                   </small>
+                </div>
+
+                <!-- GCash Payment Instructions -->
+                <div *ngIf="paymentForm.get('paymentMethod')?.value === 'gcash' && gcashConfig" class="gcash-instructions">
+                  <div class="gcash-card">
+                    <div class="gcash-header">
+                      <mat-icon>phone_android</mat-icon>
+                      <h3>GCash Payment Instructions</h3>
+                    </div>
+                    <div class="gcash-content">
+                      <!-- Desktop: Show QR Code -->
+                      <div *ngIf="!isMobileDevice && gcashConfig.qrCodeUrl" class="qr-section">
+                        <p class="instruction-text"><strong>Scan QR Code with GCash App:</strong></p>
+                        <img [src]="'http://localhost:3000' + gcashConfig.qrCodeUrl"
+                             alt="GCash QR Code"
+                             class="gcash-qr-code">
+
+                        <div class="payment-details">
+                          <p><strong>GCash Number:</strong></p>
+                          <div class="phone-display">
+                            <span class="phone-number">{{ gcashConfig.phoneNumber }}</span>
+                            <button type="button" mat-icon-button (click)="copyGCashNumber()" title="Copy number">
+                              <mat-icon>content_copy</mat-icon>
+                            </button>
+                          </div>
+
+                          <p style="margin-top: 12px;"><strong>Account:</strong> {{ gcashConfig.accountName }}</p>
+                          <p><strong>Amount:</strong> ₱{{ getGrandTotal().toFixed(2) }}</p>
+                        </div>
+                      </div>
+
+                      <!-- Mobile: Show Phone Number and Account Name -->
+                      <div *ngIf="isMobileDevice" class="phone-section">
+                        <p class="instruction-text"><strong>Send to GCash Number:</strong></p>
+                        <div class="phone-display">
+                          <span class="phone-number">{{ gcashConfig.phoneNumber }}</span>
+                          <button type="button" mat-icon-button (click)="copyGCashNumber()" title="Copy number">
+                            <mat-icon>content_copy</mat-icon>
+                          </button>
+                        </div>
+
+                        <p class="instruction-text" style="margin-top: 16px;"><strong>Account Name:</strong></p>
+                        <div class="phone-display">
+                          <span class="account-name">{{ gcashConfig.accountName }}</span>
+                          <button type="button" mat-icon-button (click)="copyGCashAccountName()" title="Copy account name">
+                            <mat-icon>content_copy</mat-icon>
+                          </button>
+                        </div>
+
+                        <button type="button" class="gcash-app-btn" (click)="openGCashApp()">
+                          <mat-icon>phone_android</mat-icon>
+                          Open GCash App
+                        </button>
+                        <div class="payment-details">
+                          <p><strong>Amount:</strong> ₱{{ getGrandTotal().toFixed(2) }}</p>
+                        </div>
+                      </div>
+
+                      <div class="instruction-note">
+                        <mat-icon>info</mat-icon>
+                        <p>After completing payment in GCash, click "Pay Now" below to mark as paid.</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Transaction Details -->
@@ -895,9 +961,8 @@ interface Notification {
                 id="payOnBehalfPaymentMethod"
                 formControlName="paymentMethod"
                 class="form-control">
-                <option value="">Select payment method</option>
-                <option value="cash">Cash</option>
                 <option value="gcash">GCash</option>
+                <option value="cash">Cash</option>
                 <option value="bank_transfer">Bank Transfer</option>
               </select>
             </div>
@@ -987,6 +1052,10 @@ export class PaymentsComponent implements OnInit {
   groupingDebugInfo: any = null;
   paymentLoadingDebugInfo: any = null;
 
+  // GCash configuration
+  gcashConfig: { phoneNumber: string; accountName: string; qrCodeUrl: string | null; deepLinkUrl: string } | null = null;
+  isMobileDevice = false;
+
   private apiUrl = environment.apiUrl;
 
   constructor(
@@ -995,12 +1064,13 @@ export class PaymentsComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
   ) {
     this.paymentForm = this.fb.group({
       reservationId: ['', Validators.required],
       courtFee: ['', [Validators.required, Validators.min(0.01)]], // Editable court fee for all users
-      paymentMethod: ['', Validators.required],
+      paymentMethod: ['gcash', Validators.required], // Default to GCash
       transactionId: [''],
       notes: [''],
       alsoPayForOthers: [false], // New checkbox for paying for others
@@ -1010,13 +1080,13 @@ export class PaymentsComponent implements OnInit {
     this.manualPaymentForm = this.fb.group({
       playerName: [''],
       courtUsageDate: ['', Validators.required],
-      paymentMethod: ['', Validators.required],
+      paymentMethod: ['gcash', Validators.required], // Default to GCash
       amount: ['', [Validators.required, Validators.min(0.01)]],
       notes: ['']
     });
 
     this.payOnBehalfForm = this.fb.group({
-      paymentMethod: ['', Validators.required],
+      paymentMethod: ['gcash', Validators.required], // Default to GCash
       transactionId: [''],
       notes: ['']
     });
@@ -1027,9 +1097,15 @@ export class PaymentsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     // Load members data for proper fee calculation
     await this.loadMembersData();
-    
+
     // Set up form validation based on user role
     this.setupManualPaymentFormValidation();
+
+    // Load GCash configuration
+    this.loadGCashConfig();
+
+    // Detect device type for responsive GCash UI
+    this.detectDevice();
     
     // Check for query parameters first (from notification "Pay Now")
     this.route.queryParams.subscribe(params => {
@@ -2192,7 +2268,7 @@ export class PaymentsComponent implements OnInit {
     this.paymentForm.patchValue({
       reservationId: '',
       courtFee: '',
-      paymentMethod: '',
+      paymentMethod: 'gcash', // Default to GCash
       transactionId: '',
       notes: '',
       alsoPayForOthers: false,
@@ -2401,7 +2477,7 @@ export class PaymentsComponent implements OnInit {
     this.selectedReservation = openPlayAsReservation;
     this.paymentForm.patchValue({
       reservationId: payment._id, // Use payment ID for Open Play
-      paymentMethod: '' // Reset payment method so user can choose
+      paymentMethod: 'gcash' // Default to GCash
     });
   }
 
@@ -2437,7 +2513,7 @@ export class PaymentsComponent implements OnInit {
     this.selectedReservation = manualPaymentAsReservation;
     this.paymentForm.patchValue({
       reservationId: payment._id, // Use payment ID for manual payment
-      paymentMethod: '', // Reset payment method so user can choose
+      paymentMethod: 'gcash', // Default to GCash
       courtFee: payment.amount // Set the amount
     });
 
@@ -2862,6 +2938,90 @@ export class PaymentsComponent implements OnInit {
       });
       // Continue without member data - will use heuristic approach
       this.members = [];
+    }
+  }
+
+  /**
+   * Load GCash configuration from backend
+   */
+  private loadGCashConfig(): void {
+    this.http.get<any>(`${this.apiUrl}/payments/gcash-config`).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.gcashConfig = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Failed to load GCash config:', error);
+      }
+    });
+  }
+
+  /**
+   * Detect if user is on mobile device
+   */
+  private detectDevice(): void {
+    this.isMobileDevice = window.innerWidth < 768;
+    console.log('📱 Device detected:', this.isMobileDevice ? 'Mobile' : 'Desktop');
+  }
+
+  /**
+   * Copy GCash phone number to clipboard
+   */
+  copyGCashNumber(): void {
+    if (this.gcashConfig?.phoneNumber) {
+      navigator.clipboard.writeText(this.gcashConfig.phoneNumber).then(() => {
+        this.snackBar.open('GCash number copied to clipboard!', 'Close', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+        console.log('📋 GCash number copied:', this.gcashConfig?.phoneNumber);
+      }).catch(err => {
+        console.error('❌ Failed to copy:', err);
+        this.snackBar.open('Failed to copy number. Please try manually selecting the text.', 'Close', {
+          duration: 4000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      });
+    }
+  }
+
+  /**
+   * Open GCash app via deep link
+   */
+  openGCashApp(): void {
+    if (this.gcashConfig?.deepLinkUrl) {
+      window.location.href = this.gcashConfig.deepLinkUrl;
+      console.log('📱 Opening GCash app with deep link:', this.gcashConfig.deepLinkUrl);
+    }
+  }
+
+  /**
+   * Copy GCash account name to clipboard
+   */
+  copyGCashAccountName(): void {
+    if (this.gcashConfig?.accountName) {
+      navigator.clipboard.writeText(this.gcashConfig.accountName).then(() => {
+        this.snackBar.open('GCash account name copied to clipboard!', 'Close', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+        console.log('📋 GCash account name copied:', this.gcashConfig?.accountName);
+      }).catch(err => {
+        console.error('❌ Failed to copy:', err);
+        this.snackBar.open('Failed to copy account name. Please try manually selecting the text.', 'Close', {
+          duration: 4000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
+      });
     }
   }
 
