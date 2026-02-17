@@ -589,7 +589,7 @@ interface Notification {
                       <!-- Desktop: Show QR Code -->
                       <div *ngIf="!isMobileDevice && gcashConfig.qrCodeUrl" class="qr-section">
                         <p class="instruction-text"><strong>Scan QR Code with GCash App:</strong></p>
-                        <img [src]="'http://localhost:3000' + gcashConfig.qrCodeUrl"
+                        <img [src]="apiUrl + gcashConfig.qrCodeUrl"
                              alt="GCash QR Code"
                              class="gcash-qr-code">
 
