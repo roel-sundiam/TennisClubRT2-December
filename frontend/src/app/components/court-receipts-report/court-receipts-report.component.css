@@ -776,6 +776,34 @@
   color: #374151;
 }
 
+.modern-table tfoot .subtotal-row {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-top: 2px solid #10b981;
+  font-weight: 700;
+}
+
+.modern-table tfoot .subtotal-row td {
+  padding: 1.25rem 1rem;
+  color: #065f46;
+}
+
+.modern-table tfoot .subtotal-label {
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modern-table tfoot .subtotal-amount {
+  text-align: left;
+  font-size: 1.1rem;
+}
+
+.modern-table tfoot .subtotal-amount strong {
+  color: #047857;
+}
+
 .member-info {
   display: flex;
   flex-direction: column;

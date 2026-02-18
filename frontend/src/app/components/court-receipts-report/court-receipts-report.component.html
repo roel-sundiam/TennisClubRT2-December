@@ -31,22 +31,18 @@
       <form [formGroup]="dateRangeForm" class="filter-form">
         <div class="date-inputs">
           <div class="form-group">
-            <label>Start Date</label>
-            <input 
-              type="date" 
-              formControlName="startDate" 
-              class="form-input"
-              [value]="dateRangeForm.get('startDate')?.value | date:'yyyy-MM-dd'"
-              (change)="onStartDateChange($event)">
+            <label>Payment Date From</label>
+            <input
+              type="date"
+              formControlName="startDate"
+              class="form-input">
           </div>
           <div class="form-group">
-            <label>End Date</label>
-            <input 
-              type="date" 
-              formControlName="endDate" 
-              class="form-input"
-              [value]="dateRangeForm.get('endDate')?.value | date:'yyyy-MM-dd'"
-              (change)="onEndDateChange($event)">
+            <label>Payment Date To</label>
+            <input
+              type="date"
+              formControlName="endDate"
+              class="form-input">
           </div>
         </div>
 
@@ -364,6 +360,14 @@
                     </td>
                   </tr>
                 </tbody>
+                <tfoot>
+                  <tr class="subtotal-row">
+                    <td colspan="5" class="subtotal-label">Subtotal</td>
+                    <td colspan="3" class="subtotal-amount">
+                      <strong>₱{{getActivePaymentsSubtotal().toFixed(2)}}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
             <div *ngIf="getActivePayments().length === 0" class="no-data">

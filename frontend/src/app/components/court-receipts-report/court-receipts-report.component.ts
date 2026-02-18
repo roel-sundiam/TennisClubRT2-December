@@ -116,8 +116,8 @@ export class CourtReceiptsReportComponent implements OnInit {
   private apiUrl = environment.apiUrl;
   
   dateRangeForm = new FormGroup({
-    startDate: new FormControl<Date | null>(null),
-    endDate: new FormControl<Date | null>(null)
+    startDate: new FormControl<string | null>(null),
+    endDate: new FormControl<string | null>(null)
   });
 
   private baseUrl = environment.apiUrl;
@@ -130,13 +130,13 @@ export class CourtReceiptsReportComponent implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {
-    // Set default date range to show all payments (from 2020 to today)
+    // Set default date range to show payments from 2026 to today
     const endDate = new Date();
-    const startDate = new Date('2020-01-01');
+    const startDate = new Date('2026-01-01');
 
     this.dateRangeForm.patchValue({
-      startDate: startDate,
-      endDate: endDate
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
     });
   }
 
@@ -151,24 +151,6 @@ export class CourtReceiptsReportComponent implements OnInit {
     this.loadCreditDeposits();
   }
 
-  // Helper methods for native date inputs
-  onStartDateChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.value) {
-      this.dateRangeForm.patchValue({
-        startDate: new Date(input.value)
-      });
-    }
-  }
-
-  onEndDateChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.value) {
-      this.dateRangeForm.patchValue({
-        endDate: new Date(input.value)
-      });
-    }
-  }
 
   // Tab filtering methods
   getActivePayments(): PaymentRecord[] {
@@ -184,9 +166,15 @@ export class CourtReceiptsReportComponent implements OnInit {
 
   getArchivedPayments(): PaymentRecord[] {
     if (!this.reportData) return [];
-    return this.reportData.payments.filter(p => 
+    return this.reportData.payments.filter(p =>
       p.status === 'record' || p.status === 'refunded' || p.status === 'failed'
     );
+  }
+
+  // Calculate subtotal for active payments
+  getActivePaymentsSubtotal(): number {
+    const activePayments = this.getActivePayments();
+    return activePayments.reduce((sum, payment) => sum + payment.amount, 0);
   }
 
   loadReport(): void {
@@ -195,10 +183,13 @@ export class CourtReceiptsReportComponent implements OnInit {
 
     const params: any = {};
     if (this.dateRangeForm.value.startDate) {
-      params.startDate = this.dateRangeForm.value.startDate.toISOString();
+      params.startDate = new Date(this.dateRangeForm.value.startDate).toISOString();
     }
     if (this.dateRangeForm.value.endDate) {
-      params.endDate = this.dateRangeForm.value.endDate.toISOString();
+      // Set to end of day for the end date
+      const endDate = new Date(this.dateRangeForm.value.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      params.endDate = endDate.toISOString();
     }
     // Fetch all payments without limit
     params.limit = 999999;
@@ -298,12 +289,12 @@ export class CourtReceiptsReportComponent implements OnInit {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
-    
+
     this.dateRangeForm.patchValue({
-      startDate: startDate,
-      endDate: endDate
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0]
     });
-    
+
     this.loadReport();
   }
 
@@ -675,13 +666,15 @@ export class CourtReceiptsReportComponent implements OnInit {
 
   private loadRecordedPayments(): void {
     this.loadingRecordedPayments = true;
-    
+
     const params: any = { status: 'record' };
     if (this.dateRangeForm.value.startDate) {
-      params.startDate = this.dateRangeForm.value.startDate.toISOString();
+      params.startDate = new Date(this.dateRangeForm.value.startDate).toISOString();
     }
     if (this.dateRangeForm.value.endDate) {
-      params.endDate = this.dateRangeForm.value.endDate.toISOString();
+      const endDate = new Date(this.dateRangeForm.value.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      params.endDate = endDate.toISOString();
     }
 
     this.http.get<{success: boolean, data: PaymentRecord[]}>(`${this.baseUrl}/payments`, { params })
@@ -795,8 +788,16 @@ export class CourtReceiptsReportComponent implements OnInit {
   loadCreditDeposits(): void {
     this.loadingCreditDeposits = true;
 
-    const startDate = this.dateRangeForm.value.startDate?.toISOString();
-    const endDate = this.dateRangeForm.value.endDate?.toISOString();
+    const startDate = this.dateRangeForm.value.startDate
+      ? new Date(this.dateRangeForm.value.startDate).toISOString()
+      : undefined;
+    const endDate = this.dateRangeForm.value.endDate
+      ? (() => {
+          const date = new Date(this.dateRangeForm.value.endDate);
+          date.setHours(23, 59, 59, 999);
+          return date.toISOString();
+        })()
+      : undefined;
 
     this.creditService.getAllCreditDeposits(1, 100, undefined, startDate, endDate).subscribe({
       next: (response) => {

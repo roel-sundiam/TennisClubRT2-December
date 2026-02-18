@@ -1006,8 +1006,8 @@ export const getPayments = asyncHandler(async (req: AuthenticatedRequest, res: R
     const fromDate = new Date(req.query.startDate as string);
     const toDate = new Date(req.query.endDate as string);
     toDate.setHours(23, 59, 59, 999);
-    
-    filter.createdAt = {
+
+    filter.paymentDate = {
       $gte: fromDate,
       $lte: toDate
     };
