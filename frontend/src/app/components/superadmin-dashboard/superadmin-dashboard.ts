@@ -25,6 +25,7 @@ interface CourtReservation {
   endTimeSlot: number;
   players: any[];
   status: string;
+  paymentStatus?: string;
   totalFee?: number;
   createdAt?: Date;
 }
@@ -289,6 +290,32 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
       'closed': ''
     };
     return colors[status] || '';
+  }
+
+  getDisplayStatus(reservation: CourtReservation): string {
+    // For no-show status, check if payment has been made
+    if (reservation.status === 'no-show') {
+      if (reservation.paymentStatus === 'paid') {
+        return 'Paid';
+      } else {
+        return 'Payment Due';
+      }
+    }
+    // For all other statuses, display as-is
+    return reservation.status;
+  }
+
+  getStatusClass(reservation: CourtReservation): string {
+    // Return appropriate CSS class based on display status
+    if (reservation.status === 'no-show') {
+      if (reservation.paymentStatus === 'paid') {
+        return 'status-paid';  // Green/success style
+      } else {
+        return 'status-payment-due';  // Orange/warning style
+      }
+    }
+    // For all other statuses, use default class
+    return 'status-' + reservation.status;
   }
 
   getPaymentMethodIcon(method: string): string {

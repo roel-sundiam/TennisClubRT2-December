@@ -203,8 +203,8 @@
                   <td>{{ reservation.players.length }}</td>
                   <td><strong>₱{{ reservation.totalFee || 0 }}</strong></td>
                   <td>
-                    <span class="status-badge" [ngClass]="'status-' + reservation.status">
-                      {{ reservation.status }}
+                    <span class="status-badge" [ngClass]="getStatusClass(reservation)">
+                      {{ getDisplayStatus(reservation) }}
                     </span>
                   </td>
                 </tr>

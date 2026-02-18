@@ -691,6 +691,16 @@
   color: white;
 }
 
+.status-paid {
+  background: linear-gradient(135deg, #22c55e, #10b981);
+  color: white;
+}
+
+.status-payment-due {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
 /* Payments List */
 .payments-list {
   display: flex;

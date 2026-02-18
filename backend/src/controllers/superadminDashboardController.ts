@@ -85,7 +85,7 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         .sort({ updatedAt: -1 })
         .limit(5)
         .populate('userId', 'fullName username')
-        .select('userId date timeSlot endTimeSlot players totalFee status createdAt updatedAt')
+        .select('userId date timeSlot endTimeSlot players totalFee status paymentStatus createdAt updatedAt')
         .lean(),
 
       // 4. Last 5 completed payments (all time)
