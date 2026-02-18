@@ -80,12 +80,12 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
         .sort({ timeSlot: 1 })
         .lean(),
 
-      // 3. Last 5 reservations
+      // 3. Last 5 reservations (sorted by most recently updated)
       Reservation.find({})
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1 })
         .limit(5)
         .populate('userId', 'fullName username')
-        .select('userId date timeSlot endTimeSlot players totalFee status createdAt')
+        .select('userId date timeSlot endTimeSlot players totalFee status createdAt updatedAt')
         .lean(),
 
       // 4. Last 5 completed payments (all time)
