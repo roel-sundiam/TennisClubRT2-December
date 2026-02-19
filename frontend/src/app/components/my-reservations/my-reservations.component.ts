@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +12,8 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { timeout, catchError } from 'rxjs/operators';
@@ -69,6 +72,7 @@ interface AvatarInfo {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -79,7 +83,9 @@ interface AvatarInfo {
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatDividerModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSelectModule,
+    MatFormFieldModule
   ],
   template: `
     <!-- Modern page structure following design system -->
@@ -116,6 +122,34 @@ interface AvatarInfo {
                 <p>Loading all reservations...</p>
               </div>
 
+              <!-- Member Filter Bar -->
+              <div *ngIf="!loading && allReservations.length > 0" class="member-filter-bar">
+                <div class="filter-container">
+                  <label for="member-filter" class="filter-label">
+                    <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="8.5" cy="7" r="4"></circle>
+                      <path d="M20 8v6M23 11h-6"></path>
+                    </svg>
+                    Filter by Member
+                  </label>
+                  <div class="select-wrapper">
+                    <select 
+                      id="member-filter" 
+                      class="member-filter-select" 
+                      [(ngModel)]="memberFilterId">
+                      <option value="">All Members</option>
+                      <option *ngFor="let member of memberFilterOptions" [value]="member.id">
+                        {{member.name}}
+                      </option>
+                    </select>
+                    <svg class="select-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
               <div *ngIf="!loading && allReservations.length === 0" class="no-reservations">
                 <mat-icon class="large-icon">event_note</mat-icon>
                 <h2>No Reservations Found</h2>
@@ -126,9 +160,15 @@ interface AvatarInfo {
                 </button>
               </div>
 
+              <div *ngIf="!loading && allReservations.length > 0 && filteredAllReservations.length === 0" class="no-reservations">
+                <mat-icon class="large-icon">person_search</mat-icon>
+                <h2>No Reservations for This Member</h2>
+                <p>The selected member has no scheduled reservations.</p>
+              </div>
+
               <!-- Mobile View: New Design -->
-              <div *ngIf="!loading && allReservations.length > 0 && isMobileView" class="reservations-list mobile-schedule">
-                <div *ngFor="let group of groupedAllReservations" class="date-group">
+              <div *ngIf="!loading && filteredAllReservations.length > 0 && isMobileView" class="reservations-list mobile-schedule">
+                <div *ngFor="let group of filteredGroupedAllReservations" class="date-group">
                   <!-- Sticky Date Header -->
                   <div class="date-header">{{group.date}}</div>
 
@@ -231,9 +271,9 @@ interface AvatarInfo {
               </div>
 
               <!-- Desktop View: Original Design -->
-              <div *ngIf="!loading && allReservations.length > 0 && !isMobileView" class="reservations-list">
+              <div *ngIf="!loading && filteredAllReservations.length > 0 && !isMobileView" class="reservations-list">
                 <!-- Original Desktop Design -->
-                <div *ngFor="let reservation of allReservations"
+                <div *ngFor="let reservation of filteredAllReservations"
                      class="reservation-card-compact all-reservations"
                      [class.homeowner-day]="reservation.isHomeownerDay"
                      [style.border-left-color]="getWeatherBorderColor(reservation)">
@@ -861,6 +901,10 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
   groupedPastReservations: GroupedReservations[] = [];
   expandedReservations = new Set<string>(); // Track which cards are expanded
 
+  // Member filter for All Reservations tab
+  memberFilterId: string = '';
+  memberFilterOptions: { id: string; name: string }[] = [];
+
   // Admin statistics
   adminStats = {
     total: 0,
@@ -1324,6 +1368,26 @@ click "Try Again" below to reconnect.
     }
   }
 
+  private matchesMemberFilter(r: Reservation): boolean {
+    if (r.userId?.fullName === this.memberFilterId) return true;
+    return (r.players || []).some((p: any) => {
+      const name = typeof p === 'string' ? p : p.name;
+      return name === this.memberFilterId;
+    });
+  }
+
+  get filteredAllReservations(): Reservation[] {
+    if (!this.memberFilterId) return this.allReservations;
+    return this.allReservations.filter(r => this.matchesMemberFilter(r));
+  }
+
+  get filteredGroupedAllReservations(): GroupedReservations[] {
+    if (!this.memberFilterId) return this.groupedAllReservations;
+    return this.groupReservationsByDate(
+      this.allReservations.filter(r => this.matchesMemberFilter(r))
+    );
+  }
+
   loadAllReservations(showLoading: boolean = true): void {
     console.log('Loading all reservations from all users...');
     if (showLoading) {
@@ -1388,6 +1452,24 @@ click "Try Again" below to reconnect.
 
         // Add Homeowner's Day entries for upcoming Wednesdays
         this.addHomeownerDayEntries();
+
+        // Build member filter options from reservers + all players in each reservation
+        const seen = new Set<string>();
+        this.memberFilterOptions = [];
+        for (const r of this.allReservations) {
+          if (r.userId?.fullName && !seen.has(r.userId.fullName)) {
+            seen.add(r.userId.fullName);
+            this.memberFilterOptions.push({ id: r.userId.fullName, name: r.userId.fullName });
+          }
+          for (const player of (r.players || [])) {
+            const playerName = typeof player === 'string' ? player : (player as any).name;
+            if (playerName && !seen.has(playerName)) {
+              seen.add(playerName);
+              this.memberFilterOptions.push({ id: playerName, name: playerName });
+            }
+          }
+        }
+        this.memberFilterOptions.sort((a, b) => a.name.localeCompare(b.name));
 
         // Group reservations by date for mobile view
         this.groupedAllReservations = this.groupReservationsByDate(this.allReservations);
