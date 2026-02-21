@@ -507,6 +507,17 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     return;
   }
 
+  // Validate 2-week rolling booking window
+  const maxBookingDate = new Date(today);
+  maxBookingDate.setDate(maxBookingDate.getDate() + 14);
+  if (reservationDate > maxBookingDate) {
+    res.status(400).json({
+      success: false,
+      error: 'Reservations can only be made up to 2 weeks in advance.'
+    });
+    return;
+  }
+
   // Validate time slot
   if (timeSlot < 5 || timeSlot > 21) {
     res.status(400).json({

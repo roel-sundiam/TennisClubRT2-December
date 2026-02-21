@@ -92,9 +92,11 @@ interface Reservation {
               id="date"
               formControlName="date"
               [min]="minDateString"
+              [max]="maxDateString"
               (change)="onDateChange($event)"
               title="Select reservation date in Philippine time"
             />
+            <small class="date-window-hint">Reservations can be made up to 2 weeks in advance.</small>
             <small
               class="error"
               *ngIf="
@@ -610,8 +612,10 @@ export class ReservationsComponent implements OnInit, OnDestroy {
   reservationForm: FormGroup;
   loading = false;
   minDate = new Date();
+  maxDate = new Date();
   selectedDate: Date | null = null;
   minDateString = '';
+  maxDateString = '';
   selectedStartTime: number | null = null;
   selectedEndTime: number | null = null;
   availableEndTimes: TimeSlot[] = [];
@@ -911,6 +915,10 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     // Always get the current date in Philippine time
     this.minDate = this.getPhilippineDate();
     this.minDateString = this.formatDateForInput(this.minDate);
+    // Rolling 2-week booking window
+    this.maxDate = new Date(this.minDate);
+    this.maxDate.setDate(this.maxDate.getDate() + 14);
+    this.maxDateString = this.formatDateForInput(this.maxDate);
   }
 
   private getPhilippineDate(): Date {
@@ -1042,6 +1050,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     if (selectedDate < this.minDate) {
       console.warn('⚠️ Selected date is in the past, using minimum date');
       this.selectedDate = this.minDate;
+    } else if (selectedDate > this.maxDate) {
+      console.warn('⚠️ Selected date exceeds 2-week booking window, using maximum date');
+      this.selectedDate = this.maxDate;
     } else {
       this.selectedDate = selectedDate;
     }
