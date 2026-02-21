@@ -1051,8 +1051,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       console.warn('⚠️ Selected date is in the past, using minimum date');
       this.selectedDate = this.minDate;
     } else if (selectedDate > this.maxDate) {
-      console.warn('⚠️ Selected date exceeds 2-week booking window, using maximum date');
       this.selectedDate = this.maxDate;
+      this.reservationForm.patchValue({ date: this.maxDateString });
+      this.showError('Date Out of Range', 'Reservations can only be made up to 2 weeks in advance. Date has been set to the last available day.');
     } else {
       this.selectedDate = selectedDate;
     }
