@@ -151,7 +151,10 @@
     <button mat-button (click)="close()" class="action-btn secondary-btn">
       Close
     </button>
-    <button mat-flat-button color="primary" (click)="bookThisDay()" *ngIf="!isDateInPast()" class="action-btn primary-btn">
+    <span *ngIf="isBeyondBookingWindow()" class="booking-window-note">
+      Bookings open within 2 weeks only
+    </span>
+    <button mat-flat-button color="primary" (click)="bookThisDay()" *ngIf="!isDateInPast() && !isBeyondBookingWindow()" class="action-btn primary-btn">
       <mat-icon>add_circle</mat-icon>
       Book This Day
     </button>

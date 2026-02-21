@@ -96,6 +96,19 @@ export class CalendarDayDetailsDialogComponent {
   }
 
   /**
+   * Check if date is beyond the 2-week rolling booking window
+   */
+  isBeyondBookingWindow(): boolean {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 14);
+    const checkDate = new Date(this.data.date);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate > maxDate;
+  }
+
+  /**
    * Get comma-separated list of player names
    */
   getPlayerNames(players: any[]): string {

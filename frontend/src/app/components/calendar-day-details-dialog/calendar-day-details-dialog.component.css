@@ -359,6 +359,13 @@
   background: rgba(102, 126, 234, 0.1) !important;
 }
 
+.booking-window-note {
+  font-size: 13px;
+  color: #888;
+  align-self: center;
+  font-style: italic;
+}
+
 .primary-btn {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
