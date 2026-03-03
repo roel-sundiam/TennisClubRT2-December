@@ -857,6 +857,19 @@
   font-size: 0.85rem;
 }
 
+.credit-balance-cell {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.credit-balance-cell.has-credit {
+  color: #16a34a;
+}
+
+.credit-balance-cell.no-credit {
+  color: #d1d5db;
+}
+
 .status-badge {
   display: inline-block;
   padding: 0.35rem 0.85rem;

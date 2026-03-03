@@ -15,6 +15,7 @@ export interface CancellationDialogData {
   reservationDate: string;
   reservationTime: string;
   isReservationCancellation?: boolean;
+  isLateCancellation?: boolean;
 }
 
 export interface CancellationResult {
@@ -692,7 +693,7 @@ export interface CancellationResult {
 })
 export class CancellationDialogComponent {
   cancellationForm: FormGroup;
-  
+
   cancellationReasons = [
     'Weather conditions (rain, storm, etc.)',
     'Player(s) did not show up',
@@ -774,9 +775,9 @@ export class CancellationDialogComponent {
       finalReason = this.cancellationForm.get('customReason')?.value.trim();
     }
 
-    this.dialogRef.close({ 
-      cancelled: true, 
-      reason: finalReason 
-    });
+    this.dialogRef.close({
+      cancelled: true,
+      reason: finalReason
+    } as CancellationResult);
   }
 }

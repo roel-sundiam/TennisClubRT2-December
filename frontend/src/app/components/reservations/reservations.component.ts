@@ -517,6 +517,14 @@ interface Reservation {
             </div>
           </div>
 
+          <!-- Cancellation Policy Notice -->
+          <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px 14px;margin-bottom:16px;color:#856404;font-size:14px;line-height:1.5;">
+            <strong>⚠️ Cancellation Policy</strong><br>
+            Cancellations made within <strong>12 hours</strong> of the scheduled reservation will be charged a
+            <strong>₱100 late cancellation fee</strong>, which will be added to your pending payments.
+            To avoid the fee, please cancel at least 12 hours before your reservation.
+          </div>
+
           <!-- Form Actions -->
           <div class="form-actions">
             <button type="submit" [disabled]="reservationForm.invalid || loading" class="book-btn">
@@ -1829,7 +1837,8 @@ export class ReservationsComponent implements OnInit, OnDestroy {
             'Your reservation has been updated successfully'
           );
           setTimeout(() => {
-            this.router.navigate(['/my-reservations']);
+            const fromAdmin = this.route.snapshot.queryParamMap.get('from') === 'admin';
+            this.router.navigate([fromAdmin ? '/admin/reservations' : '/my-reservations']);
           }, 2000);
         },
         error: (error) => {

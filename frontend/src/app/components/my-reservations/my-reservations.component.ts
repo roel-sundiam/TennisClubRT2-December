@@ -869,6 +869,12 @@ interface AvatarInfo {
             <strong>Time:</strong> {{reservationToCancel.timeSlotDisplay}}<br>
             <strong>Players:</strong> {{formatPlayerNames(reservationToCancel.players)}}
           </div>
+          <div class="fee-warning" *ngIf="isLateCancellation(reservationToCancel)"
+               style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin:12px 0;color:#856404;">
+            <strong>⚠️ Late Cancellation Fee</strong><br>
+            This reservation starts in less than 12 hours. A <strong>₱100 cancellation fee</strong>
+            will be added to your pending payments.
+          </div>
           <p class="warning-text">This action cannot be undone.</p>
         </div>
         <div class="modal-actions">
@@ -1896,6 +1902,21 @@ click "Try Again" below to reconnect.
     return canCancelReservation(reservation);
   }
 
+  isLateCancellation(reservation: Reservation | null): boolean {
+    if (!reservation) return false;
+    const reservationDate = new Date(reservation.date);
+    const reservationStart = new Date(
+      reservationDate.getFullYear(),
+      reservationDate.getMonth(),
+      reservationDate.getDate(),
+      reservation.timeSlot,
+      0, 0, 0
+    );
+    const hoursUntil = (reservationStart.getTime() - Date.now()) / (1000 * 60 * 60);
+    const bookedToday = new Date(reservation.createdAt).toDateString() === new Date().toDateString();
+    return hoursUntil < 12 && !bookedToday;
+  }
+
   editReservation(reservation: Reservation): void {
     // Navigate to reservations page with edit mode
     this.router.navigate(['/reservations'], { 
@@ -1918,8 +1939,11 @@ click "Try Again" below to reconnect.
 
     this.http.delete<any>(`${this.apiUrl}/reservations/${this.reservationToCancel._id}`).subscribe({
       next: (response) => {
-        this.snackBar.open('Reservation cancelled successfully', 'Close', {
-          duration: 3000,
+        const msg = response.data?.cancellationFeeCharged
+          ? 'Reservation cancelled. A ₱100 late cancellation fee has been added to your pending payments.'
+          : 'Reservation cancelled successfully';
+        this.snackBar.open(msg, 'Close', {
+          duration: 5000,
           panelClass: ['success-snackbar']
         });
         this.loadReservations(); // Reload the list

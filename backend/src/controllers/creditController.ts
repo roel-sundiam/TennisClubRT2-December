@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import mongoose from 'mongoose';
 import User from '../models/User';
 import CreditTransaction from '../models/CreditTransaction';
@@ -425,63 +425,52 @@ export const recordCreditDeposit = async (req: AuthenticatedRequest, res: Respon
     const adminId = req.user!._id;
 
     // Update transaction status to recorded and update user balance
-    const session = await mongoose.startSession();
-    
     let updatedTransaction;
     try {
-      await session.withTransaction(async () => {
-        // Fetch transaction within session
-        const transaction = await CreditTransaction.findById(transactionId).session(session);
-        if (!transaction) {
-          throw new Error('Credit deposit transaction not found');
-        }
+      const transaction = await CreditTransaction.findById(transactionId);
+      if (!transaction) {
+        throw new Error('Credit deposit transaction not found');
+      }
 
-        if (transaction.type !== 'deposit' || transaction.referenceType !== 'deposit') {
-          throw new Error('Transaction is not a credit deposit');
-        }
+      if (transaction.type !== 'deposit' || transaction.referenceType !== 'deposit') {
+        throw new Error('Transaction is not a credit deposit');
+      }
 
-        if (transaction.status === 'recorded') {
-          throw new Error('Transaction is already recorded');
-        }
+      if (transaction.status === 'recorded') {
+        throw new Error('Transaction is already recorded');
+      }
 
-        // Update user's credit balance (add the deposited amount)
-        const user = await User.findById(transaction.userId).session(session);
-        if (!user) {
-          throw new Error('User not found');
-        }
+      // Update user's credit balance (add the deposited amount)
+      const user = await User.findById(transaction.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
 
-        const currentBalance = user.creditBalance || 0;
-        const newBalance = currentBalance + transaction.amount;
-        
-        // Update transaction status and balance fields
-        transaction.status = 'recorded';
-        transaction.processedAt = new Date();
-        transaction.balanceBefore = currentBalance;
-        transaction.balanceAfter = newBalance;
-        transaction.metadata = {
-          ...transaction.metadata,
-          recordedBy: adminId.toString(),
-          recordedAt: new Date()
-        };
-        
-        // Save both user and transaction
-        user.creditBalance = newBalance;
-        await Promise.all([
-          user.save({ session }),
-          transaction.save({ session })
-        ]);
-        
-        console.log(`💳 Credit deposit recorded: ${user.fullName} balance updated from ₱${currentBalance} to ₱${newBalance}`);
-        updatedTransaction = transaction;
-      });
+      const currentBalance = user.creditBalance || 0;
+      const newBalance = currentBalance + transaction.amount;
+
+      // Update transaction status and balance fields
+      transaction.status = 'recorded';
+      transaction.processedAt = new Date();
+      transaction.balanceBefore = currentBalance;
+      transaction.balanceAfter = newBalance;
+      transaction.metadata = {
+        ...transaction.metadata,
+        recordedBy: adminId.toString(),
+        recordedAt: new Date()
+      };
+
+      // Save both user and transaction
+      user.creditBalance = newBalance;
+      await Promise.all([user.save(), transaction.save()]);
+
+      console.log(`💳 Credit deposit recorded: ${user.fullName} balance updated from ₱${currentBalance} to ₱${newBalance}`);
+      updatedTransaction = transaction;
     } catch (error: any) {
-      await session.endSession();
       return res.status(400).json({
         success: false,
         error: error.message
       });
-    } finally {
-      await session.endSession();
     }
 
     // Populate user info for response

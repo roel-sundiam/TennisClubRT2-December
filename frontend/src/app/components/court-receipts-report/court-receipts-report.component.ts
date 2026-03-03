@@ -37,6 +37,7 @@ interface PaymentRecord {
     _id: string;
     username: string;
     fullName: string;
+    creditBalance?: number;
   };
   // Open Play Event data
   pollId?: {

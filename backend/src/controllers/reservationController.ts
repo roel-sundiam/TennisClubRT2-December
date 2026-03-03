@@ -884,16 +884,20 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
   }
 
   // Cannot edit past reservations or reservations that have already started
-  const now = new Date();
-  const reservationDateTime = new Date(reservation.date);
-  reservationDateTime.setHours(reservation.timeSlot, 0, 0, 0);
+  // Admins bypass this restriction to allow data corrections
+  const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+  if (!isAdmin) {
+    const now = new Date();
+    const reservationDateTime = new Date(reservation.date);
+    reservationDateTime.setHours(reservation.timeSlot, 0, 0, 0);
 
-  if (reservationDateTime <= now) {
-    res.status(400).json({
-      success: false,
-      error: 'Cannot edit reservations that have already started or passed. Payments can be made after the reservation time.'
-    });
-    return;
+    if (reservationDateTime <= now) {
+      res.status(400).json({
+        success: false,
+        error: 'Cannot edit reservations that have already started or passed. Payments can be made after the reservation time.'
+      });
+      return;
+    }
   }
 
   // Cannot edit cancelled or completed reservations
@@ -1265,6 +1269,21 @@ export const cancelReservation = asyncHandler(async (req: AuthenticatedRequest, 
     console.log(`⚠️  Same-day cancellation for ongoing/past time slot - allowing for emergency/weather reasons`);
   }
 
+  // 12-hour late cancellation check
+  const reservationDate = new Date(reservation.date);
+  const reservationStartTime = new Date(
+    reservationDate.getFullYear(),
+    reservationDate.getMonth(),
+    reservationDate.getDate(),
+    reservation.timeSlot, // hour in local time
+    0, 0, 0
+  );
+  const hoursUntilReservation = (reservationStartTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const reservationCreatedDate = new Date((reservation as any).createdAt);
+  const bookedToday = reservationCreatedDate.toDateString() === now.toDateString();
+  const isLateCancellation = hoursUntilReservation < 12 && req.user?.role === 'member' && !bookedToday;
+  console.log(`⏱️  Hours until reservation: ${hoursUntilReservation.toFixed(2)}, bookedToday: ${bookedToday}, isLateCancellation: ${isLateCancellation}`);
+
   // Cannot cancel already cancelled or completed reservations
   if (reservation.status === 'cancelled' || reservation.status === 'completed') {
     console.log(`❌ Cannot cancel - reservation status is: ${reservation.status}`);
@@ -1310,32 +1329,72 @@ export const cancelReservation = asyncHandler(async (req: AuthenticatedRequest, 
     }
   }
 
+  // Capture userId string BEFORE populate (populate replaces it with a User document)
+  const reserverId = reservation.userId.toString();
+
   reservation.status = 'cancelled';
   await reservation.save({ validateBeforeSave: false });
   await reservation.populate('userId', 'username fullName email');
 
-  // Delete associated pending payments when cancelling a reservation
-  try {
-    const Payment = require('../models/Payment').default;
-    const deletedPayments = await Payment.deleteMany({
-      reservationId: reservation._id,
-      status: 'pending'
-    });
-    console.log(`🗑️  Deleted ${deletedPayments.deletedCount} pending payment(s) for cancelled reservation`);
-  } catch (error) {
-    console.error('Failed to delete payments for cancelled reservation:', error);
-    // Continue even if payment deletion fails
+  const LATE_CANCELLATION_FEE = 100;
+  let cancellationFeeCharged = false;
+
+  if (isLateCancellation) {
+    // Charge ₱100 late cancellation fee as a pending payment
+    try {
+      const Payment = require('../models/Payment').default;
+      // Delete any existing pending payments for this reservation first
+      await Payment.deleteMany({ reservationId: reservation._id, status: 'pending' });
+      // Create the cancellation fee payment
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 7); // due in 7 days
+      await Payment.create({
+        userId: reserverId,
+        reservationId: reservation._id,
+        amount: LATE_CANCELLATION_FEE,
+        status: 'pending',
+        paymentMethod: 'cash',
+        paymentType: 'cancellation_fee',
+        dueDate,
+        description: `Late cancellation fee — reservation on ${reservationStartTime.toLocaleDateString('en-PH', { dateStyle: 'medium' })} at ${reservation.timeSlot}:00`,
+        notes: `Cancelled within 12 hours of the scheduled reservation (${hoursUntilReservation.toFixed(1)} hrs before start). Reason: ${reason || 'No reason provided'}`
+      });
+      cancellationFeeCharged = true;
+      console.log(`💸 ₱${LATE_CANCELLATION_FEE} late cancellation fee added to pending for user ${reserverId}`);
+    } catch (error) {
+      console.error('Failed to create cancellation fee payment:', error);
+      // Continue with cancellation even if fee creation fails
+    }
+  } else {
+    // No fee — delete pending payments as before
+    try {
+      const Payment = require('../models/Payment').default;
+      const deletedPayments = await Payment.deleteMany({
+        reservationId: reservation._id,
+        status: 'pending'
+      });
+      console.log(`🗑️  Deleted ${deletedPayments.deletedCount} pending payment(s) for cancelled reservation`);
+    } catch (error) {
+      console.error('Failed to delete payments for cancelled reservation:', error);
+      // Continue even if payment deletion fails
+    }
   }
 
-  const message = creditRefundAmount > 0 
-    ? `Reservation cancelled successfully. ₱${creditRefundAmount} credits refunded.`
+  let message = creditRefundAmount > 0
+    ? `Reservation cancelled. ₱${creditRefundAmount} credits refunded.`
     : `Reservation cancelled successfully.`;
+
+  if (cancellationFeeCharged) {
+    message += ` A ₱${LATE_CANCELLATION_FEE} late cancellation fee has been added to your pending payments.`;
+  }
 
   res.status(200).json({
     success: true,
     data: {
       ...reservation.toJSON(),
-      creditRefunded: creditRefundAmount
+      creditRefunded: creditRefundAmount,
+      cancellationFeeCharged,
+      cancellationFee: cancellationFeeCharged ? LATE_CANCELLATION_FEE : 0
     },
     message
   });

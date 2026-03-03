@@ -38,6 +38,7 @@ import { AdminGalleryUploadComponent } from './components/admin-gallery-upload/a
 import { AnnouncementManagementComponent } from './pages/admin/announcement-management/announcement-management.component';
 import { AdminSystemSettingsComponent } from './components/admin-system-settings/admin-system-settings.component';
 import { SuperadminDashboard } from './components/superadmin-dashboard/superadmin-dashboard';
+import { AdminReservationManagementComponent } from './components/admin-reservation-management/admin-reservation-management.component';
 import { authGuard, loginGuard, adminGuard, superadminGuard, treasurerGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -198,6 +199,7 @@ export const routes: Routes = [
   { path: 'admin/membership-payments', component: AdminMembershipPaymentsComponent, canActivate: [authGuard, treasurerGuard] },
   { path: 'admin/tournaments', component: TournamentManagementComponent, canActivate: [authGuard, adminGuard] },
   { path: 'admin/payments', component: AdminPaymentManagementComponent, canActivate: [authGuard, adminGuard] },
+  { path: 'admin/reservations', component: AdminReservationManagementComponent, canActivate: [authGuard, adminGuard] },
   { path: 'admin/resurfacing-contributions', component: AdminResurfacingContributionsComponent, canActivate: [authGuard, adminGuard] },
   { path: 'admin/announcements', component: AnnouncementManagementComponent, canActivate: [authGuard, superadminGuard] },
   { path: 'admin/settings', component: AdminSystemSettingsComponent, canActivate: [authGuard, superadminGuard] },

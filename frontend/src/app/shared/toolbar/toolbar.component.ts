@@ -192,6 +192,11 @@ import { Subscription } from 'rxjs';
               <span>Block Court</span>
             </button>
 
+            <button mat-button class="mobile-nav-item admin-item" (click)="navigateAndClose('/admin/reservations')">
+              <mat-icon>event_available</mat-icon>
+              <span>Manage Reservations</span>
+            </button>
+
             <button mat-button class="mobile-nav-item admin-item" *ngIf="isSuperAdmin" (click)="navigateAndClose('/admin/manual-court-usage')">
               <mat-icon>edit_calendar</mat-icon>
               <span>Manual Court Usage</span>

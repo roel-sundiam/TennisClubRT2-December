@@ -457,6 +457,44 @@
     }
   }
 
+  .credit-balance-hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    border-radius: 8px;
+    color: #2e7d32;
+    font-size: 14px;
+
+    .credit-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #388e3c;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .credit-hint-text {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+
+      strong {
+        font-weight: 700;
+      }
+
+      .credit-hint-note {
+        font-size: 13px;
+        color: #388e3c;
+        opacity: 0.85;
+      }
+    }
+  }
+
   .payment-actions, .reservation-actions {
     margin-top: 20px;
     padding-top: 20px;

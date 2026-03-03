@@ -54,6 +54,7 @@ interface Payment {
   amount: number;
   currency: string;
   paymentMethod: 'cash' | 'bank_transfer' | 'gcash';
+  paymentType?: 'court_usage' | 'membership_fee' | 'tournament_entry' | 'cancellation_fee';
   status: 'pending' | 'completed' | 'failed' | 'refunded' | 'record';
   transactionId?: string;
   referenceNumber: string;
@@ -784,7 +785,7 @@ interface Notification {
                 <div class="payment-header">
                   <div class="payment-info">
                     <h4>
-                      {{payment.metadata?.isManualPayment ? 'Manual Court Usage' : payment.reservationId ? 'Court Reservation' : 'Open Play Event'}}
+                      {{payment.paymentType === 'cancellation_fee' ? 'Cancellation Fee' : payment.metadata?.isManualPayment ? 'Manual Court Usage' : payment.reservationId ? 'Court Reservation' : 'Open Play Event'}}
                       <span class="overdue-badge" *ngIf="isPaymentOverdue(payment)">OVERDUE</span>
                     </h4>
                     <p>{{formatPaymentReservation(payment)}}</p>
@@ -802,7 +803,14 @@ interface Notification {
                   </div>
                 </div>
 
-                <!-- Payment details removed for cleaner display -->
+                <!-- Credit balance indicator -->
+                <div class="credit-balance-hint" *ngIf="creditBalance > 0">
+                  <mat-icon class="credit-icon">account_balance_wallet</mat-icon>
+                  <div class="credit-hint-text">
+                    <span>You have <strong>₱{{creditBalance.toFixed(2)}}</strong> in credits on file.</span>
+                    <span class="credit-hint-note">Please still log your payment below — admin will review and apply your credits accordingly.</span>
+                  </div>
+                </div>
 
                 <div class="payment-actions">
                   <!-- For synthetic payments (unpaid reservations), show Pay Now and Cancel buttons -->
@@ -824,6 +832,7 @@ interface Notification {
                     <button
                       class="cancel-reservation-btn"
                       (click)="cancelReservationDirectly(convertPaymentToReservation(payment))"
+                      *ngIf="isReservationSchedulePast(payment)"
                       [disabled]="processing.includes(payment.reservationId._id) || !canCancel(payment)">
                       Cancel Reservation
                     </button>
@@ -862,11 +871,11 @@ interface Notification {
                     
                     <!-- Payment Action Buttons Row 2: Secondary Actions -->
                     <div class="payment-buttons-row">
-                      <!-- Cancel Reservation button for court reservations -->
-                      <button 
+                      <!-- Cancel Reservation button for court reservations (hidden for cancellation fee payments) -->
+                      <button
                         class="cancel-reservation-btn"
                         (click)="cancelReservationFromPayment(payment)"
-                        *ngIf="payment.reservationId && canCancel(payment)"
+                        *ngIf="payment.reservationId && canCancel(payment) && payment.paymentType !== 'cancellation_fee' && isReservationSchedulePast(payment)"
                         [disabled]="processing.includes(payment.reservationId._id)">
                         Cancel Reservation
                       </button>
@@ -1052,6 +1061,9 @@ export class PaymentsComponent implements OnInit {
   groupingDebugInfo: any = null;
   paymentLoadingDebugInfo: any = null;
 
+  // Credit balance
+  creditBalance: number = 0;
+
   // GCash configuration
   gcashConfig: { phoneNumber: string; accountName: string; qrCodeUrl: string | null; deepLinkUrl: string } | null = null;
   isMobileDevice = false;
@@ -1098,6 +1110,9 @@ export class PaymentsComponent implements OnInit {
     // Load members data for proper fee calculation
     await this.loadMembersData();
 
+    // Load credit balance
+    this.loadCreditBalance();
+
     // Set up form validation based on user role
     this.setupManualPaymentFormValidation();
 
@@ -1119,6 +1134,17 @@ export class PaymentsComponent implements OnInit {
       if (params['reservationId']) {
         // Auto-populate the form with the specific reservation
         this.handleDirectPayment(params['reservationId']);
+      }
+    });
+  }
+
+  loadCreditBalance(): void {
+    this.http.get<any>(`${this.apiUrl}/credits/balance`).subscribe({
+      next: (response) => {
+        this.creditBalance = response.data?.balance || 0;
+      },
+      error: () => {
+        this.creditBalance = 0;
       }
     });
   }
@@ -1761,6 +1787,15 @@ export class PaymentsComponent implements OnInit {
     });
   }
 
+  isReservationSchedulePast(payment: Payment): boolean {
+    const res = payment.reservationId;
+    if (!res?.date || res.timeSlot == null) return true;
+    const endHour = res.endTimeSlot ?? (res.timeSlot + (res.duration ?? 1));
+    const d = new Date(res.date);
+    const endTime = new Date(d.getFullYear(), d.getMonth(), d.getDate(), endHour, 0, 0, 0);
+    return Date.now() >= endTime.getTime();
+  }
+
   canCancel(payment: Payment): boolean {
     // If payment is for a reservation, check the date
     if (payment.reservationId) {
@@ -1890,6 +1925,18 @@ export class PaymentsComponent implements OnInit {
     });
   }
 
+  private checkIsLateCancellation(reservation: Reservation): boolean {
+    if (!reservation?.date || reservation.timeSlot == null) return false;
+    const reservationDate = new Date(reservation.date);
+    const reservationStart = new Date(
+      reservationDate.getFullYear(),
+      reservationDate.getMonth(),
+      reservationDate.getDate(),
+      reservation.timeSlot, 0, 0, 0
+    );
+    return (reservationStart.getTime() - Date.now()) / (1000 * 60 * 60) < 12;
+  }
+
   cancelReservationDirectly(reservation: Reservation): void {
     // Open confirmation dialog for canceling the entire reservation
     const dialogData: CancellationDialogData = {
@@ -1897,7 +1944,8 @@ export class PaymentsComponent implements OnInit {
       paymentAmount: `₱${reservation.totalFee}`,
       reservationDate: this.formatDate(reservation.date),
       reservationTime: reservation.timeSlotDisplay,
-      isReservationCancellation: true // Flag to indicate this is a reservation cancellation
+      isReservationCancellation: true, // Flag to indicate this is a reservation cancellation
+      isLateCancellation: this.checkIsLateCancellation(reservation)
     };
 
     const dialogRef = this.dialog.open(CancellationDialogComponent, {
@@ -1916,12 +1964,12 @@ export class PaymentsComponent implements OnInit {
 
   processReservationCancellation(reservationId: string, reason: string): void {
     if (this.processing.includes(reservationId)) return;
-    
+
     this.processing.push(reservationId);
 
     // Cancel the reservation directly via DELETE /reservations/:id
     this.http.delete<any>(`${this.apiUrl}/reservations/${reservationId}`, {
-      body: { reason: reason }
+      body: { reason }
     }).subscribe({
       next: (response) => {
         this.processing = this.processing.filter(id => id !== reservationId);
@@ -2565,7 +2613,8 @@ export class PaymentsComponent implements OnInit {
     this.calculateAndSetReservationFeeWithMemberData(reservationForForm);
     this.paymentForm.patchValue({
       reservationId: payment.reservationId._id,
-      paymentMethod: payment.paymentMethod
+      paymentMethod: payment.paymentMethod,
+      courtFee: payment.amount  // Use the member's actual stored amount, not the reserver's recalculated share
     });
 
     // Scroll to payment form after a brief delay to allow rendering

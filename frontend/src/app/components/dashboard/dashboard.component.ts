@@ -681,6 +681,31 @@ import { environment } from '../../../environments/environment';
               </mat-card-actions>
             </mat-card>
 
+            <!-- Manage Reservations -->
+            <mat-card class="action-card admin-card" data-icon="event_available" data-title="Manage Reservations" (click)="navigateTo('/admin/reservations')">
+              <!-- Mobile Icon -->
+              <div class="mobile-card-icon">
+                <mat-icon>event_available</mat-icon>
+              </div>
+              <div class="mobile-card-title">Manage Reservations</div>
+
+              <!-- Desktop Content -->
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="action-icon admin-icon">event_available</mat-icon>
+                <mat-card-title>Reservation Management</mat-card-title>
+                <mat-card-subtitle>Edit and manage court reservations</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>View all court reservations, edit booking details, and manage player lists.</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/reservations')">
+                  <mat-icon>event_available</mat-icon>
+                  Manage Reservations
+                </button>
+              </mat-card-actions>
+            </mat-card>
+
             <!-- Credit Management -->
             <mat-card class="action-card admin-card" data-icon="account_balance" data-title="Credit Management" (click)="navigateTo('/admin/credits')">
               <!-- Mobile Icon -->

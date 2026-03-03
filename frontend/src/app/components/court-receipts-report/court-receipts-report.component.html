@@ -284,6 +284,7 @@
                     <th>Reservation</th>
                     <th>Method</th>
                     <th>Amount</th>
+                    <th>Credit Balance</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -313,7 +314,7 @@
                     </td>
                     <td>{{formatPaymentMethod(payment.paymentMethod)}}</td>
                     <td>
-                      <div 
+                      <div
                         class="amount-display"
                         [class.editable]="canEditPayment(payment)"
                         (click)="handleAmountClick(payment)"
@@ -322,20 +323,28 @@
                       </div>
                     </td>
                     <td>
+                      <span *ngIf="payment.userId?.creditBalance && payment.userId.creditBalance > 0" class="credit-balance-cell has-credit">
+                        ₱{{payment.userId.creditBalance.toFixed(2)}}
+                      </span>
+                      <span *ngIf="!payment.userId?.creditBalance || payment.userId.creditBalance === 0" class="credit-balance-cell no-credit">
+                        —
+                      </span>
+                    </td>
+                    <td>
                       <span class="status-badge" [ngClass]="'status-' + payment.status">
                         {{payment.status | titlecase}}
                       </span>
                     </td>
                     <td>
                       <div class="action-btns">
-                        <button 
+                        <button
                           *ngIf="payment.status === 'pending'"
                           class="btn btn-sm btn-approve"
                           [disabled]="processing.includes(payment._id)"
                           (click)="approvePayment(payment)">
                           {{processing.includes(payment._id) ? 'Processing...' : 'Approve'}}
                         </button>
-                        <button 
+                        <button
                           *ngIf="payment.status === 'completed'"
                           class="btn btn-sm btn-record"
                           [disabled]="processing.includes(payment._id)"
@@ -362,7 +371,7 @@
                 </tbody>
                 <tfoot>
                   <tr class="subtotal-row">
-                    <td colspan="5" class="subtotal-label">Subtotal</td>
+                    <td colspan="6" class="subtotal-label">Subtotal</td>
                     <td colspan="3" class="subtotal-amount">
                       <strong>₱{{getActivePaymentsSubtotal().toFixed(2)}}</strong>
                     </td>

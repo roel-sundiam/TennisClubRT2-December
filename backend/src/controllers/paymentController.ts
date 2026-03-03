@@ -5,6 +5,7 @@ import Reservation from '../models/Reservation';
 import Poll from '../models/Poll';
 import User from '../models/User';
 import CourtUsageReport from '../models/CourtUsageReport';
+import CreditTransaction from '../models/CreditTransaction';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import * as fs from 'fs';
@@ -1001,7 +1002,26 @@ export const getPayments = asyncHandler(async (req: AuthenticatedRequest, res: R
   if (req.query.paymentMethod) {
     filter.paymentMethod = req.query.paymentMethod;
   }
-  
+
+  if (req.query.paymentIds) {
+    const ids = (req.query.paymentIds as string).split(',').filter(Boolean);
+    filter._id = { $in: ids };
+  }
+
+  if (req.query.reservationId) {
+    // Use reservation.paymentIds for reliable filtering (bypasses reservationId type mismatch in DB)
+    const reservation = await Reservation.findById(req.query.reservationId)
+      .select('paymentIds')
+      .lean() as any;
+    const paymentIds = reservation?.paymentIds ?? [];
+    if (paymentIds.length > 0) {
+      filter._id = { $in: paymentIds };
+    } else {
+      // Fallback for legacy reservations without paymentIds array
+      filter.reservationId = req.query.reservationId;
+    }
+  }
+
   if (req.query.startDate && req.query.endDate) {
     const fromDate = new Date(req.query.startDate as string);
     const toDate = new Date(req.query.endDate as string);
@@ -1025,8 +1045,7 @@ export const getPayments = asyncHandler(async (req: AuthenticatedRequest, res: R
     const total = await Payment.countDocuments(filter);
     console.log('💰 TOTAL PAYMENTS FOUND:', total);
     
-    const payments = await Payment.find(filter)
-      .populate('userId', 'username fullName email')
+    const paymentsRaw = await Payment.find(filter)
       .populate({
         path: 'reservationId',
         select: 'date timeSlot players status',
@@ -1050,10 +1069,23 @@ export const getPayments = asyncHandler(async (req: AuthenticatedRequest, res: R
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean();
+      .lean() as any[];
+
+    // Manually populate userId, skipping any corrupted (non-ObjectId) values
+    const isValidObjectId = (id: any) => typeof id === 'string' && /^[a-f\d]{24}$/i.test(id);
+    const validUserIds = [...new Set(paymentsRaw.map((p: any) => p.userId).filter(isValidObjectId))];
+    const userDocs = validUserIds.length > 0
+      ? await User.find({ _id: { $in: validUserIds } }).select('username fullName email creditBalance').lean() as any[]
+      : [];
+    const userMap = new Map(userDocs.map((u: any) => [u._id.toString(), u]));
+
+    const payments = paymentsRaw.map((p: any) => ({
+      ...p,
+      userId: isValidObjectId(p.userId) ? (userMap.get(p.userId) || { _id: p.userId }) : { _id: null }
+    }));
 
     console.log('💰 PAYMENTS RETRIEVED:', payments.length, 'payments');
-    
+
     // Transform payments to ensure all required fields are present
     const transformedPayments = payments.map((payment: any) => {
       const reservation = payment.reservationId || null;
@@ -1642,8 +1674,7 @@ export const getMyPayments = asyncHandler(async (req: AuthenticatedRequest, res:
   console.log('🔍 Completed payments for user:', completedCount);
   
   try {
-    const payments = await Payment.find(filter)
-      .populate('userId', 'username fullName email')
+    const paymentsRaw = await Payment.find(filter)
       .populate({
         path: 'reservationId',
         select: 'userId date timeSlot endTimeSlot duration players status totalFee tennisBalls',
@@ -1653,7 +1684,20 @@ export const getMyPayments = asyncHandler(async (req: AuthenticatedRequest, res:
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean(); // Use lean() to get plain objects instead of mongoose documents
+      .lean() as any[];
+
+    // Manually populate userId, skipping any corrupted (non-ObjectId) values
+    const isValidObjectId = (id: any) => typeof id === 'string' && /^[a-f\d]{24}$/i.test(id);
+    const validUserIds = [...new Set(paymentsRaw.map((p: any) => p.userId).filter(isValidObjectId))];
+    const userDocs = validUserIds.length > 0
+      ? await User.find({ _id: { $in: validUserIds } }).select('username fullName email').lean() as any[]
+      : [];
+    const userMap = new Map(userDocs.map((u: any) => [u._id.toString(), u]));
+
+    const payments = paymentsRaw.map((p: any) => ({
+      ...p,
+      userId: isValidObjectId(p.userId) ? (userMap.get(p.userId) || { _id: p.userId }) : { _id: null }
+    }));
 
     // Manually add timeSlotDisplay virtual for reservations
     payments.forEach((payment: any) => {
@@ -1974,6 +2018,34 @@ export const recordPayment = asyncHandler(async (req: AuthenticatedRequest, res:
     }
 
     await payment.save();
+
+    // Deduct from credit balance if member has credits available
+    try {
+      const paymentUser = await User.findById(payment.userId);
+      if (paymentUser && (paymentUser.creditBalance || 0) > 0) {
+        const creditBalance = paymentUser.creditBalance || 0;
+        const deductAmount = Math.min(creditBalance, payment.amount);
+        await CreditTransaction.createTransaction(
+          paymentUser._id.toString(),
+          'deduction',
+          deductAmount,
+          `Payment recorded for court reservation — ₱${deductAmount.toFixed(2)} deducted from credit balance`,
+          {
+            referenceId: String(payment._id),
+            referenceType: 'payment',
+            metadata: {
+              source: 'payment_recorded',
+              adminUserId: req.user._id.toString(),
+              reason: `Credit applied when payment ${payment.referenceNumber} was recorded`
+            }
+          }
+        );
+        console.log(`💳 Credit deducted: ₱${deductAmount.toFixed(2)} from ${paymentUser.fullName} (balance was ₱${creditBalance})`);
+      }
+    } catch (creditError) {
+      // Log but don't fail the payment recording
+      console.error('⚠️ Failed to deduct credit balance during payment recording:', creditError);
+    }
 
     // Update CourtUsageReport when payment is recorded
     await updateCourtUsageReport(payment);

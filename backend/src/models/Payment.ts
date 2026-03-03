@@ -19,7 +19,7 @@ export interface IPaymentDocument extends Document {
   approvedAt?: Date; // When payment was approved
   recordedBy?: string; // Admin who recorded the payment
   recordedAt?: Date; // When payment was recorded
-  paymentType?: 'court_usage' | 'membership_fee' | 'tournament_entry'; // Type of payment
+  paymentType?: 'court_usage' | 'membership_fee' | 'tournament_entry' | 'cancellation_fee'; // Type of payment
   membershipYear?: number; // Year for membership fee (e.g., 2026)
   metadata?: {
     timeSlot?: number;
@@ -84,8 +84,8 @@ const paymentSchema = new Schema<IPaymentDocument>({
   paymentType: {
     type: String,
     enum: {
-      values: ['court_usage', 'membership_fee', 'tournament_entry'],
-      message: 'Payment type must be court_usage, membership_fee, or tournament_entry'
+      values: ['court_usage', 'membership_fee', 'tournament_entry', 'cancellation_fee'],
+      message: 'Payment type must be court_usage, membership_fee, tournament_entry, or cancellation_fee'
     },
     default: 'court_usage',
     index: true

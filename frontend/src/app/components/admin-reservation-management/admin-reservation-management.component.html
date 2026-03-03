@@ -1,0 +1,398 @@
+<div class="page-container">
+  <div class="page-content">
+    <div class="content-wrapper">
+
+      <!-- Modern Page Header -->
+      <div class="page-header">
+        <div class="header-left">
+          <div class="header-icon-wrapper">
+            <mat-icon class="header-icon">calendar_today</mat-icon>
+          </div>
+          <div class="header-text">
+            <h1>Reservations</h1>
+            <p>Manage all court reservations and payments</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="action-btn refresh-btn" (click)="loadReservations()" [disabled]="isLoading" matTooltip="Refresh data">
+            <mat-icon>refresh</mat-icon>
+            <span class="btn-text">Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modern Stats Grid -->
+      <div class="stats-grid" *ngIf="!isLoading">
+        <div class="stat-card stat-total">
+          <div class="stat-icon">
+            <mat-icon>event_note</mat-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Total</div>
+            <div class="stat-value">{{ summary.total }}</div>
+          </div>
+        </div>
+        <div class="stat-card stat-pending">
+          <div class="stat-icon">
+            <mat-icon>schedule</mat-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value">{{ summary.pending }}</div>
+          </div>
+        </div>
+        <div class="stat-card stat-confirmed">
+          <div class="stat-icon">
+            <mat-icon>check_circle</mat-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Confirmed</div>
+            <div class="stat-value">{{ summary.confirmed }}</div>
+          </div>
+        </div>
+        <div class="stat-card stat-unpaid">
+          <div class="stat-icon">
+            <mat-icon>payment</mat-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">Unpaid</div>
+            <div class="stat-value">{{ summary.pendingPayment }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modern Filters Section -->
+      <div class="filters-section">
+        <div class="filters-header">
+          <div class="filters-title">
+            <mat-icon>tune</mat-icon>
+            <span>Filters</span>
+          </div>
+          <button class="reset-btn" (click)="resetFilters()" matTooltip="Clear all filters">
+            <mat-icon>refresh</mat-icon>
+            <span>Reset</span>
+          </button>
+        </div>
+
+        <div class="filters-grid">
+          <!-- Native Select: Reservation Status -->
+          <div class="form-group">
+            <label class="form-label">
+              <mat-icon class="label-icon">flag</mat-icon>
+              Reservation Status
+            </label>
+            <div class="input-wrapper">
+              <select class="native-select" [(ngModel)]="filterStatus" (ngModelChange)="applyFilters()">
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+              </select>
+              <mat-icon class="input-icon">expand_more</mat-icon>
+            </div>
+          </div>
+
+          <!-- Native Select: Payment Status -->
+          <div class="form-group">
+            <label class="form-label">
+              <mat-icon class="label-icon">payment</mat-icon>
+              Payment Status
+            </label>
+            <div class="input-wrapper">
+              <select class="native-select" [(ngModel)]="filterPaymentStatus" (ngModelChange)="applyFilters()">
+                <option value="all">All Payments</option>
+                <option value="pending">Pending Payment</option>
+                <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
+                <option value="not_applicable">Not Applicable</option>
+              </select>
+              <mat-icon class="input-icon">expand_more</mat-icon>
+            </div>
+          </div>
+
+          <!-- Native Input: Search -->
+          <div class="form-group">
+            <label class="form-label">
+              <mat-icon class="label-icon">search</mat-icon>
+              Search Member
+            </label>
+            <div class="input-wrapper">
+              <input 
+                type="text" 
+                class="native-input" 
+                [(ngModel)]="searchMember" 
+                (ngModelChange)="applyFilters()" 
+                placeholder="Enter name or username">
+              <mat-icon class="input-icon clickable" *ngIf="searchMember" (click)="searchMember=''; applyFilters()">close</mat-icon>
+            </div>
+          </div>
+
+          <!-- Native Input: Date -->
+          <div class="form-group">
+            <label class="form-label">
+              <mat-icon class="label-icon">today</mat-icon>
+              Filter by Date
+            </label>
+            <div class="input-wrapper">
+              <input 
+                type="date" 
+                class="native-input" 
+                [(ngModel)]="filterDateString" 
+                (ngModelChange)="onDateFilterChange()" 
+                placeholder="Select date">
+              <mat-icon class="input-icon clickable" *ngIf="filterDateString" (click)="filterDateString=''; onDateFilterChange()">close</mat-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoading">
+        <div class="spinner-wrapper">
+          <mat-spinner diameter="48"></mat-spinner>
+        </div>
+        <p class="loading-text">Loading reservations...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="!isLoading && filteredReservations.length === 0">
+        <div class="empty-icon">
+          <mat-icon>event_busy</mat-icon>
+        </div>
+        <h3>No Reservations Found</h3>
+        <p>Try adjusting your filters or check back later</p>
+      </div>
+
+      <!-- Results Section -->
+      <div class="results-section" *ngIf="!isLoading && filteredReservations.length > 0">
+        <div class="results-header">
+          <span class="results-count">
+            <mat-icon>event_available</mat-icon>
+            {{ filteredReservations.length }} reservation{{ filteredReservations.length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+
+        <!-- Mobile Cards View -->
+        <div class="mobile-cards">
+          <div class="reservation-card" *ngFor="let r of paginatedReservations">
+            <div class="card-header">
+              <div class="card-date">
+                <mat-icon>event</mat-icon>
+                <span>{{ getDateDisplay(r.date) }}</span>
+              </div>
+              <button class="card-menu-btn" [matMenuTriggerFor]="mobileMenu">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #mobileMenu="matMenu">
+                <button mat-menu-item (click)="editReservation(r)" [disabled]="!canEdit(r)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit</span>
+                </button>
+              </mat-menu>
+            </div>
+
+            <div class="card-body">
+              <div class="card-row">
+                <mat-icon class="row-icon">schedule</mat-icon>
+                <span class="row-label">Time:</span>
+                <span class="row-value">{{ getTimeDisplay(r) }}</span>
+              </div>
+              <div class="card-row">
+                <mat-icon class="row-icon">person</mat-icon>
+                <span class="row-label">Member:</span>
+                <span class="row-value">{{ getMemberName(r) }}</span>
+              </div>
+              <div class="card-row">
+                <mat-icon class="row-icon">groups</mat-icon>
+                <span class="row-label">Players:</span>
+                <span class="row-value">{{ getPlayerNames(r) }}</span>
+              </div>
+              <div class="card-row">
+                <mat-icon class="row-icon">payments</mat-icon>
+                <span class="row-label">Fee:</span>
+                <span class="row-value fee-value">₱{{ r.totalFee | number }}</span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <span class="status-pill" [ngClass]="getStatusClass(r.status)">
+                {{ getStatusDisplay(r.status) }}
+              </span>
+              <span class="status-pill" [ngClass]="getPaymentStatusClass(r.paymentStatus)">
+                {{ getPaymentDisplayText(r.paymentStatus) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="desktop-table">
+          <div class="table-wrapper">
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Member</th>
+                  <th>Players</th>
+                  <th class="center-align">Status</th>
+                  <th class="right-align">Fee</th>
+                  <th class="center-align">Payment</th>
+                  <th class="center-align">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container *ngFor="let r of paginatedReservations">
+                <tr class="table-row" [class.row-expanded]="expandedReservationId === r._id">
+                  <td class="date-cell">
+                    <div class="date-wrapper">
+                      <mat-icon class="cell-icon">event</mat-icon>
+                      <span>{{ getDateDisplay(r.date) }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="time-wrapper">
+                      <mat-icon class="cell-icon">schedule</mat-icon>
+                      <span>{{ getTimeDisplay(r) }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="member-wrapper">
+                      <mat-icon class="cell-icon">person</mat-icon>
+                      <span>{{ getMemberName(r) }}</span>
+                    </div>
+                  </td>
+                  <td class="players-col">
+                    <div class="players-cell">
+                      <span class="players-badge">{{ getPlayerCount(r) }}</span>
+                      <span class="players-names">{{ getPlayerNames(r) }}</span>
+                    </div>
+                  </td>
+                  <td class="center-align">
+                    <span class="status-pill" [ngClass]="getStatusClass(r.status)">
+                      {{ getStatusDisplay(r.status) }}
+                    </span>
+                  </td>
+                  <td class="right-align fee-cell">₱{{ r.totalFee | number }}</td>
+                  <td class="center-align">
+                    <span class="status-pill" [ngClass]="getPaymentStatusClass(r.paymentStatus)">
+                      {{ getPaymentDisplayText(r.paymentStatus) }}
+                    </span>
+                  </td>
+                  <td class="center-align actions-cell">
+                    <button class="icon-btn primary" (click)="editReservation(r)" [disabled]="!canEdit(r)" matTooltip="Edit reservation">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button class="icon-btn payments-btn" (click)="togglePayments(r)" [matTooltip]="expandedReservationId === r._id ? 'Hide payments' : 'View player payments'">
+                      <mat-icon>{{ expandedReservationId === r._id ? 'expand_less' : 'payments' }}</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+                <tr class="payment-detail-row" *ngIf="expandedReservationId === r._id">
+                  <td colspan="8">
+                    <div class="payment-detail-panel">
+                      <!-- Loading State -->
+                      <div class="payment-detail-loading" *ngIf="loadingPaymentsForId === r._id">
+                        <mat-spinner diameter="32"></mat-spinner>
+                        <span>Loading payments...</span>
+                      </div>
+                      
+                      <!-- Content -->
+                      <ng-container *ngIf="loadingPaymentsForId !== r._id">
+                        <!-- Header -->
+                        <div class="payment-header">
+                          <div class="payment-header-left">
+                            <mat-icon class="header-icon">account_balance_wallet</mat-icon>
+                            <div class="header-title">
+                              <h3>Payment Details</h3>
+                              <p>{{ getReservationPayments(r._id).length }} payment record{{ getReservationPayments(r._id).length !== 1 ? 's' : '' }}</p>
+                            </div>
+                          </div>
+                          <div class="payment-header-right">
+                            <div class="payment-summary-badge">
+                              <mat-icon>payments</mat-icon>
+                              <span>₱{{ r.totalFee | number }}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div class="payment-detail-empty" *ngIf="getReservationPayments(r._id).length === 0">
+                          <mat-icon>receipt_long</mat-icon>
+                          <p>No payment records found</p>
+                        </div>
+                        
+                        <!-- Payment Cards Grid -->
+                        <div class="payment-cards-grid" *ngIf="getReservationPayments(r._id).length > 0">
+                          <div class="payment-card" *ngFor="let p of getReservationPayments(r._id)" [class.paid-card]="p.status === 'completed' || p.status === 'record'">
+                            <div class="payment-card-header">
+                              <div class="payment-card-member">
+                                <div class="member-avatar">
+                                  <mat-icon>person</mat-icon>
+                                </div>
+                                <div class="member-info">
+                                  <div class="member-name">{{ p.userId?.fullName || p.userId?.username || 'Unknown' }}</div>
+                                  <div class="member-username" *ngIf="p.userId?.fullName && p.userId?.username">@{{ p.userId?.username }}</div>
+                                </div>
+                              </div>
+                              <span class="payment-status-badge" [ngClass]="getPaymentRowClass(p.status)">
+                                {{ getPaymentStatusLabel(p.status) }}
+                              </span>
+                            </div>
+                            
+                            <div class="payment-card-body">
+                              <div class="payment-info-row">
+                                <div class="info-item">
+                                  <mat-icon class="info-icon">payments</mat-icon>
+                                  <div class="info-content">
+                                    <span class="info-label">Amount</span>
+                                    <span class="info-value amount-value">₱{{ p.amount | number }}</span>
+                                  </div>
+                                </div>
+                                
+                                <div class="info-item">
+                                  <mat-icon class="info-icon">credit_card</mat-icon>
+                                  <div class="info-content">
+                                    <span class="info-label">Method</span>
+                                    <span class="info-value">{{ getPaymentMethodDisplay(p.paymentMethod) }}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div class="payment-info-row" *ngIf="p.referenceNumber">
+                                <div class="info-item full-width">
+                                  <mat-icon class="info-icon">confirmation_number</mat-icon>
+                                  <div class="info-content">
+                                    <span class="info-label">Reference</span>
+                                    <span class="info-value reference-value">{{ p.referenceNumber }}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </ng-container>
+                    </div>
+                  </td>
+                </tr>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Modern Pagination -->
+        <div class="pagination-wrapper">
+          <mat-paginator
+            [length]="filteredReservations.length"
+            [pageSize]="pageSize"
+            [pageIndex]="pageIndex"
+            [pageSizeOptions]="pageSizeOptions"
+            (page)="onPageChange($event)"
+            showFirstLastButtons>
+          </mat-paginator>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

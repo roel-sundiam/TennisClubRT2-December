@@ -233,60 +233,53 @@ creditTransactionSchema.statics.createTransaction = async function(
   } = {}
 ) {
   const User = mongoose.model('User');
-  const session = await mongoose.startSession();
-  
-  try {
-    return await session.withTransaction(async () => {
-      // Get current user balance
-      const user = await User.findById(userId).session(session);
-      if (!user) {
-        throw new Error('User not found');
-      }
-      
-      const balanceBefore = user.creditBalance || 0;
-      let balanceAfter: number;
-      
-      // Calculate new balance
-      if (['deposit', 'refund'].includes(type)) {
-        balanceAfter = balanceBefore + Math.abs(amount);
-      } else {
-        balanceAfter = balanceBefore - Math.abs(amount);
-        
-        // Check if user has sufficient balance for deductions
-        if (balanceAfter < 0 && type === 'deduction') {
-          throw new Error('Insufficient credit balance');
-        }
-      }
-      
-      // Create transaction record
-      const transactionStatus = options.status || 'completed';
-      const transaction = new this({
-        userId,
-        type,
-        amount,
-        balanceBefore,
-        balanceAfter,
-        description,
-        referenceId: options.referenceId,
-        referenceType: options.referenceType,
-        refundReason: options.refundReason,
-        metadata: options.metadata,
-        status: transactionStatus
-      });
-      
-      await transaction.save({ session });
-      
-      // Only update user balance if transaction is completed
-      if (transactionStatus === 'completed') {
-        user.creditBalance = balanceAfter;
-        await user.save({ session });
-      }
-      
-      return transaction;
-    });
-  } finally {
-    await session.endSession();
+
+  // Get current user balance
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new Error('User not found');
   }
+
+  const balanceBefore = user.creditBalance || 0;
+  let balanceAfter: number;
+
+  // Calculate new balance
+  if (['deposit', 'refund'].includes(type)) {
+    balanceAfter = balanceBefore + Math.abs(amount);
+  } else {
+    balanceAfter = balanceBefore - Math.abs(amount);
+
+    // Check if user has sufficient balance for deductions
+    if (balanceAfter < 0 && type === 'deduction') {
+      throw new Error('Insufficient credit balance');
+    }
+  }
+
+  // Create transaction record
+  const transactionStatus = options.status || 'completed';
+  const transaction = new this({
+    userId,
+    type,
+    amount,
+    balanceBefore,
+    balanceAfter,
+    description,
+    referenceId: options.referenceId,
+    referenceType: options.referenceType,
+    refundReason: options.refundReason,
+    metadata: options.metadata,
+    status: transactionStatus
+  });
+
+  await transaction.save();
+
+  // Only update user balance if transaction is completed
+  if (transactionStatus === 'completed') {
+    user.creditBalance = balanceAfter;
+    await user.save();
+  }
+
+  return transaction;
 };
 
 // Static method to refund a reservation
@@ -435,49 +428,41 @@ creditTransactionSchema.statics.getCreditStats = async function(startDate?: Date
 
 // Static method to reverse a transaction
 creditTransactionSchema.statics.reverseTransaction = async function(transactionId: string, reason: string, adminUserId?: string) {
-  const session = await mongoose.startSession();
-  
-  try {
-    return await session.withTransaction(async () => {
-      const originalTransaction = await this.findById(transactionId).session(session);
-      if (!originalTransaction) {
-        throw new Error('Transaction not found');
-      }
-      
-      if (originalTransaction.status === 'reversed') {
-        throw new Error('Transaction already reversed');
-      }
-      
-      // Create reverse transaction
-      const reverseType = originalTransaction.type === 'deduction' ? 'refund' : 
-                         originalTransaction.type === 'deposit' ? 'adjustment' : 
-                         originalTransaction.type === 'refund' ? 'deduction' : 'deposit';
-      
-      const reverseTransaction = await (this as any).createTransaction(
-        originalTransaction.userId,
-        reverseType,
-        Math.abs(originalTransaction.amount),
-        `Reversal: ${reason}`,
-        {
-          referenceId: originalTransaction._id.toString(),
-          referenceType: 'admin_adjustment',
-          metadata: {
-            reason,
-            adminUserId,
-            originalTransactionId: originalTransaction._id
-          }
-        }
-      );
-      
-      // Mark original transaction as reversed
-      originalTransaction.status = 'reversed';
-      await originalTransaction.save({ session });
-      
-      return reverseTransaction;
-    });
-  } finally {
-    await session.endSession();
+  const originalTransaction = await this.findById(transactionId);
+  if (!originalTransaction) {
+    throw new Error('Transaction not found');
   }
+
+  if (originalTransaction.status === 'reversed') {
+    throw new Error('Transaction already reversed');
+  }
+
+  // Create reverse transaction
+  const reverseType = originalTransaction.type === 'deduction' ? 'refund' :
+                     originalTransaction.type === 'deposit' ? 'adjustment' :
+                     originalTransaction.type === 'refund' ? 'deduction' : 'deposit';
+
+  const reverseTransaction = await (this as any).createTransaction(
+    originalTransaction.userId,
+    reverseType,
+    Math.abs(originalTransaction.amount),
+    `Reversal: ${reason}`,
+    {
+      referenceId: originalTransaction._id.toString(),
+      referenceType: 'admin_adjustment',
+      metadata: {
+        reason,
+        adminUserId,
+        originalTransactionId: originalTransaction._id
+      }
+    }
+  );
+
+  // Mark original transaction as reversed
+  originalTransaction.status = 'reversed';
+  await originalTransaction.save();
+
+  return reverseTransaction;
 };
 
 const CreditTransaction = mongoose.model<ICreditTransactionDocument, ICreditTransactionModel>('CreditTransaction', creditTransactionSchema);
