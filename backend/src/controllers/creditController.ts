@@ -201,6 +201,48 @@ export const getCreditStats = async (req: AuthenticatedRequest, res: Response) =
   }
 };
 
+// Admin: Get a specific user's credit transaction history
+export const getUserTransactions = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const type = req.query.type as string;
+
+    const filter: any = { userId };
+    if (type) filter.type = type;
+
+    const skip = (page - 1) * limit;
+
+    const [transactions, total] = await Promise.all([
+      CreditTransaction.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('metadata.adminUserId', 'username fullName'),
+      CreditTransaction.countDocuments(filter)
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        transactions,
+        pagination: {
+          current: page,
+          pages: Math.ceil(total / limit),
+          total
+        }
+      }
+    });
+  } catch (error: any) {
+    console.error('Error getting user transactions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user transaction history'
+    });
+  }
+};
+
 // Admin: Adjust user credits
 export const adjustCredits = async (req: AuthenticatedRequest, res: Response) => {
   try {

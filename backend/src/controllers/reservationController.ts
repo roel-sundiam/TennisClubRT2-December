@@ -2,7 +2,6 @@ import { Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import Reservation from '../models/Reservation';
 import User from '../models/User';
-import CreditTransaction from '../models/CreditTransaction';
 import Poll from '../models/Poll';
 import Payment from '../models/Payment';
 import SystemSettings from '../models/SystemSettings';
@@ -466,7 +465,7 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
         id: p._id,
         amount: p.amount,
         dueDate: p.dueDate,
-        daysOverdue: Math.ceil((Date.now() - p.dueDate.getTime()) / (1000 * 60 * 60 * 24)),
+        daysOverdue: p.dueDate ? Math.ceil((Date.now() - p.dueDate.getTime()) / (1000 * 60 * 60 * 24)) : 0,
         description: p.description
       });
     });
@@ -681,43 +680,7 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     console.log(`✅ Using frontend calculated fee: ₱${finalTotalFee}`);
   }
 
-  // Check for credit auto-deduction
-  let paymentStatus = 'pending';
-  let creditUsed = false;
-  let creditTransactionId = null;
-
-  // Auto-deduct from credits if user has sufficient balance
-  if (user.creditBalance >= finalTotalFee) {
-    try {
-      console.log(`💳 Auto-deducting ₱${finalTotalFee} from ${user.fullName}'s credit balance (₱${user.creditBalance})`);
-      
-      const creditTransaction = await (CreditTransaction as any).createTransaction(
-        req.user._id,
-        'deduction',
-        finalTotalFee,
-        `Court reservation fee for ${reservationDate.toISOString().split('T')[0]} at ${timeSlot}:00`,
-        {
-          referenceType: 'reservation',
-          metadata: {
-            source: 'court_reservation',
-            reason: 'Court reservation payment',
-            reservationDate: reservationDate,
-            timeSlot: timeSlot
-          }
-        }
-      );
-
-      paymentStatus = 'paid';
-      creditUsed = true;
-      creditTransactionId = creditTransaction._id;
-      
-      console.log(`✅ Successfully deducted ₱${finalTotalFee} from credits. New balance: ₱${user.creditBalance - finalTotalFee}`);
-    } catch (error) {
-      console.error('Failed to auto-deduct credits:', error);
-      // Continue with normal flow - payment will be pending
-      paymentStatus = 'pending';
-    }
-  }
+  const paymentStatus = 'pending';
 
   // Convert players to ReservationPlayer objects for December 2025 pricing
   const playerObjects = await convertPlayersToObjects(trimmedPlayers);
@@ -837,22 +800,12 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     await reservation.save({ validateBeforeSave: false });
   }
 
-  // Update the reservation with credit transaction reference if credit was used
-  if (creditUsed && creditTransactionId) {
-    reservation.set('metadata.creditTransactionId', creditTransactionId);
-    await reservation.save({ validateBeforeSave: false });
-  }
-
-  const message = creditUsed
-    ? `Reservation created successfully. ₱${finalTotalFee} automatically deducted from your credit balance.`
-    : `Reservation created successfully. ${members.length} payment(s) created for members. Payments can be made after the reservation time.`;
+  const message = `Reservation created successfully. ${members.length} payment(s) created for members. Payments can be made after the reservation time.`;
 
   res.status(201).json({
     success: true,
     data: {
       ...reservation.toJSON(),
-      creditUsed,
-      creditBalance: user.creditBalance - (creditUsed ? finalTotalFee : 0),
       paymentsCreated: paymentIds.length
     },
     message
@@ -1296,39 +1249,6 @@ export const cancelReservation = asyncHandler(async (req: AuthenticatedRequest, 
 
   const { reason } = req.body;
 
-  // Auto-refund credits if the reservation was paid with credits
-  let creditRefundAmount = 0;
-  if (reservation.paymentStatus === 'paid') {
-    // Check if there's a related credit transaction for this reservation
-    const creditTransaction = await CreditTransaction.findOne({
-      userId: reservation.userId,
-      referenceType: 'reservation',
-      type: 'deduction',
-      'metadata.reservationDate': reservation.date,
-      'metadata.timeSlot': reservation.timeSlot,
-      status: 'completed'
-    });
-
-    if (creditTransaction) {
-      creditRefundAmount = creditTransaction.amount;
-      try {
-        console.log(`💳 Auto-refunding ₱${creditRefundAmount} credits for cancelled reservation`);
-        
-        await (CreditTransaction as any).refundReservation(
-          reservation.userId.toString(),
-          (reservation._id as any).toString(),
-          creditRefundAmount,
-          'reservation_cancelled'
-        );
-
-        console.log(`✅ Successfully refunded ₱${creditRefundAmount} to user's credit balance`);
-      } catch (error) {
-        console.error('Failed to auto-refund credits for cancelled reservation:', error);
-        // Continue with cancellation even if credit refund fails
-      }
-    }
-  }
-
   // Capture userId string BEFORE populate (populate replaces it with a User document)
   const reserverId = reservation.userId.toString();
 
@@ -1380,9 +1300,7 @@ export const cancelReservation = asyncHandler(async (req: AuthenticatedRequest, 
     }
   }
 
-  let message = creditRefundAmount > 0
-    ? `Reservation cancelled. ₱${creditRefundAmount} credits refunded.`
-    : `Reservation cancelled successfully.`;
+  let message = `Reservation cancelled successfully.`;
 
   if (cancellationFeeCharged) {
     message += ` A ₱${LATE_CANCELLATION_FEE} late cancellation fee has been added to your pending payments.`;
@@ -1392,7 +1310,6 @@ export const cancelReservation = asyncHandler(async (req: AuthenticatedRequest, 
     success: true,
     data: {
       ...reservation.toJSON(),
-      creditRefunded: creditRefundAmount,
       cancellationFeeCharged,
       cancellationFee: cancellationFeeCharged ? LATE_CANCELLATION_FEE : 0
     },
@@ -1835,6 +1752,294 @@ export const deleteBlockedReservation = asyncHandler(async (req: AuthenticatedRe
   res.status(200).json({
     success: true,
     message: 'Block removed successfully'
+  });
+});
+
+// Join an existing reservation (member adds themselves to someone else's reservation)
+export const joinReservation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const currentUserId = req.user?._id?.toString();
+
+  const reservation = await Reservation.findById(id);
+  if (!reservation) {
+    res.status(404).json({ success: false, message: 'Reservation not found' });
+    return;
+  }
+
+  // Only pending or confirmed reservations can be joined
+  if (!['pending', 'confirmed'].includes(reservation.status)) {
+    res.status(400).json({ success: false, message: 'Cannot join a reservation that is not active' });
+    return;
+  }
+
+  // Must be a future reservation
+  const reservationDateTime = new Date(reservation.date);
+  reservationDateTime.setHours(reservation.timeSlot, 0, 0, 0);
+  if (reservationDateTime <= new Date()) {
+    res.status(400).json({ success: false, message: 'Cannot join a past reservation' });
+    return;
+  }
+
+  // User must not already be the reserver
+  if (reservation.userId.toString() === currentUserId) {
+    res.status(400).json({ success: false, message: 'You are already the reserver of this reservation' });
+    return;
+  }
+
+  // User must not already be in the players list
+  const alreadyJoined = reservation.players.some((p: any) => {
+    const uid = typeof p === 'object' ? p.userId?.toString() : null;
+    return uid === currentUserId;
+  });
+  if (alreadyJoined) {
+    res.status(400).json({ success: false, message: 'You are already part of this reservation' });
+    return;
+  }
+
+  // Get user record for their full name
+  const user = await User.findById(currentUserId);
+  if (!user) {
+    res.status(404).json({ success: false, message: 'User not found' });
+    return;
+  }
+
+  // Cancel all existing pending payments (fees will be recalculated with more members)
+  if (reservation.paymentIds && reservation.paymentIds.length > 0) {
+    await Payment.updateMany(
+      { _id: { $in: reservation.paymentIds }, status: 'pending' },
+      { $set: { status: 'cancelled' } }
+    );
+    console.log(`📝 Cancelled ${reservation.paymentIds.length} pending payments to recalculate for join`);
+  }
+
+  // Add the joining member to players array
+  (reservation.players as any[]).push({
+    name: user.fullName || user.username,
+    userId: user._id.toString(),
+    isMember: true,
+    isGuest: false
+  });
+
+  // Reset total fee so pre-save hook recalculates with the new member count
+  reservation.totalFee = 0;
+  await reservation.save();
+
+  // Rebuild payments for all members with updated fee split
+  const paymentIds: string[] = [];
+  const allPlayers = reservation.players as any[];
+  const members = allPlayers.filter((p: any) => p.isMember);
+  const guests = allPlayers.filter((p: any) => p.isGuest);
+  const peakHours = (process.env.PEAK_HOURS || '5,18,19,20,21').split(',').map(h => parseInt(h));
+
+  if (members.length > 0) {
+    const PEAK_BASE_FEE = 150;
+    const NON_PEAK_BASE_FEE = 100;
+    const GUEST_FEE = 70;
+
+    const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
+    let totalBaseFee = 0;
+    let totalGuestFee = 0;
+
+    for (let hour = reservation.timeSlot; hour < calculatedEndTimeSlot; hour++) {
+      const isPeakHour = peakHours.includes(hour);
+      totalBaseFee += isPeakHour ? PEAK_BASE_FEE : NON_PEAK_BASE_FEE;
+      totalGuestFee += guests.length * GUEST_FEE;
+    }
+
+    const memberShare = totalBaseFee / members.length;
+    const reserverId = reservation.userId.toString();
+
+    for (const member of members) {
+      const isReserver = member.userId === reserverId;
+      let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+
+      if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+        paymentAmount += reservation.tennisBalls.totalCost;
+      }
+
+      const paymentDueDate = new Date(reservation.date);
+      paymentDueDate.setDate(paymentDueDate.getDate() + 1);
+      paymentDueDate.setHours(23, 59, 59, 999);
+
+      const payment = new Payment({
+        userId: member.userId,
+        reservationId: reservation._id,
+        amount: Math.round(paymentAmount * 100) / 100,
+        currency: 'PHP',
+        paymentMethod: 'cash',
+        status: 'pending',
+        dueDate: paymentDueDate,
+        description: `Court reservation ${isReserver ? '(Reserver)' : ''} - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
+        metadata: {
+          timeSlot: reservation.timeSlot,
+          date: reservation.date,
+          playerCount: allPlayers.length,
+          memberCount: members.length,
+          guestCount: guests.length,
+          isReserver,
+          memberShare: Math.round(memberShare * 100) / 100,
+          guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
+          tennisBalls: {
+            quantity: reservation.tennisBalls?.quantity || 0,
+            costPerCan: reservation.tennisBalls?.costPerCan || 0,
+            totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
+          }
+        }
+      });
+
+      await payment.save();
+      paymentIds.push((payment._id as any).toString());
+    }
+
+    reservation.paymentIds = paymentIds;
+    await reservation.save({ validateBeforeSave: false });
+    console.log(`✅ Created ${paymentIds.length} new payments after ${user.fullName} joined reservation ${id}`);
+  }
+
+  await reservation.populate('userId', 'username fullName email');
+
+  res.status(200).json({
+    success: true,
+    data: reservation,
+    message: `Successfully joined the reservation`
+  });
+});
+
+// Leave (unjoin) a reservation the current user previously joined
+export const leaveReservation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const currentUserId = req.user?._id?.toString();
+
+  const reservation = await Reservation.findById(id);
+  if (!reservation) {
+    res.status(404).json({ success: false, message: 'Reservation not found' });
+    return;
+  }
+
+  // Only pending or confirmed reservations can be left
+  if (!['pending', 'confirmed'].includes(reservation.status)) {
+    res.status(400).json({ success: false, message: 'Cannot leave a reservation that is not active' });
+    return;
+  }
+
+  // Must be a future reservation
+  const reservationDateTime = new Date(reservation.date);
+  reservationDateTime.setHours(reservation.timeSlot, 0, 0, 0);
+  if (reservationDateTime <= new Date()) {
+    res.status(400).json({ success: false, message: 'Cannot leave a past reservation' });
+    return;
+  }
+
+  // Reserver cannot leave — they must cancel
+  if (reservation.userId.toString() === currentUserId) {
+    res.status(400).json({ success: false, message: 'You are the reserver. Please cancel the reservation instead.' });
+    return;
+  }
+
+  // User must actually be in the players list
+  const playerIndex = (reservation.players as any[]).findIndex((p: any) => {
+    const uid = typeof p === 'object' ? p.userId?.toString() : null;
+    return uid === currentUserId;
+  });
+  if (playerIndex === -1) {
+    res.status(400).json({ success: false, message: 'You are not part of this reservation' });
+    return;
+  }
+
+  // Cancel all existing pending payments
+  if (reservation.paymentIds && reservation.paymentIds.length > 0) {
+    await Payment.updateMany(
+      { _id: { $in: reservation.paymentIds }, status: 'pending' },
+      { $set: { status: 'cancelled' } }
+    );
+    console.log(`📝 Cancelled ${reservation.paymentIds.length} pending payments for leave`);
+  }
+
+  // Remove the leaving member from players array
+  (reservation.players as any[]).splice(playerIndex, 1);
+
+  // Reset total fee so pre-save hook recalculates with one fewer member
+  reservation.totalFee = 0;
+  await reservation.save();
+
+  // Rebuild payments for remaining members
+  const paymentIds: string[] = [];
+  const allPlayers = reservation.players as any[];
+  const members = allPlayers.filter((p: any) => p.isMember);
+  const guests = allPlayers.filter((p: any) => p.isGuest);
+  const peakHours = (process.env.PEAK_HOURS || '5,18,19,20,21').split(',').map(h => parseInt(h));
+
+  if (members.length > 0) {
+    const PEAK_BASE_FEE = 150;
+    const NON_PEAK_BASE_FEE = 100;
+    const GUEST_FEE = 70;
+
+    const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
+    let totalBaseFee = 0;
+    let totalGuestFee = 0;
+
+    for (let hour = reservation.timeSlot; hour < calculatedEndTimeSlot; hour++) {
+      const isPeakHour = peakHours.includes(hour);
+      totalBaseFee += isPeakHour ? PEAK_BASE_FEE : NON_PEAK_BASE_FEE;
+      totalGuestFee += guests.length * GUEST_FEE;
+    }
+
+    const memberShare = totalBaseFee / members.length;
+    const reserverId = reservation.userId.toString();
+
+    for (const member of members) {
+      const isReserver = member.userId === reserverId;
+      let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+
+      if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+        paymentAmount += reservation.tennisBalls.totalCost;
+      }
+
+      const paymentDueDate = new Date(reservation.date);
+      paymentDueDate.setDate(paymentDueDate.getDate() + 1);
+      paymentDueDate.setHours(23, 59, 59, 999);
+
+      const payment = new Payment({
+        userId: member.userId,
+        reservationId: reservation._id,
+        amount: Math.round(paymentAmount * 100) / 100,
+        currency: 'PHP',
+        paymentMethod: 'cash',
+        status: 'pending',
+        dueDate: paymentDueDate,
+        description: `Court reservation ${isReserver ? '(Reserver)' : ''} - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
+        metadata: {
+          timeSlot: reservation.timeSlot,
+          date: reservation.date,
+          playerCount: allPlayers.length,
+          memberCount: members.length,
+          guestCount: guests.length,
+          isReserver,
+          memberShare: Math.round(memberShare * 100) / 100,
+          guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
+          tennisBalls: {
+            quantity: reservation.tennisBalls?.quantity || 0,
+            costPerCan: reservation.tennisBalls?.costPerCan || 0,
+            totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
+          }
+        }
+      });
+
+      await payment.save();
+      paymentIds.push((payment._id as any).toString());
+    }
+
+    reservation.paymentIds = paymentIds;
+    await reservation.save({ validateBeforeSave: false });
+    console.log(`✅ Rebuilt ${paymentIds.length} payments after member left reservation ${id}`);
+  }
+
+  await reservation.populate('userId', 'username fullName email');
+
+  res.status(200).json({
+    success: true,
+    data: reservation,
+    message: 'You have successfully left the reservation'
   });
 });
 

@@ -186,8 +186,14 @@ async function updateFinancialReportCourtReceipts(): Promise<void> {
 // Helper function to subtract from CourtUsageReport when payment is unrecorded
 async function subtractFromCourtUsageReport(payment: any): Promise<void> {
   try {
+    // Assigned expenses are not court usage — skip
+    if (payment.metadata?.isAssignedExpense === true) {
+      console.log('📊 Skipping court usage report subtraction for assigned expense');
+      return;
+    }
+
     console.log('📊 Subtracting from court usage report for unrecorded payment...');
-    
+
     // Get user information to find member name
     await payment.populate('userId', 'fullName');
     const memberName = (payment.userId as any)?.fullName;
@@ -266,8 +272,14 @@ async function subtractFromCourtUsageReport(payment: any): Promise<void> {
 // Helper function to update CourtUsageReport when payment is recorded
 async function updateCourtUsageReport(payment: any): Promise<void> {
   try {
+    // Assigned expenses (tournament entry fees, etc.) are not court usage — skip
+    if (payment.metadata?.isAssignedExpense === true) {
+      console.log('📊 Skipping court usage report update for assigned expense');
+      return;
+    }
+
     console.log('📊 Updating court usage report for recorded payment...');
-    
+
     // Get user information to find member name
     await payment.populate('userId', 'fullName');
     const memberName = (payment.userId as any)?.fullName;
@@ -1795,7 +1807,7 @@ export const checkMyOverduePayments = asyncHandler(async (req: AuthenticatedRequ
 
   // Add Payment records
   overduePayments.forEach(payment => {
-    const daysOverdue = Math.ceil((new Date().getTime() - new Date(payment.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+    const daysOverdue = payment.dueDate ? Math.ceil((new Date().getTime() - new Date(payment.dueDate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
     overdueDetails.push({
       type: 'payment',
       id: payment._id,
@@ -3098,3 +3110,183 @@ export const validateMembershipFeePayment = [
     .isLength({ max: 500 })
     .withMessage('Notes cannot exceed 500 characters')
 ];
+
+// ============================================================
+// Assign Expense to Members
+// POST /api/payments/assign-expense
+// Admin creates a pending payment for each selected member
+// ============================================================
+
+export const assignExpenseValidation = [
+  body('title')
+    .notEmpty().withMessage('Expense title is required')
+    .isLength({ max: 200 }).withMessage('Title cannot exceed 200 characters'),
+  body('amount')
+    .notEmpty().withMessage('Amount is required')
+    .isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
+  body('memberIds')
+    .isArray({ min: 1 }).withMessage('At least one member must be selected'),
+  body('memberIds.*')
+    .isString().withMessage('Member IDs must be strings'),
+  body('description')
+    .optional()
+    .isLength({ max: 500 }).withMessage('Description cannot exceed 500 characters')
+];
+
+export const assignExpense = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, message: errors.array()[0]?.msg || 'Validation error', errors: errors.array() });
+  }
+
+  const { title, amount, memberIds, description } = req.body;
+  const adminUser = req.user!;
+
+  // Resolve members
+  const members = await User.find({
+    _id: { $in: memberIds },
+    isApproved: true,
+    isActive: true
+  }).select('_id fullName username');
+
+  if (members.length === 0) {
+    return res.status(400).json({ success: false, message: 'No valid active members found for the provided IDs' });
+  }
+
+  const createdPayments: any[] = [];
+  const skippedMembers: string[] = [];
+
+  for (const member of members) {
+    // Duplicate guard: skip if a pending assigned expense with the same title already exists for this member
+    const existing = await Payment.findOne({
+      userId: member._id.toString(),
+      description: title,
+      status: 'pending',
+      'metadata.isAssignedExpense': true
+    });
+
+    if (existing) {
+      skippedMembers.push((member as any).fullName || (member as any).username);
+      continue;
+    }
+
+    const payment = new Payment({
+      userId: member._id.toString(),
+      amount: Number(amount),
+      paymentMethod: 'cash',
+      status: 'pending',
+      paymentType: 'tournament_entry',
+      description: title,
+      metadata: {
+        isAssignedExpense: true,
+        isManualPayment: false,
+        createdBy: (adminUser as any).fullName || (adminUser as any).username,
+        createdById: (adminUser as any)._id?.toString() || (adminUser as any).id,
+        reason: description || undefined
+      }
+    });
+
+    await payment.save();
+    createdPayments.push({
+      paymentId: payment._id,
+      memberId: member._id,
+      memberName: (member as any).fullName || (member as any).username,
+      amount: payment.amount,
+      referenceNumber: payment.referenceNumber
+    });
+  }
+
+  return res.status(201).json({
+    success: true,
+    message: `${createdPayments.length} pending payment(s) created${skippedMembers.length > 0 ? `. Skipped ${skippedMembers.length} member(s) with existing pending payment for this expense.` : ''}`,
+    data: {
+      created: createdPayments,
+      skipped: skippedMembers,
+      count: createdPayments.length
+    }
+  });
+});
+
+// ============================================================
+// GET /api/payments/expense-templates
+// Returns distinct past assigned expense titles with amount
+// for quick re-use on the assign expense page
+// ============================================================
+
+export const getExpenseTemplates = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const templates = await Payment.aggregate([
+    { $match: { 'metadata.isAssignedExpense': true } },
+    { $sort: { createdAt: -1 } },
+    {
+      $group: {
+        _id: '$description',
+        amount: { $first: '$amount' },
+        lastUsed: { $first: '$createdAt' },
+        useCount: { $sum: 1 },
+        memberIds: { $addToSet: '$userId' },
+        reason: { $first: '$metadata.reason' }
+      }
+    },
+    { $sort: { lastUsed: -1 } },
+    { $limit: 10 },
+    {
+      $project: {
+        _id: 0,
+        title: '$_id',
+        amount: 1,
+        lastUsed: 1,
+        useCount: 1,
+        memberIds: 1,
+        reason: 1
+      }
+    }
+  ]);
+
+  return res.json({ success: true, data: templates });
+});
+export const renameAssignedExpense = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { oldTitle, newTitle } = req.body;
+
+  if (!oldTitle?.trim() || !newTitle?.trim()) {
+    return res.status(400).json({ success: false, message: 'oldTitle and newTitle are required' });
+  }
+  if (oldTitle.trim() === newTitle.trim()) {
+    return res.status(400).json({ success: false, message: 'New title must be different from old title' });
+  }
+
+  const result = await Payment.updateMany(
+    { description: oldTitle.trim(), 'metadata.isAssignedExpense': true },
+    { $set: { description: newTitle.trim() } }
+  );
+
+  console.log(`✏️ Renamed assigned expense "${oldTitle}" → "${newTitle}": ${result.modifiedCount} payments updated`);
+
+  return res.json({
+    success: true,
+    message: `${result.modifiedCount} payment(s) renamed to "${newTitle.trim()}"`,
+    data: { modifiedCount: result.modifiedCount }
+  });
+});
+
+export const rebuildCourtUsageReport = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  // Delete all existing court usage records
+  await CourtUsageReport.deleteMany({});
+
+  // Re-process all recorded payments, excluding assigned expenses
+  const recordedPayments = await Payment.find({
+    status: 'record',
+    'metadata.isAssignedExpense': { $ne: true }
+  });
+
+  console.log(`🔄 Rebuilding court usage report from ${recordedPayments.length} payments (excluding assigned expenses)...`);
+
+  for (const payment of recordedPayments) {
+    await updateCourtUsageReport(payment);
+  }
+
+  return res.json({
+    success: true,
+    message: `Court usage report rebuilt from ${recordedPayments.length} recorded payments`,
+    data: { processedPayments: recordedPayments.length }
+  });
+});

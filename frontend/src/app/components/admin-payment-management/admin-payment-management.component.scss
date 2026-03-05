@@ -852,3 +852,170 @@ button[mat-icon-button] {
     font-size: 14px;
   }
 }
+
+// ---- Header Actions ----
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-actions {
+  flex-shrink: 0;
+}
+
+.assign-expense-btn {
+  font-size: 14px;
+  padding: 0 16px;
+  height: 40px;
+
+  mat-icon {
+    margin-right: 6px;
+  }
+}
+
+// ---- Assign Expense Panel ----
+.assign-expense-card {
+  border-left: 4px solid #f59e0b;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.assign-expense-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.assign-expense-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.amount-date-row {
+  display: flex;
+  gap: 12px;
+
+  .amount-field { flex: 1; }
+  .date-field   { flex: 1; }
+}
+
+.assign-expense-members {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.members-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.members-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.selected-count {
+  color: #4f46e5;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.members-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.select-btn {
+  font-size: 12px;
+  padding: 0 8px;
+  min-width: 0;
+  height: 32px;
+}
+
+.member-search-field {
+  width: 100%;
+}
+
+.member-list {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #fafafa;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #f1f5f9;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: #f0f4ff;
+  }
+
+  &.member-selected {
+    background: #eef2ff;
+  }
+}
+
+.member-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  flex: 1;
+}
+
+.member-username {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.members-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.no-members {
+  padding: 16px;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+}
+
+.btn-spinner {
+  display: inline-block;
+  margin-right: 6px;
+}

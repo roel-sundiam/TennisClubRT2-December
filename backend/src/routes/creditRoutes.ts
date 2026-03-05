@@ -1,5 +1,5 @@
 import express from 'express';
-import { 
+import {
   getCreditBalance,
   getCreditTransactions,
   depositCredits,
@@ -8,7 +8,8 @@ import {
   refundCredits,
   getAllUserCredits,
   getAllCreditDeposits,
-  recordCreditDeposit
+  recordCreditDeposit,
+  getUserTransactions
 } from '../controllers/creditController';
 import { authenticateToken, requireApprovedUser, requireAdmin, requireFinancialAccess } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
@@ -68,6 +69,15 @@ router.get('/stats',
 
 // Admin routes - Allow financial access (treasurer, admin, superadmin)
 router.use(requireFinancialAccess);
+
+// Get a specific user's credit transaction history (admin only)
+router.get('/admin/user/:userId/transactions',
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+  query('type').optional().isIn(['deposit', 'deduction', 'refund', 'adjustment']),
+  validateRequest,
+  getUserTransactions
+);
 
 // Get all users' credit balances (admin only)
 router.get('/admin/all-balances',

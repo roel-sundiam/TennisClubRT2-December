@@ -6,6 +6,8 @@ import {
   createReservation,
   updateReservation,
   cancelReservation,
+  joinReservation,
+  leaveReservation,
   updateReservationStatus,
   completeReservation,
   getMyUpcomingReservations,
@@ -45,6 +47,12 @@ router.post('/',
   validateRequest,
   createReservation
 );
+
+// Join an existing reservation (requires membership fees paid)
+router.post('/:id/join', requireMembershipFees, joinReservation);
+
+// Leave a reservation the user previously joined
+router.post('/:id/leave', leaveReservation);
 
 // Update reservation (requires membership fees paid)
 router.put('/:id',

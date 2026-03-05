@@ -18,8 +18,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatListModule } from '@angular/material/list';
+import { MatDividerModule } from '@angular/material/divider';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { ActivatedRoute } from '@angular/router';
 import { PaymentEditDialogComponent } from './payment-edit-dialog/payment-edit-dialog.component';
+import { MemberService, Member } from '../../services/member.service';
 import { environment } from '../../../environments/environment';
 
 interface Payment {
@@ -96,7 +101,10 @@ interface OverdueMemberSummary {
     MatTooltipModule,
     MatMenuModule,
     MatDialogModule,
-    MatTabsModule
+    MatTabsModule,
+    MatCheckboxModule,
+    MatListModule,
+    MatDividerModule
   ],
   templateUrl: './admin-payment-management.component.html',
   styleUrl: './admin-payment-management.component.scss'
@@ -135,6 +143,20 @@ export class AdminPaymentManagementComponent implements OnInit {
   // Overdue Report
   overdueSummaries: OverdueMemberSummary[] = [];
 
+  // Assign Expense Panel
+  showAssignExpensePanel = false;
+  assignExpenseLoading = false;
+  membersForExpense: Member[] = [];
+  filteredMembersForExpense: Member[] = [];
+  selectedMemberIds = new Set<string>();
+  memberSearchTerm = '';
+  assignExpenseForm = {
+    title: '',
+    description: '',
+    amount: null as number | null,
+    dueDate: null as Date | null
+  };
+
   // Summary
   summary: PaymentSummary = {
     total: 0,
@@ -149,11 +171,19 @@ export class AdminPaymentManagementComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private memberService: MemberService,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     this.loadPayments();
+    this.route.queryParams.subscribe(params => {
+      if (params['action'] === 'assign-expense') {
+        this.showAssignExpensePanel = true;
+        this.loadMembersForExpense();
+      }
+    });
   }
 
   private getAuthHeaders(): HttpHeaders {
@@ -528,5 +558,118 @@ export class AdminPaymentManagementComponent implements OnInit {
 
   getTotalOverdueCount(): number {
     return this.overdueSummaries.reduce((sum, member) => sum + member.overdueCount, 0);
+  }
+
+  // ---- Assign Expense ----
+
+  toggleAssignExpensePanel(): void {
+    this.showAssignExpensePanel = !this.showAssignExpensePanel;
+    if (this.showAssignExpensePanel && this.membersForExpense.length === 0) {
+      this.loadMembersForExpense();
+    }
+    if (!this.showAssignExpensePanel) {
+      this.resetAssignExpenseForm();
+    }
+  }
+
+  loadMembersForExpense(): void {
+    this.memberService.getMembers({ approved: true, active: true, includeAll: true }).subscribe({
+      next: (response) => {
+        this.membersForExpense = (response.data || []).sort((a, b) =>
+          (a.fullName || a.username).localeCompare(b.fullName || b.username)
+        );
+        this.filteredMembersForExpense = [...this.membersForExpense];
+      },
+      error: () => {
+        this.snackBar.open('Failed to load members', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  filterMembersForExpense(): void {
+    const term = this.memberSearchTerm.toLowerCase();
+    this.filteredMembersForExpense = this.membersForExpense.filter(m =>
+      (m.fullName || '').toLowerCase().includes(term) ||
+      m.username.toLowerCase().includes(term)
+    );
+  }
+
+  toggleMemberSelection(memberId: string): void {
+    if (this.selectedMemberIds.has(memberId)) {
+      this.selectedMemberIds.delete(memberId);
+    } else {
+      this.selectedMemberIds.add(memberId);
+    }
+  }
+
+  isMemberSelected(memberId: string): boolean {
+    return this.selectedMemberIds.has(memberId);
+  }
+
+  selectAllMembers(): void {
+    this.filteredMembersForExpense.forEach(m => this.selectedMemberIds.add(m._id));
+  }
+
+  clearMemberSelection(): void {
+    this.selectedMemberIds.clear();
+  }
+
+  resetAssignExpenseForm(): void {
+    this.assignExpenseForm = { title: '', description: '', amount: null, dueDate: null };
+    this.selectedMemberIds.clear();
+    this.memberSearchTerm = '';
+    this.filteredMembersForExpense = [...this.membersForExpense];
+  }
+
+  submitAssignExpense(): void {
+    if (!this.assignExpenseForm.title?.trim()) {
+      this.snackBar.open('Expense title is required', 'Close', { duration: 3000 });
+      return;
+    }
+    if (!this.assignExpenseForm.amount || this.assignExpenseForm.amount <= 0) {
+      this.snackBar.open('Amount must be greater than 0', 'Close', { duration: 3000 });
+      return;
+    }
+    if (!this.assignExpenseForm.dueDate) {
+      this.snackBar.open('Due date is required', 'Close', { duration: 3000 });
+      return;
+    }
+    if (this.selectedMemberIds.size === 0) {
+      this.snackBar.open('Please select at least one member', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.assignExpenseLoading = true;
+
+    const payload = {
+      title: this.assignExpenseForm.title.trim(),
+      description: this.assignExpenseForm.description?.trim() || '',
+      amount: this.assignExpenseForm.amount,
+      dueDate: this.assignExpenseForm.dueDate,
+      memberIds: Array.from(this.selectedMemberIds)
+    };
+
+    this.http.post<any>(
+      `${this.apiUrl}/payments/assign-expense`,
+      payload,
+      { headers: this.getAuthHeaders() }
+    ).subscribe({
+      next: (response) => {
+        this.assignExpenseLoading = false;
+        const { count, skipped } = response.data;
+        let msg = `${count} pending payment(s) created for "${payload.title}"`;
+        if (skipped?.length > 0) {
+          msg += `. ${skipped.length} skipped (already assigned).`;
+        }
+        this.snackBar.open(msg, 'Close', { duration: 6000 });
+        this.showAssignExpensePanel = false;
+        this.resetAssignExpenseForm();
+        this.loadPayments();
+      },
+      error: (error) => {
+        this.assignExpenseLoading = false;
+        this.snackBar.open(error.error?.message || 'Failed to assign expense', 'Close', { duration: 5000 });
+      }
+    });
   }
 }

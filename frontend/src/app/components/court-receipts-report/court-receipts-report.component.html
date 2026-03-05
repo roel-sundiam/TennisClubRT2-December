@@ -281,6 +281,7 @@
                     <th>Payment Date</th>
                     <th>Reference #</th>
                     <th>Member</th>
+                    <th>Type</th>
                     <th>Reservation</th>
                     <th>Method</th>
                     <th>Amount</th>
@@ -303,12 +304,16 @@
                       </div>
                     </td>
                     <td>
+                      <span class="type-badge" [ngClass]="getPaymentType(payment).cssClass">
+                        {{getPaymentType(payment).label}}
+                      </span>
+                    </td>
+                    <td>
                       <div class="reservation-info">
                         <div>{{formatDate(payment.reservationDate)}}</div>
                         <div class="time-slot">
                           {{payment.timeSlotDisplay}}
                           <span *ngIf="payment.isPeakHour" class="badge peak-badge">Peak</span>
-                          <span *ngIf="payment.isOpenPlayEvent" class="badge open-play-badge">Open Play</span>
                         </div>
                       </div>
                     </td>
@@ -371,7 +376,7 @@
                 </tbody>
                 <tfoot>
                   <tr class="subtotal-row">
-                    <td colspan="6" class="subtotal-label">Subtotal</td>
+                    <td colspan="7" class="subtotal-label">Subtotal</td>
                     <td colspan="3" class="subtotal-amount">
                       <strong>₱{{getActivePaymentsSubtotal().toFixed(2)}}</strong>
                     </td>

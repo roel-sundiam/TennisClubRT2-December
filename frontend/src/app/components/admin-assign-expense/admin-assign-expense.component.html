@@ -1,0 +1,240 @@
+<div class="assign-expense-container">
+
+  <!-- Modern Header -->
+  <div class="modern-page-header">
+    <button class="modern-back-btn" (click)="goBack()" title="Back to Payment Management">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-content">
+      <div class="header-icon-wrapper">
+        <mat-icon class="header-icon">assignment_add</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Assign Expense</h1>
+        <p>Create pending payments for selected members</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Expense Templates -->
+  <div class="templates-section" *ngIf="templates.length > 0 || templatesLoading">
+    <div class="templates-header">
+      <mat-icon>history</mat-icon>
+      <span>Recent Expenses — click to reuse</span>
+    </div>
+    <div class="templates-list">
+      <div *ngIf="templatesLoading" class="template-loading">
+        <mat-spinner diameter="20"></mat-spinner>
+      </div>
+      <div *ngFor="let t of templates" class="template-chip-wrapper">
+        <!-- Normal chip view -->
+        <ng-container *ngIf="renamingTitle !== t.title">
+          <button
+            class="template-chip"
+            (click)="applyTemplate(t)"
+            [class.active]="form.title === t.title"
+            type="button">
+            <mat-icon class="template-icon">receipt</mat-icon>
+            <span class="template-title">{{ t.title }}</span>
+            <span class="template-amount">₱{{ t.amount.toFixed(2) }}</span>
+            <span class="template-count">used {{ t.useCount }}×</span>
+          </button>
+          <button class="rename-icon-btn" (click)="startRename(t, $event)" type="button" title="Rename expense title">
+            <mat-icon>edit</mat-icon>
+          </button>
+        </ng-container>
+
+        <!-- Inline rename view -->
+        <div *ngIf="renamingTitle === t.title" class="template-rename-chip">
+          <mat-icon class="template-icon">edit</mat-icon>
+          <input
+            class="rename-input"
+            [(ngModel)]="renameValue"
+            (keyup.enter)="confirmRename(t)"
+            (keyup.escape)="cancelRename()"
+            maxlength="200"
+            autofocus>
+          <button class="rename-confirm-btn" (click)="confirmRename(t)" type="button" title="Save new title">
+            <mat-icon>check</mat-icon>
+          </button>
+          <button class="rename-cancel-btn" (click)="cancelRename()" type="button" title="Cancel">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="main-layout">
+
+    <!-- Left: Expense Details -->
+    <div class="modern-card details-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <mat-icon>receipt_long</mat-icon>
+        </div>
+        <div class="card-title-section">
+          <h2 class="card-title">Expense Details</h2>
+          <p class="card-subtitle">Fill in the expense information</p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Expense Title -->
+        <div class="form-group">
+          <label class="form-label" for="expenseTitle">
+            <mat-icon>label</mat-icon>
+            <span>Expense Title</span>
+          </label>
+          <input 
+            type="text" 
+            id="expenseTitle"
+            class="form-input" 
+            [(ngModel)]="form.title" 
+            placeholder="e.g. Philippine Open Entry Fee" 
+            maxlength="200">
+          <div class="form-hint">{{ form.title.length }}/200 characters</div>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label class="form-label" for="expenseDescription">
+            <mat-icon>notes</mat-icon>
+            <span>Description / Notes (optional)</span>
+          </label>
+          <textarea 
+            id="expenseDescription"
+            class="form-textarea" 
+            [(ngModel)]="form.description" 
+            rows="3" 
+            maxlength="500"
+            placeholder="Additional details, payment instructions, etc."></textarea>
+        </div>
+
+        <!-- Amount -->
+        <div class="form-group">
+          <label class="form-label" for="expenseAmount">
+            <mat-icon>payments</mat-icon>
+            <span>Amount per Member (₱)</span>
+          </label>
+          <div class="input-with-prefix">
+            <span class="input-prefix">₱</span>
+            <input
+              type="number"
+              id="expenseAmount"
+              class="form-input with-prefix"
+              [(ngModel)]="form.amount"
+              min="1"
+              step="0.01"
+              placeholder="500.00">
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-section" *ngIf="selectedMemberIds.size > 0 && form.amount && form.amount > 0">
+          <div class="summary-card">
+            <div class="summary-item">
+              <mat-icon>group</mat-icon>
+              <span class="summary-label">Selected Members</span>
+              <span class="summary-value">{{ selectedMemberIds.size }}</span>
+            </div>
+            <div class="summary-item total">
+              <mat-icon>account_balance_wallet</mat-icon>
+              <span class="summary-label">Total Amount</span>
+              <span class="summary-value">₱{{ (selectedMemberIds.size * (form.amount || 0)).toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Actions -->
+      <div class="card-actions">
+        <button class="btn btn-secondary" (click)="reset()" [disabled]="submitting">
+          <mat-icon>restart_alt</mat-icon>
+          <span>Reset Form</span>
+        </button>
+        <button class="btn btn-primary" (click)="submit()" [disabled]="submitting || selectedMemberIds.size === 0">
+          <mat-spinner *ngIf="submitting" diameter="18" class="btn-spinner"></mat-spinner>
+          <mat-icon *ngIf="!submitting">send</mat-icon>
+          <span>{{ submitting ? 'Creating...' : 'Assign to ' + selectedMemberIds.size + ' Member(s)' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: Member Selection -->
+    <div class="modern-card members-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <mat-icon>group</mat-icon>
+        </div>
+        <div class="card-title-section">
+          <h2 class="card-title">Select Members</h2>
+          <p class="card-subtitle">
+            {{ selectedMemberIds.size > 0 ? selectedMemberIds.size + ' of ' + allMembers.length + ' selected' : allMembers.length + ' members available' }}
+          </p>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Search + Bulk Actions -->
+        <div class="member-toolbar">
+          <div class="search-wrapper">
+            <mat-icon class="search-icon">search</mat-icon>
+            <input 
+              type="text" 
+              class="search-input" 
+              [(ngModel)]="memberSearchTerm" 
+              (input)="filterMembers()" 
+              placeholder="Search members by name or username...">
+            <button class="clear-search-btn" *ngIf="memberSearchTerm" (click)="memberSearchTerm=''; filterMembers()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="bulk-actions">
+            <button class="btn-action" (click)="selectAll()" title="Select All">
+              <mat-icon>done_all</mat-icon>
+              <span>All</span>
+            </button>
+            <button class="btn-action" (click)="clearSelection()" title="Clear Selection">
+              <mat-icon>remove_done</mat-icon>
+              <span>None</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="membersLoading" class="members-loading">
+          <mat-spinner diameter="40"></mat-spinner>
+          <span>Loading members...</span>
+        </div>
+
+        <!-- Member List -->
+        <div *ngIf="!membersLoading" class="member-list">
+          <div *ngFor="let member of filteredMembers"
+            class="member-item"
+            [class.selected]="isMemberSelected(member._id)"
+            (click)="toggleMember(member._id)">
+            <input 
+              type="checkbox"
+              class="member-checkbox"
+              [checked]="isMemberSelected(member._id)"
+              (change)="toggleMember(member._id)"
+              (click)="$event.stopPropagation()">
+            <div class="member-details">
+              <span class="member-name">{{ member.fullName || member.username }}</span>
+              <span class="member-username">@{{ member.username }}</span>
+            </div>
+            <mat-icon class="check-icon">check_circle</mat-icon>
+          </div>
+
+          <div *ngIf="filteredMembers.length === 0" class="no-results">
+            <mat-icon>search_off</mat-icon>
+            <p>No members match "{{ memberSearchTerm }}"</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

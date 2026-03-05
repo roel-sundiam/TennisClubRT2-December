@@ -149,6 +149,35 @@ export class CreditService {
   }
 
   /**
+   * Admin: Get a specific user's credit transaction history
+   */
+  getUserCreditTransactions(userId: string, page = 1, limit = 10, type?: string): Observable<{
+    success: boolean;
+    data: {
+      transactions: CreditTransaction[];
+      pagination: {
+        current: number;
+        pages: number;
+        total: number;
+      };
+    };
+  }> {
+    const params: any = { page: page.toString(), limit: limit.toString() };
+    if (type) params.type = type;
+    return this.http.get<{
+      success: boolean;
+      data: {
+        transactions: CreditTransaction[];
+        pagination: {
+          current: number;
+          pages: number;
+          total: number;
+        };
+      };
+    }>(`${this.apiUrl}/credits/admin/user/${userId}/transactions`, { params });
+  }
+
+  /**
    * Admin: Get all users' credit balances
    */
   getAllUserCredits(page = 1, limit = 20, search?: string): Observable<{

@@ -59,7 +59,7 @@ interface Payment {
   transactionId?: string;
   referenceNumber: string;
   paymentDate?: Date;
-  dueDate: Date;
+  dueDate?: Date;
   description: string;
   formattedAmount: string;
   statusDisplay: string;
@@ -100,6 +100,9 @@ interface Payment {
     // Pay on behalf metadata
     paidOnBehalf?: boolean;
     originalDebtor?: string;
+    // Assigned expense metadata
+    isAssignedExpense?: boolean;
+    reason?: string;
     // Tennis balls metadata
     tennisBalls?: {
       quantity: number;
@@ -514,13 +517,13 @@ interface Notification {
                   <mat-icon>event</mat-icon>
                 </div>
                 <div class="reservation-info">
-                  <h4>{{isManualPayment() ? 'Manual Court Usage' : isOpenPlayPayment() ? 'Open Play Event' : 'Court Reservation'}}</h4>
+                  <h4>{{isManualPayment() ? 'Manual Court Usage' : isOpenPlayPayment() ? 'Open Play Event' : isAssignedExpensePayment() ? (selectedReservation?.timeSlotDisplay || 'Club Expense') : 'Court Reservation'}}</h4>
                   <div class="reservation-details">
-                    <div class="detail-item">
+                    <div class="detail-item" *ngIf="!isAssignedExpensePayment()">
                       <mat-icon>schedule</mat-icon>
                       <span>{{formatDate(selectedReservation.date)}} at {{selectedReservation.timeSlotDisplay}}</span>
                     </div>
-                    <div class="detail-item" *ngIf="!isOpenPlayPayment() && !isManualPayment()">
+                    <div class="detail-item" *ngIf="!isOpenPlayPayment() && !isManualPayment() && !isAssignedExpensePayment()">
                       <mat-icon>group</mat-icon>
                       <span>{{selectedReservation.players.length}} player{{selectedReservation.players.length !== 1 ? 's' : ''}}: {{formatPlayerNames(selectedReservation.players)}}</span>
                     </div>
@@ -549,7 +552,7 @@ interface Notification {
                 <!-- Payment Method -->
                 <!-- Court Fee -->
                 <div class="field">
-                  <label for="courtFee">Court Fee (₱) *</label>
+                  <label for="courtFee">{{isAssignedExpensePayment() ? (selectedReservation?.timeSlotDisplay || 'Expense Amount') + ' (₱) *' : 'Court Fee (₱) *'}}</label>
                   <input 
                     type="number" 
                     id="courtFee"
@@ -785,7 +788,7 @@ interface Notification {
                 <div class="payment-header">
                   <div class="payment-info">
                     <h4>
-                      {{payment.paymentType === 'cancellation_fee' ? 'Cancellation Fee' : payment.metadata?.isManualPayment ? 'Manual Court Usage' : payment.reservationId ? 'Court Reservation' : 'Open Play Event'}}
+                      {{payment.paymentType === 'cancellation_fee' ? 'Cancellation Fee' : payment.metadata?.isAssignedExpense ? payment.description : payment.metadata?.isManualPayment ? 'Manual Court Usage' : payment.reservationId ? 'Court Reservation' : 'Open Play Event'}}
                       <span class="overdue-badge" *ngIf="isPaymentOverdue(payment)">OVERDUE</span>
                     </h4>
                     <p>{{formatPaymentReservation(payment)}}</p>
@@ -855,6 +858,14 @@ interface Notification {
                         class="pay-btn"
                         (click)="payForManualPayment(payment)"
                         *ngIf="payment.metadata?.isManualPayment">
+                        Pay Now
+                      </button>
+
+                      <!-- Assigned expense payments - Pay Now -->
+                      <button
+                        class="pay-btn"
+                        (click)="payForAssignedExpense(payment)"
+                        *ngIf="payment.metadata?.isAssignedExpense">
                         Pay Now
                       </button>
 
@@ -1611,6 +1622,13 @@ export class PaymentsComponent implements OnInit {
       return;
     }
 
+    const isAssignedExpense = (this.selectedReservation as any)?.isAssignedExpense;
+    if (isAssignedExpense && originalPaymentId) {
+      console.log('🔍 Taking Assigned Expense path');
+      this.updateManualPayment(originalPaymentId, formValue.paymentMethod, formValue.transactionId);
+      return;
+    }
+
     // Check if this is for an existing payment that needs to be updated
     const existingPaymentId = (this.selectedReservation as any)?.existingPaymentId;
 
@@ -2070,6 +2088,11 @@ export class PaymentsComponent implements OnInit {
         year: 'numeric'
       });
       return `${date} - ${payment.pollId.title}`;
+    } else if (payment.metadata?.isAssignedExpense) {
+      const parts: string[] = [];
+      if (payment.metadata.reason) parts.push(payment.metadata.reason);
+      if (payment.metadata.createdBy) parts.push(`Assigned by ${payment.metadata.createdBy}`);
+      return parts.join(' • ') || 'Club Expense';
     }
     return 'N/A';
   }
@@ -2778,6 +2801,37 @@ export class PaymentsComponent implements OnInit {
     return !!(this.selectedReservation as any)?.isManualPayment;
   }
 
+  isAssignedExpensePayment(): boolean {
+    return !!(this.selectedReservation as any)?.isAssignedExpense;
+  }
+
+  payForAssignedExpense(payment: Payment): void {
+    if (!payment.metadata?.isAssignedExpense) return;
+
+    const expenseAsReservation: Reservation = {
+      _id: payment._id,
+      date: payment.createdAt || new Date(),
+      timeSlot: 0,
+      players: [],
+      timeSlotDisplay: payment.description,
+      status: 'confirmed',
+      paymentStatus: 'pending',
+      totalFee: payment.amount
+    };
+
+    (expenseAsReservation as any).isAssignedExpense = true;
+    (expenseAsReservation as any).originalPaymentId = payment._id;
+
+    this.selectedReservation = expenseAsReservation;
+    this.paymentForm.patchValue({
+      reservationId: payment._id,
+      paymentMethod: 'gcash',
+      courtFee: payment.amount
+    });
+
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+  }
+
   getTimeSlotInfo(): string {
     if (!this.selectedReservation) return '';
     
@@ -3302,6 +3356,10 @@ export class PaymentsComponent implements OnInit {
       return '₱' + this.selectedReservation.totalFee.toFixed(2);
     }
 
+    if (this.isAssignedExpensePayment()) {
+      return '₱' + this.selectedReservation.totalFee.toFixed(2);
+    }
+
     // Create a mock payment object for fee calculation
     const mockPayment = {
       reservationId: {
@@ -3538,6 +3596,10 @@ export class PaymentsComponent implements OnInit {
     }
 
     if (this.isManualPayment()) {
+      return this.selectedReservation.totalFee;
+    }
+
+    if (this.isAssignedExpensePayment()) {
       return this.selectedReservation.totalFee;
     }
 

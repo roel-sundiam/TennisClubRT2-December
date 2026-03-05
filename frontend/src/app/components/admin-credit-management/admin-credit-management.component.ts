@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatChipsModule } from '@angular/material/chips';
@@ -176,9 +176,9 @@ interface UserCreditInfo {
           </div>
 
           <!-- Pagination -->
-          <mat-paginator 
-            [length]="totalUsers" 
-            [pageSize]="pageSize" 
+          <mat-paginator
+            [length]="totalUsers"
+            [pageSize]="pageSize"
             [pageSizeOptions]="[10, 25, 50]"
             (page)="onPageChange($event)"
             showFirstLastButtons>
@@ -1303,6 +1303,7 @@ interface UserCreditInfo {
         justify-content: center;
       }
     }
+
   `]
 })
 export class AdminCreditManagementComponent implements OnInit {
@@ -1471,9 +1472,12 @@ export class AdminCreditManagementComponent implements OnInit {
   }
 
   viewUserHistory(user: UserCreditInfo): void {
-    // Navigate to user-specific credit history (to be implemented)
-    this.snackBar.open(`Credit history for ${user.fullName} - Feature coming soon!`, 'Close', { 
-      duration: 3000 
+    this.dialog.open(UserHistoryDialogComponent, {
+      data: user,
+      width: '720px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: 'history-dialog-panel'
     });
   }
 
@@ -1519,5 +1523,334 @@ export class AdminCreditManagementComponent implements OnInit {
 
   getTotalTransactions(): number {
     return this.creditStats?.totalTransactions || 0;
+  }
+}
+
+// ─── User Credit History Dialog ─────────────────────────────────────────────
+
+@Component({
+  selector: 'app-user-history-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatPaginatorModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+  ],
+  template: `
+    <div class="history-dialog">
+      <!-- Header -->
+      <div class="hd-header">
+        <div class="hd-title">
+          <mat-icon>history</mat-icon>
+          <div>
+            <h2>Transaction History</h2>
+            <p>{{data.fullName}} &nbsp;·&nbsp; Balance: <strong>₱{{data.creditBalance | number:'1.2-2'}}</strong></p>
+          </div>
+        </div>
+        <button class="hd-close" (click)="dialogRef.close()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="hd-body">
+        <!-- Loading -->
+        <div class="hd-loading" *ngIf="loading">
+          <mat-spinner diameter="44"></mat-spinner>
+          <span>Loading transactions...</span>
+        </div>
+
+        <!-- List -->
+        <div *ngIf="!loading">
+          <div class="hd-row" *ngFor="let tx of transactions">
+            <mat-icon class="hd-icon" [attr.data-type]="tx.type">{{getIcon(tx.type)}}</mat-icon>
+            <div class="hd-info">
+              <div class="hd-top">
+                <span class="hd-badge" [attr.data-type]="tx.type">{{tx.type | titlecase}}</span>
+                <span class="hd-desc">{{tx.description}}</span>
+              </div>
+              <div class="hd-meta">
+                <span class="hd-flow">₱{{tx.balanceBefore | number:'1.2-2'}} → ₱{{tx.balanceAfter | number:'1.2-2'}}</span>
+                <span class="hd-date">{{tx.createdAt | date:'MMM d, y, h:mm a'}}</span>
+              </div>
+            </div>
+            <div class="hd-amount" [class.pos]="isPositive(tx.type)" [class.neg]="!isPositive(tx.type)">
+              {{isPositive(tx.type) ? '+' : '−'}}₱{{tx.amount | number:'1.2-2'}}
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div class="hd-empty" *ngIf="transactions.length === 0">
+            <mat-icon>receipt_long</mat-icon>
+            <p>No transactions found for this member</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <mat-paginator
+        *ngIf="total > pageSize"
+        [length]="total"
+        [pageSize]="pageSize"
+        [pageIndex]="page"
+        [pageSizeOptions]="[5, 10, 25]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons>
+      </mat-paginator>
+    </div>
+  `,
+  styles: [`
+    .history-dialog {
+      display: flex;
+      flex-direction: column;
+      max-height: 85vh;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .hd-header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .hd-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: white;
+    }
+
+    .hd-title mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    .hd-title h2 {
+      margin: 0 0 4px 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .hd-title p {
+      margin: 0;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .hd-close {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .hd-close:hover { background: rgba(255,255,255,0.35); }
+
+    /* Body */
+    .hd-body {
+      overflow-y: auto;
+      flex: 1;
+      background: white;
+    }
+
+    /* Loading */
+    .hd-loading {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 40px 24px;
+      color: #64748b;
+      font-size: 1rem;
+    }
+
+    /* Rows */
+    .hd-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 24px;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s;
+    }
+
+    .hd-row:last-child { border-bottom: none; }
+    .hd-row:hover { background: #f8fafc; }
+
+    .hd-icon {
+      font-size: 26px;
+      width: 26px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+
+    .hd-icon[data-type="deposit"]    { color: #10b981; }
+    .hd-icon[data-type="deduction"]  { color: #ef4444; }
+    .hd-icon[data-type="refund"]     { color: #3b82f6; }
+    .hd-icon[data-type="adjustment"] { color: #8b5cf6; }
+
+    .hd-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .hd-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+      flex-wrap: wrap;
+    }
+
+    .hd-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      flex-shrink: 0;
+    }
+
+    .hd-badge[data-type="deposit"]    { background: #dcfce7; color: #166534; }
+    .hd-badge[data-type="deduction"]  { background: #fee2e2; color: #991b1b; }
+    .hd-badge[data-type="refund"]     { background: #dbeafe; color: #1e40af; }
+    .hd-badge[data-type="adjustment"] { background: #f3e8ff; color: #6b21a8; }
+
+    .hd-desc {
+      font-size: 0.9rem;
+      color: #374151;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hd-meta {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .hd-flow {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+
+    .hd-date {
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+
+    .hd-amount {
+      font-size: 1.05rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      min-width: 80px;
+      text-align: right;
+    }
+
+    .hd-amount.pos { color: #10b981; }
+    .hd-amount.neg { color: #ef4444; }
+
+    /* Empty */
+    .hd-empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: #94a3b8;
+    }
+
+    .hd-empty mat-icon {
+      font-size: 52px;
+      width: 52px;
+      height: 52px;
+      display: block;
+      margin: 0 auto 12px;
+      color: #cbd5e1;
+    }
+
+    .hd-empty p {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    @media (max-width: 480px) {
+      .hd-flow { display: none; }
+      .hd-desc { max-width: 130px; }
+    }
+  `]
+})
+export class UserHistoryDialogComponent implements OnInit {
+  transactions: CreditTransaction[] = [];
+  loading = false;
+  page = 0;
+  pageSize = 10;
+  total = 0;
+
+  constructor(
+    public dialogRef: MatDialogRef<UserHistoryDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: UserCreditInfo,
+    private creditService: CreditService,
+    private snackBar: MatSnackBar
+  ) {}
+
+  ngOnInit(): void {
+    this.loadTransactions(0, this.pageSize);
+  }
+
+  loadTransactions(page: number, pageSize: number): void {
+    this.loading = true;
+    this.creditService.getUserCreditTransactions(this.data._id, page + 1, pageSize)
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            this.transactions = res.data.transactions;
+            this.total = res.data.pagination.total;
+            this.page = page;
+          }
+          this.loading = false;
+        },
+        error: () => {
+          this.snackBar.open('Error loading transaction history', 'Close', { duration: 3000 });
+          this.loading = false;
+        }
+      });
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.pageSize = event.pageSize;
+    this.loadTransactions(event.pageIndex, event.pageSize);
+  }
+
+  getIcon(type: string): string {
+    switch (type) {
+      case 'deposit':    return 'add_circle';
+      case 'deduction':  return 'remove_circle';
+      case 'refund':     return 'refresh';
+      case 'adjustment': return 'tune';
+      default:           return 'account_balance';
+    }
+  }
+
+  isPositive(type: string): boolean {
+    return ['deposit', 'refund'].includes(type);
   }
 }

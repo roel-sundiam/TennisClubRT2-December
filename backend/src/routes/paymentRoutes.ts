@@ -25,7 +25,12 @@ import {
   updateMembershipPayment,
   deleteMembershipPayment,
   validateMembershipFeePayment,
-  getGCashConfig
+  getGCashConfig,
+  assignExpense,
+  assignExpenseValidation,
+  getExpenseTemplates,
+  renameAssignedExpense,
+  rebuildCourtUsageReport
 } from '../controllers/paymentController';
 import { authenticateToken, requireRole, requireFinancialAccess, AuthenticatedRequest } from '../middleware/auth';
 import { autoFixPaymentsMiddleware } from '../middleware/autoFixPayments';
@@ -78,6 +83,44 @@ router.post(
   payOnBehalfValidation,
   handleValidationErrors,
   payOnBehalf
+);
+
+/**
+ * @route GET /api/payments/expense-templates
+ * @desc Get distinct past assigned expense titles for quick re-use
+ * @access Private (Admin/SuperAdmin)
+ */
+router.get(
+  '/expense-templates',
+  authenticateToken,
+  requireRole(['admin', 'superadmin']),
+  getExpenseTemplates
+);
+
+/**
+ * @route POST /api/payments/assign-expense
+ * @desc Admin assigns an expense (e.g. tournament entry fee) to selected members as pending payments
+ * @access Private (Admin/SuperAdmin)
+ */
+router.post(
+  '/assign-expense',
+  authenticateToken,
+  requireRole(['admin', 'superadmin']),
+  assignExpenseValidation,
+  handleValidationErrors,
+  assignExpense
+);
+
+/**
+ * @route PATCH /api/payments/rename-assigned-expense
+ * @desc Rename all pending assigned expense payments from oldTitle to newTitle
+ * @access Private (Admin/SuperAdmin)
+ */
+router.patch(
+  '/rename-assigned-expense',
+  authenticateToken,
+  requireRole(['admin', 'superadmin']),
+  renameAssignedExpense
 );
 
 /**
@@ -166,6 +209,18 @@ router.post(
   authenticateToken,
   requireRole(['admin', 'superadmin']),
   cleanupDuplicatePayments
+);
+
+/**
+ * @route POST /api/payments/rebuild-court-usage-report
+ * @desc Rebuild CourtUsageReport from scratch, excluding assigned expenses
+ * @access Private (Admin/SuperAdmin)
+ */
+router.post(
+  '/rebuild-court-usage-report',
+  authenticateToken,
+  requireRole(['admin', 'superadmin']),
+  rebuildCourtUsageReport
 );
 
 // ======================

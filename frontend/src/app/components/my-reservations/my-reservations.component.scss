@@ -1077,6 +1077,68 @@ $container-padding-mobile: 1rem;
   }
 }
 
+.mobile-join-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.join-btn {
+  font-size: 0.8rem;
+  padding: 0 10px;
+  height: 32px;
+  line-height: 32px;
+  white-space: nowrap;
+  background-color: #166534 !important;
+  color: white !important;
+  border-color: #166534 !important;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    color: white;
+  }
+
+  &:hover:not([disabled]) {
+    background-color: #14532d !important;
+    border-color: #14532d !important;
+  }
+
+  &[disabled] {
+    opacity: 0.5;
+  }
+}
+
+.leave-btn {
+  font-size: 0.8rem;
+  padding: 0 10px;
+  height: 32px;
+  line-height: 32px;
+  white-space: nowrap;
+  background-color: #991b1b !important;
+  color: white !important;
+  border-color: #991b1b !important;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    color: white;
+  }
+
+  &:hover:not([disabled]) {
+    background-color: #7f1d1d !important;
+    border-color: #7f1d1d !important;
+  }
+
+  &[disabled] {
+    opacity: 0.5;
+  }
+}
+
 .card-actions {
   display: flex;
   gap: 0.5rem;
@@ -2434,6 +2496,181 @@ button:focus {
         transform: translateY(0);
       }
     }
+  }
+}
+
+// Confirm (non-danger) modal action button
+.modal-actions .btn-confirm {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+    transform: translateY(-2px);
+  }
+
+  &:active { transform: translateY(0); }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Join modal specific styles
+.join-modal-content { max-width: 480px; }
+
+.join-modal-body {
+  text-align: left;
+
+  .join-icon {
+    font-size: 3rem;
+    text-align: center;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+
+  > p {
+    text-align: center;
+    font-size: 1rem;
+    color: #374151;
+    margin: 0 0 1.25rem 0;
+  }
+}
+
+.join-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  margin: 1.25rem 0 0.6rem 0;
+
+  .join-section-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.join-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
+.join-player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .join-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+
+    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  }
+
+  .join-player-name {
+    font-size: 0.95rem;
+    color: #374151;
+    font-weight: 500;
+  }
+
+  &.join-you-row {
+    border-top: 1px dashed #cbd5e1;
+    margin-top: 4px;
+    padding-top: 8px;
+
+    .join-player-name { color: #1d4ed8; font-weight: 600; }
+  }
+}
+
+.join-you-avatar {
+  background: #2563eb !important;
+}
+
+.joining-badge {
+  font-size: 0.7rem;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-weight: 600;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.join-fee-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.join-fee-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .join-fee-label {
+    font-size: 0.9rem;
+    color: #6b7280;
+  }
+
+  .join-fee-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #059669;
+  }
+
+  &.join-fee-split .join-fee-value {
+    color: #1d4ed8;
+  }
+}
+
+.join-fee-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #6b7280;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 4px;
+  padding-top: 8px;
+  line-height: 1.5;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: #93c5fd;
   }
 }
 

@@ -66,9 +66,10 @@ export class SheetsService {
     const now = new Date();
     
     // Return cached data if still valid and not bypassing cache
+    // Deep copy so controller mutations (pushing expense lines) don't contaminate the cache
     if (this.cache && this.isCacheValid(now) && !bypassCache) {
       console.log('📊 Returning cached financial data');
-      return this.cache.data;
+      return JSON.parse(JSON.stringify(this.cache.data));
     }
 
     if (bypassCache) {

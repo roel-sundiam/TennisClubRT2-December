@@ -1139,17 +1139,18 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
 
     // Calculate recorded payments and add to Tennis Court Usage Receipts
     try {
-      // Get recorded payments from database (excluding membership fees, filtered by year)
+      // Get recorded payments from database (excluding membership fees and assigned expenses, filtered by year)
       const recordedPayments = await Payment.find({
         status: 'record',
         paymentMethod: { $ne: 'coins' },
         paymentType: { $ne: 'membership_fee' },
+        'metadata.isAssignedExpense': { $ne: true },
         paymentDate: { $gte: yearStart, $lte: yearEnd }
       });
 
       const totalRecordedAmount = recordedPayments.reduce((sum: number, payment: any) => sum + payment.amount, 0);
 
-      console.log(`💰 Found ${recordedPayments.length} recorded payments totaling ₱${totalRecordedAmount}`);
+      console.log(`💰 Found ${recordedPayments.length} recorded court payments totaling ₱${totalRecordedAmount}`);
 
       // Find Tennis Court Usage Receipts and add recorded payments
       const courtReceiptsIndex = financialData.receiptsCollections.findIndex((item: any) =>
@@ -1173,6 +1174,38 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
 
           console.log(`📊 Updated totals: receipts ₱${financialData.totalReceipts}, net income ₱${financialData.netIncome}, fund balance ₱${financialData.fundBalance}`);
         }
+      }
+
+      // Add each recorded assigned expense as its own line item grouped by description
+      const recordedExpenses = await Payment.find({
+        status: 'record',
+        paymentMethod: { $ne: 'coins' },
+        'metadata.isAssignedExpense': true,
+        paymentDate: { $gte: yearStart, $lte: yearEnd }
+      });
+
+      if (recordedExpenses.length > 0) {
+        // Group by description (expense title)
+        const expenseByTitle = new Map<string, number>();
+        for (const exp of recordedExpenses) {
+          const title = (exp as any).description || 'Assigned Expense';
+          expenseByTitle.set(title, (expenseByTitle.get(title) || 0) + (exp as any).amount);
+        }
+
+        // Insert each group as a separate line in receiptsCollections (before the last item)
+        for (const [title, amount] of expenseByTitle) {
+          financialData.receiptsCollections.push({ description: title, amount });
+          console.log(`💰 Added assigned expense line: "${title}" ₱${amount}`);
+        }
+
+        // Recalculate totals
+        financialData.totalReceipts = financialData.receiptsCollections.reduce(
+          (sum: number, item: any) => sum + item.amount, 0
+        );
+        financialData.netIncome = financialData.totalReceipts - financialData.totalDisbursements;
+        financialData.fundBalance = financialData.beginningBalance.amount + financialData.netIncome;
+
+        console.log(`📊 Updated totals after assigned expenses: receipts ₱${financialData.totalReceipts}, fund balance ₱${financialData.fundBalance}`);
       }
 
     } catch (error) {
@@ -1580,27 +1613,28 @@ export const forceRefreshFinancialReport = asyncHandler(async (req: Authenticate
     const currentYear = currentDate.getFullYear();
     freshData.period = `COVERING January 1, ${currentYear} - ${currentMonth} ${currentDay}, ${currentYear}`;
 
-    // Calculate recorded payments to add to the baseline
+    // Calculate recorded payments to add to the baseline (excluding assigned expenses)
     const Payment = (await import('../models/Payment')).default;
-    const recordedPayments = await Payment.find({ 
-      status: 'record', 
-      paymentMethod: { $ne: 'coins' }
+    const recordedPayments = await Payment.find({
+      status: 'record',
+      paymentMethod: { $ne: 'coins' },
+      'metadata.isAssignedExpense': { $ne: true }
     });
-    
+
     const totalRecordedAmount = recordedPayments.reduce((sum: number, payment: any) => sum + payment.amount, 0);
-    console.log(`💰 Found ${recordedPayments.length} recorded payments totaling ₱${totalRecordedAmount}`);
-    
+    console.log(`💰 Found ${recordedPayments.length} recorded court payments totaling ₱${totalRecordedAmount}`);
+
     // Calculate App Service Fee from only recorded payments - service fee only applies to recorded payments
     const serviceFeePercentage = 0.20; // 20% service fee
     const serviceablePayments = await Payment.find({
       status: 'record',
       paymentMethod: { $ne: 'coins' }
     });
-    
+
     let totalServiceFees = serviceablePayments.reduce((sum: number, payment: any) => {
       return sum + (payment.amount * serviceFeePercentage);
     }, 0);
-    
+
     // Fallback to known correct amount if calculation is different
     if (totalServiceFees !== 103.20) {
       console.log(`💰 Calculated App Service Fee from ${serviceablePayments.length} serviceable payments: ₱${totalServiceFees.toFixed(2)}`);
@@ -1609,29 +1643,55 @@ export const forceRefreshFinancialReport = asyncHandler(async (req: Authenticate
     } else {
       console.log(`💰 Calculated App Service Fee matches expected: ₱${totalServiceFees.toFixed(2)}`);
     }
-    
+
     // Find Tennis Court Usage Receipts and add recorded payments
-    const courtReceiptsIndex = freshData.receiptsCollections.findIndex((item: any) => 
+    const courtReceiptsIndex = freshData.receiptsCollections.findIndex((item: any) =>
       item.description === 'Tennis Court Usage Receipts'
     );
-    
+
     if (courtReceiptsIndex !== -1 && totalRecordedAmount > 0) {
       const courtReceiptsItem = freshData.receiptsCollections[courtReceiptsIndex];
       if (courtReceiptsItem) {
         const baselineAmount = courtReceiptsItem.amount;
         const newAmount = baselineAmount + totalRecordedAmount;
-        
+
         console.log(`🧮 Adjusting Tennis Court Usage Receipts: baseline ₱${baselineAmount} + recorded ₱${totalRecordedAmount} = ₱${newAmount}`);
-        
+
         courtReceiptsItem.amount = newAmount;
-        
+
         // Recalculate totals
         freshData.totalReceipts = freshData.receiptsCollections.reduce((sum: number, item: any) => sum + item.amount, 0);
         freshData.netIncome = freshData.totalReceipts - freshData.totalDisbursements;
         freshData.fundBalance = freshData.beginningBalance.amount + freshData.netIncome;
-        
+
         console.log(`📊 Updated totals: receipts ₱${freshData.totalReceipts}, net income ₱${freshData.netIncome}, fund balance ₱${freshData.fundBalance}`);
       }
+    }
+
+    // Add each recorded assigned expense as its own line item grouped by description
+    const recordedExpenses = await Payment.find({
+      status: 'record',
+      paymentMethod: { $ne: 'coins' },
+      'metadata.isAssignedExpense': true
+    });
+
+    if (recordedExpenses.length > 0) {
+      const expenseByTitle = new Map<string, number>();
+      for (const exp of recordedExpenses) {
+        const title = (exp as any).description || 'Assigned Expense';
+        expenseByTitle.set(title, (expenseByTitle.get(title) || 0) + (exp as any).amount);
+      }
+
+      for (const [title, amount] of expenseByTitle) {
+        freshData.receiptsCollections.push({ description: title, amount });
+        console.log(`💰 Added assigned expense line: "${title}" ₱${amount}`);
+      }
+
+      freshData.totalReceipts = freshData.receiptsCollections.reduce((sum: number, item: any) => sum + item.amount, 0);
+      freshData.netIncome = freshData.totalReceipts - freshData.totalDisbursements;
+      freshData.fundBalance = freshData.beginningBalance.amount + freshData.netIncome;
+
+      console.log(`📊 Updated totals after assigned expenses: receipts ₱${freshData.totalReceipts}, fund balance ₱${freshData.fundBalance}`);
     }
     
     // Add or update App Service Fee in disbursements (always include, even if 0)

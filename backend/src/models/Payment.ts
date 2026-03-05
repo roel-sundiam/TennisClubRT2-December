@@ -12,7 +12,7 @@ export interface IPaymentDocument extends Document {
   transactionId?: string;
   referenceNumber?: string;
   paymentDate?: Date;
-  dueDate: Date;
+  dueDate?: Date;
   description: string;
   notes?: string; // Additional notes, including admin overrides
   approvedBy?: string; // Admin who approved the payment
@@ -54,6 +54,9 @@ export interface IPaymentDocument extends Document {
     // Pay on behalf metadata
     paidOnBehalf?: boolean; // Indicates payment was made by someone else
     originalDebtor?: string; // Name of the person who owes the payment
+    // Assigned expense metadata
+    isAssignedExpense?: boolean; // Flag for admin-assigned expenses (e.g. tournament entry fees)
+    reason?: string; // Optional reason/notes for assigned expense
   };
   createdAt: Date;
   updatedAt: Date;
@@ -147,7 +150,6 @@ const paymentSchema = new Schema<IPaymentDocument>({
   },
   dueDate: {
     type: Date,
-    required: [true, 'Due date is required'],
     index: true
   },
   description: {
@@ -209,7 +211,10 @@ const paymentSchema = new Schema<IPaymentDocument>({
     },
     // Pay on behalf metadata
     paidOnBehalf: { type: Boolean },
-    originalDebtor: { type: String }
+    originalDebtor: { type: String },
+    // Assigned expense metadata
+    isAssignedExpense: { type: Boolean },
+    reason: { type: String }
   }
 }, {
   timestamps: true,
@@ -234,6 +239,7 @@ paymentSchema.pre('save', function(next) {
   // Check if this is a manual payment or membership fee
   const isManualPayment = payment.metadata?.isManualPayment;
   const isMembershipFee = payment.paymentType === 'membership_fee';
+  const isAssignedExpense = payment.metadata?.isAssignedExpense === true;
 
   // Validate payment type requirements
   if (isMembershipFee) {
@@ -246,6 +252,8 @@ paymentSchema.pre('save', function(next) {
     if (payment.reservationId || payment.pollId) {
       return next(new Error('Membership fee payments cannot have reservationId or pollId'));
     }
+  } else if (isAssignedExpense) {
+    // Admin-assigned expenses (e.g. tournament entry fees) — no reservationId/pollId required
   } else if (!isManualPayment) {
     // Regular court usage payments need reservationId or pollId
     if (!payment.reservationId && !payment.pollId) {
@@ -320,7 +328,7 @@ paymentSchema.virtual('isOverdue').get(function(this: IPaymentDocument) {
   if (this.status === 'completed' || this.status === 'refunded' || this.status === 'record') {
     return false;
   }
-  return new Date() > this.dueDate;
+  return this.dueDate ? new Date() > this.dueDate : false;
 });
 
 // Virtual for days until due
@@ -328,6 +336,7 @@ paymentSchema.virtual('daysUntilDue').get(function(this: IPaymentDocument) {
   if (this.status === 'completed' || this.status === 'refunded' || this.status === 'record') {
     return null;
   }
+  if (!this.dueDate) return null;
   const today = new Date();
   const diffTime = this.dueDate.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

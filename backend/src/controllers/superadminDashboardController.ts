@@ -126,10 +126,10 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
       // 7. Recent page views (last 20, excluding superadmin users and login/register pages)
       // NOTE: $lookup runs before $limit so superadmin visits don't consume the quota
       PageView.aggregate([
-        // Filter out login/register pages and anonymous visits
+        // Filter out login/register pages, anonymous visits, and invalid userIds
         {
           $match: {
-            userId: { $exists: true, $ne: '' },
+            userId: { $exists: true, $ne: '', $regex: /^[a-fA-F0-9]{24}$/ },
             page: { $nin: ['Login', 'Registration', 'Superadmin Dashboard'] }
           }
         },
@@ -217,6 +217,12 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
             totalAmount: { $sum: '$amount' },
             paymentCount: { $sum: 1 },
             oldestDueDate: { $min: '$dueDate' }
+          }
+        },
+        // Filter out any userId values that are not valid 24-char hex ObjectId strings
+        {
+          $match: {
+            _id: { $regex: /^[a-fA-F0-9]{24}$/ }
           }
         },
         // userId is stored as String in Payment model; convert to ObjectId for $lookup

@@ -201,6 +201,28 @@ interface AvatarInfo {
                       </div>
                     </div>
 
+                    <!-- Join / Leave buttons: after players, right-aligned -->
+                    <div *ngIf="canJoinReservation(reservation) || canLeaveReservation(reservation)"
+                         class="mobile-join-row" (click)="$event.stopPropagation()">
+                      <button *ngIf="canJoinReservation(reservation)"
+                              mat-stroked-button
+                              color="primary"
+                              class="join-btn"
+                              [disabled]="joiningReservationId === reservation._id"
+                              (click)="openJoinModal(reservation)">
+                        <mat-icon>group_add</mat-icon>
+                        {{joiningReservationId === reservation._id ? 'Joining...' : 'Join'}}
+                      </button>
+                      <button *ngIf="canLeaveReservation(reservation)"
+                              mat-stroked-button
+                              class="leave-btn"
+                              [disabled]="leavingReservationId === reservation._id"
+                              (click)="openLeaveModal(reservation)">
+                        <mat-icon>exit_to_app</mat-icon>
+                        {{leavingReservationId === reservation._id ? 'Leaving...' : 'Leave'}}
+                      </button>
+                    </div>
+
                     <!-- Weather Info -->
                     <div class="weather-row" *ngIf="reservation.weatherForecast">
                       <mat-icon class="weather-icon">{{getWeatherIcon(reservation.weatherForecast.icon)}}</mat-icon>
@@ -338,6 +360,25 @@ interface AvatarInfo {
                         </span>
                       </span>
                     </div>
+                    <!-- Join button -->
+                    <button *ngIf="canJoinReservation(reservation)"
+                            mat-stroked-button
+                            color="primary"
+                            class="join-btn"
+                            [disabled]="joiningReservationId === reservation._id"
+                            (click)="openJoinModal(reservation)">
+                      <mat-icon>group_add</mat-icon>
+                      {{joiningReservationId === reservation._id ? 'Joining...' : 'Join'}}
+                    </button>
+                    <!-- Leave button -->
+                    <button *ngIf="canLeaveReservation(reservation)"
+                            mat-stroked-button
+                            class="leave-btn"
+                            [disabled]="leavingReservationId === reservation._id"
+                            (click)="openLeaveModal(reservation)">
+                      <mat-icon>exit_to_app</mat-icon>
+                      {{leavingReservationId === reservation._id ? 'Leaving...' : 'Leave'}}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -854,6 +895,107 @@ interface AvatarInfo {
       </div>
     </div>
 
+    <!-- Join Confirmation Modal -->
+    <div class="modal-overlay" *ngIf="showJoinModal" (click)="closeJoinModal()">
+      <div class="modal-content join-modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Join Reservation</h2>
+          <button class="modal-close" (click)="closeJoinModal()">×</button>
+        </div>
+        <div class="modal-body join-modal-body" *ngIf="reservationToJoin">
+          <div class="join-icon">🎾</div>
+          <p>You're about to join this court reservation.</p>
+
+          <!-- Reservation details -->
+          <div class="reservation-details">
+            <strong>Date:</strong> {{reservationToJoin.date | date:'fullDate'}}<br>
+            <strong>Time:</strong> {{reservationToJoin.timeSlotDisplay}}<br>
+            <strong>Reserved by:</strong> {{reservationToJoin.userId?.fullName}}
+          </div>
+
+          <!-- Players section -->
+          <div class="join-section-label">
+            <mat-icon class="join-section-icon">people</mat-icon>
+            Players
+          </div>
+          <div class="join-player-list">
+            <div *ngFor="let playerName of getAllPlayers(reservationToJoin)" class="join-player-row">
+              <div class="avatar join-avatar" [style.background-color]="getAvatarColor(playerName)">
+                {{getInitials(playerName)}}
+              </div>
+              <span class="join-player-name">{{playerName}}</span>
+            </div>
+            <!-- Current user joining -->
+            <div class="join-player-row join-you-row">
+              <div class="avatar join-avatar join-you-avatar">
+                <mat-icon>person_add</mat-icon>
+              </div>
+              <span class="join-player-name">You <span class="joining-badge">joining</span></span>
+            </div>
+          </div>
+
+          <!-- Fee section -->
+          <div class="join-section-label">
+            <mat-icon class="join-section-icon">payments</mat-icon>
+            Fee Information
+          </div>
+          <div class="join-fee-box">
+            <div class="join-fee-row">
+              <span class="join-fee-label">Total court fee</span>
+              <span class="join-fee-value">₱{{reservationToJoin.totalFee}}</span>
+            </div>
+            <div class="join-fee-row join-fee-split">
+              <span class="join-fee-label">Split among members</span>
+              <span class="join-fee-value">{{getJoinMemberCount(reservationToJoin)}} → {{getJoinMemberCount(reservationToJoin) + 1}}</span>
+            </div>
+            <div class="join-fee-note">
+              <mat-icon>info</mat-icon>
+              The court fee will be recalculated and split equally among all members. Your share will be assigned as a pending payment after the session.
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" (click)="closeJoinModal()">Cancel</button>
+          <button class="btn-confirm" (click)="confirmJoin()">
+            <mat-icon style="font-size:18px;width:18px;height:18px;margin-right:6px;vertical-align:middle;">group_add</mat-icon>
+            Confirm Join
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leave Confirmation Modal -->
+    <div class="modal-overlay" *ngIf="showLeaveModal" (click)="closeLeaveModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Leave Reservation</h2>
+          <button class="modal-close" (click)="closeLeaveModal()">×</button>
+        </div>
+        <div class="modal-body" *ngIf="reservationToLeave">
+          <div class="warning-icon">🚪</div>
+          <p>Are you sure you want to leave this reservation?</p>
+
+          <div class="reservation-details">
+            <strong>Date:</strong> {{reservationToLeave.date | date:'fullDate'}}<br>
+            <strong>Time:</strong> {{reservationToLeave.timeSlotDisplay}}<br>
+            <strong>Reserved by:</strong> {{reservationToLeave.userId?.fullName}}<br>
+            <strong>Players:</strong> {{formatPlayerNames(getAllPlayers(reservationToLeave))}}
+          </div>
+
+          <div class="fee-warning" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;margin:12px 0;color:#991b1b;text-align:left;">
+            <strong>⚠️ Note</strong><br>
+            Your pending payment for this reservation will be cancelled. The remaining members' fees will be recalculated.
+          </div>
+
+          <p class="warning-text">This action cannot be undone.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" (click)="closeLeaveModal()">Keep My Spot</button>
+          <button class="btn-danger" (click)="confirmLeave()">Yes, Leave Reservation</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Cancel Confirmation Modal -->
     <div class="modal-overlay" *ngIf="showCancelModal" (click)="closeCancelModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
@@ -930,6 +1072,16 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
   // Cancel modal state
   showCancelModal = false;
   reservationToCancel: Reservation | null = null;
+
+  // Join state
+  joiningReservationId: string | null = null;
+  showJoinModal = false;
+  reservationToJoin: any = null;
+
+  // Leave state
+  leavingReservationId: string | null = null;
+  showLeaveModal = false;
+  reservationToLeave: any = null;
   
   private apiUrl = environment.apiUrl;
 
@@ -1972,6 +2124,138 @@ click "Try Again" below to reconnect.
 
   viewCalendar(): void {
     this.router.navigate(['/calendar']);
+  }
+
+  openJoinModal(reservation: any): void {
+    this.reservationToJoin = reservation;
+    this.showJoinModal = true;
+  }
+
+  closeJoinModal(): void {
+    this.showJoinModal = false;
+    this.reservationToJoin = null;
+  }
+
+  confirmJoin(): void {
+    if (!this.reservationToJoin) return;
+    const id = this.reservationToJoin._id;
+    this.closeJoinModal();
+    this.joinReservation(id);
+  }
+
+  // Count current members (reserver + member players) for fee display
+  getJoinMemberCount(reservation: any): number {
+    if (!reservation) return 1;
+    let count = 1; // reserver is always a member
+    (reservation.players as any[] || []).forEach((p: any) => {
+      const isMember = typeof p === 'object' ? p.isMember : true;
+      if (isMember) count++;
+    });
+    return count;
+  }
+
+  canJoinReservation(reservation: any): boolean {
+    if (!['pending', 'confirmed'].includes(reservation.status)) return false;
+    if (this.isBlockedReservation(reservation)) return false;
+    if (reservation.isHomeownerDay) return false;
+
+    const resDate = new Date(reservation.date);
+    resDate.setHours(reservation.timeSlot, 0, 0, 0);
+    if (resDate <= new Date()) return false;
+
+    const currentUserId = this.authService.currentUser?._id;
+    if (!currentUserId) return false;
+
+    // Don't show Join to the reserver
+    const reserverId = reservation.userId?._id || reservation.userId;
+    if (reserverId === currentUserId) return false;
+
+    // Don't show Join if current user is already a player
+    const alreadyIn = reservation.players?.some((p: any) => {
+      const uid = typeof p === 'object' ? (p.userId || p._id) : null;
+      return uid === currentUserId;
+    });
+    return !alreadyIn;
+  }
+
+  joinReservation(reservationId: string): void {
+    this.joiningReservationId = reservationId;
+    this.http.post<any>(`${this.apiUrl}/reservations/${reservationId}/join`, {}).subscribe({
+      next: () => {
+        this.joiningReservationId = null;
+        this.snackBar.open('Successfully joined the reservation!', 'Close', {
+          duration: 3000,
+          panelClass: ['success-snackbar']
+        });
+        this.loadAllReservations(false);
+      },
+      error: (err) => {
+        this.joiningReservationId = null;
+        const message = err.error?.message || 'Failed to join reservation';
+        this.snackBar.open(message, 'Close', {
+          duration: 4000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
+  }
+
+  canLeaveReservation(reservation: any): boolean {
+    if (!['pending', 'confirmed'].includes(reservation.status)) return false;
+    if (this.isBlockedReservation(reservation)) return false;
+    if (reservation.isHomeownerDay) return false;
+
+    const resDate = new Date(reservation.date);
+    resDate.setHours(reservation.timeSlot, 0, 0, 0);
+    if (resDate <= new Date()) return false;
+
+    const currentUserId = this.authService.currentUser?._id;
+    if (!currentUserId) return false;
+
+    // Reserver cannot leave — they must cancel
+    const reserverId = reservation.userId?._id || reservation.userId;
+    if (reserverId === currentUserId) return false;
+
+    // User must be in the players list
+    return reservation.players?.some((p: any) => {
+      const uid = typeof p === 'object' ? (p.userId || p._id) : null;
+      return uid === currentUserId;
+    }) ?? false;
+  }
+
+  openLeaveModal(reservation: any): void {
+    this.reservationToLeave = reservation;
+    this.showLeaveModal = true;
+  }
+
+  closeLeaveModal(): void {
+    this.showLeaveModal = false;
+    this.reservationToLeave = null;
+  }
+
+  confirmLeave(): void {
+    if (!this.reservationToLeave) return;
+    const id = this.reservationToLeave._id;
+    this.closeLeaveModal();
+    this.leavingReservationId = id;
+    this.http.post<any>(`${this.apiUrl}/reservations/${id}/leave`, {}).subscribe({
+      next: () => {
+        this.leavingReservationId = null;
+        this.snackBar.open('You have left the reservation.', 'Close', {
+          duration: 3000,
+          panelClass: ['success-snackbar']
+        });
+        this.loadAllReservations(false);
+      },
+      error: (err) => {
+        this.leavingReservationId = null;
+        const message = err.error?.message || 'Failed to leave reservation';
+        this.snackBar.open(message, 'Close', {
+          duration: 4000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   // New methods for All Reservations tab

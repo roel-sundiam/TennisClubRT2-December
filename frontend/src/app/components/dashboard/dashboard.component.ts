@@ -606,6 +606,31 @@ import { environment } from '../../../environments/environment';
               </mat-card-actions>
             </mat-card>
 
+            <!-- Assign Expense -->
+            <mat-card class="action-card admin-card" data-icon="assignment_add" data-title="Assign Expense" (click)="navigateTo('/admin/assign-expense')">
+              <!-- Mobile Icon -->
+              <div class="mobile-card-icon">
+                <mat-icon>assignment_add</mat-icon>
+              </div>
+              <div class="mobile-card-title">Assign Expense</div>
+
+              <!-- Desktop Content -->
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="action-icon admin-icon">assignment_add</mat-icon>
+                <mat-card-title>Assign Expense</mat-card-title>
+                <mat-card-subtitle>Charge members for shared expenses</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>Assign tournament entry fees or other expenses to selected members as pending payments.</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-raised-button class="admin-btn" (click)="navigateTo('/admin/assign-expense')">
+                  <mat-icon>assignment_add</mat-icon>
+                  Assign Expense
+                </button>
+              </mat-card-actions>
+            </mat-card>
+
             <!-- Poll Management -->
             <mat-card class="action-card admin-card" data-icon="poll" data-title="Poll Management" (click)="navigateTo('/admin/polls')">
               <!-- Mobile Icon -->

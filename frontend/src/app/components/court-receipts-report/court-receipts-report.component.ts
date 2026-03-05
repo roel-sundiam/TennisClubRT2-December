@@ -55,6 +55,8 @@ interface PaymentRecord {
     };
   };
   isOpenPlayEvent: boolean;
+  isAssignedExpense: boolean;
+  description?: string;
   openPlayParticipants: string[];
 }
 
@@ -209,6 +211,7 @@ export class CourtReceiptsReportComponent implements OnInit {
                 // Determine payment type
                 const isOpenPlayEvent = !!payment.pollId;
                 const isManualPayment = payment.metadata?.isManualPayment;
+                const isAssignedExpense = payment.metadata?.isAssignedExpense === true;
 
                 let players: string[] = [];
                 let reservationDate: string;
@@ -257,6 +260,8 @@ export class CourtReceiptsReportComponent implements OnInit {
                   players,
                   openPlayParticipants,
                   isOpenPlayEvent,
+                  isAssignedExpense,
+                  description: payment.description,
                   isPeakHour: payment.metadata?.isPeakHour || false
                 };
               }),
@@ -769,6 +774,19 @@ export class CourtReceiptsReportComponent implements OnInit {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  getPaymentType(payment: PaymentRecord): { label: string; cssClass: string } {
+    if (payment.isAssignedExpense) {
+      return { label: payment.description || 'Assigned Expense', cssClass: 'type-expense' };
+    }
+    if (payment.isOpenPlayEvent) {
+      return { label: 'Open Play Event', cssClass: 'type-open-play' };
+    }
+    if ((payment as any).metadata?.isManualPayment) {
+      return { label: 'Manual Court Usage', cssClass: 'type-manual' };
+    }
+    return { label: 'Court Reservation', cssClass: 'type-court' };
   }
 
   goBack(): void {
