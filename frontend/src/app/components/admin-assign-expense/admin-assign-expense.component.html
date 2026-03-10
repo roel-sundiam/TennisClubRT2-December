@@ -42,6 +42,9 @@
           <button class="rename-icon-btn" (click)="startRename(t, $event)" type="button" title="Rename expense title">
             <mat-icon>edit</mat-icon>
           </button>
+          <button class="delete-icon-btn" (click)="deleteExpense(t, $event)" [disabled]="deletingTitle === t.title" type="button" title="Delete expense and all payments">
+            <mat-icon>delete_forever</mat-icon>
+          </button>
         </ng-container>
 
         <!-- Inline rename view -->

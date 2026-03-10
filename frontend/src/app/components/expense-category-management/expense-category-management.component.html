@@ -1,276 +1,399 @@
-<div class="expense-category-management">
-  <!-- Header -->
-  <div class="header">
-    <h2>Expense Category Management</h2>
-    <p class="subtitle">Manage expense categories dynamically</p>
+<div class="modern-category-management">
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <mat-icon class="stat-icon">category</mat-icon>
+      <div class="stat-content">
+        <span class="stat-value">{{ totalCategories }}</span>
+        <span class="stat-label">Total Categories</span>
+      </div>
+    </div>
+    <div class="stat-item active">
+      <mat-icon class="stat-icon">check_circle</mat-icon>
+      <div class="stat-content">
+        <span class="stat-value">{{ activeCategories }}</span>
+        <span class="stat-label">Active</span>
+      </div>
+    </div>
+    <div class="stat-item inactive">
+      <mat-icon class="stat-icon">cancel</mat-icon>
+      <div class="stat-content">
+        <span class="stat-value">{{ inactiveCategories }}</span>
+        <span class="stat-label">Inactive</span>
+      </div>
+    </div>
   </div>
 
-  <!-- Summary Cards -->
-  <div class="summary-cards">
-    <mat-card class="summary-card">
-      <mat-card-content>
-        <div class="stat-icon">
-          <mat-icon>category</mat-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-label">Total Categories</div>
-          <div class="stat-value">{{ totalCategories }}</div>
-        </div>
-      </mat-card-content>
-    </mat-card>
+  <!-- Main Content Tabs -->
+  <mat-tab-group class="modern-tabs">
+    <!-- Category List Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>list</mat-icon>
+        Category List
+      </ng-template>
 
-    <mat-card class="summary-card active">
-      <mat-card-content>
-        <div class="stat-icon">
-          <mat-icon>check_circle</mat-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-label">Active</div>
-          <div class="stat-value">{{ activeCategories }}</div>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="summary-card inactive">
-      <mat-card-content>
-        <div class="stat-icon">
-          <mat-icon>cancel</mat-icon>
-        </div>
-        <div class="stat-info">
-          <div class="stat-label">Inactive</div>
-          <div class="stat-value">{{ inactiveCategories }}</div>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
-  <!-- Main Content -->
-  <mat-card class="main-card">
-    <mat-tab-group>
-      <!-- Tab 1: Category List -->
-      <mat-tab label="Category List">
-        <div class="tab-content">
-          <!-- Filter Buttons -->
-          <div class="filter-buttons">
-            <button mat-stroked-button
-                    [color]="filterStatus === 'all' ? 'primary' : ''"
-                    (click)="setFilter('all')">
-              All Categories
-            </button>
-            <button mat-stroked-button
-                    [color]="filterStatus === 'active' ? 'primary' : ''"
-                    (click)="setFilter('active')">
-              Active Only
-            </button>
-            <button mat-stroked-button
-                    [color]="filterStatus === 'inactive' ? 'primary' : ''"
-                    (click)="setFilter('inactive')">
-              Inactive Only
-            </button>
+      <div class="tab-content modern-list-container">
+        <!-- Modern Toolbar -->
+        <div class="modern-toolbar">
+          <div class="toolbar-left">
+            <div class="filter-group">
+              <label for="statusFilter" class="filter-label">
+                <mat-icon class="label-icon">filter_alt</mat-icon>
+                Filter by Status
+              </label>
+              <select
+                id="statusFilter"
+                class="modern-select"
+                [(ngModel)]="filterStatus"
+                (change)="setFilter(filterStatus)"
+              >
+                <option value="all">All Categories</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Inactive Only</option>
+              </select>
+            </div>
           </div>
+        </div>
 
-          <!-- Loading Spinner -->
-          <div *ngIf="isLoading" class="loading-container">
-            <mat-spinner diameter="50"></mat-spinner>
-          </div>
+        <!-- Loading State -->
+        <div *ngIf="isLoading" class="modern-loading">
+          <mat-spinner diameter="50"></mat-spinner>
+          <p class="loading-text">Loading categories...</p>
+        </div>
 
-          <!-- Category Table -->
-          <div *ngIf="!isLoading" class="table-container">
-            <table mat-table
-                   [dataSource]="filteredCategories"
-                   cdkDropList
-                   (cdkDropListDropped)="onDrop($event)"
-                   class="category-table">
-
-              <!-- Drag Handle Column -->
-              <ng-container matColumnDef="dragHandle">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let category">
-                  <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
+        <!-- Modern Table -->
+        <div *ngIf="!isLoading && filteredCategories.length > 0" class="modern-table-wrapper">
+          <table class="modern-table" cdkDropList (cdkDropListDropped)="onDrop($event)">
+            <thead>
+              <tr>
+                <th class="col-drag"></th>
+                <th class="col-name">
+                  <div class="header-content">
+                    <mat-icon>category</mat-icon>
+                    <span>Name</span>
+                  </div>
+                </th>
+                <th class="col-color">
+                  <div class="header-content">
+                    <mat-icon>palette</mat-icon>
+                    <span>Color</span>
+                  </div>
+                </th>
+                <th class="col-description">
+                  <div class="header-content">
+                    <mat-icon>description</mat-icon>
+                    <span>Description</span>
+                  </div>
+                </th>
+                <th class="col-usage">
+                  <div class="header-content">
+                    <mat-icon>analytics</mat-icon>
+                    <span>Usage</span>
+                  </div>
+                </th>
+                <th class="col-status">
+                  <div class="header-content">
+                    <mat-icon>info</mat-icon>
+                    <span>Status</span>
+                  </div>
+                </th>
+                <th class="col-actions">
+                  <div class="header-content">
+                    <mat-icon>settings</mat-icon>
+                    <span>Actions</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let category of filteredCategories" class="category-row" cdkDrag>
+                <td class="col-drag">
+                  <mat-icon class="drag-handle" cdkDragHandle>drag_indicator</mat-icon>
                 </td>
-              </ng-container>
-
-              <!-- Name Column -->
-              <ng-container matColumnDef="name">
-                <th mat-header-cell *matHeaderCellDef>Name</th>
-                <td mat-cell *matCellDef="let category" cdkDrag>
+                <td class="col-name">
                   <div class="name-cell">
-                    <mat-icon *ngIf="category.icon" class="category-icon">{{ category.icon }}</mat-icon>
-                    <span>{{ category.name }}</span>
+                    <mat-icon *ngIf="category.icon" class="category-icon">{{
+                      category.icon
+                    }}</mat-icon>
+                    <span class="name-text">{{ category.name }}</span>
                   </div>
                 </td>
-              </ng-container>
-
-              <!-- Color Column -->
-              <ng-container matColumnDef="color">
-                <th mat-header-cell *matHeaderCellDef>Color</th>
-                <td mat-cell *matCellDef="let category">
-                  <mat-chip *ngIf="category.color"
-                            [style.background-color]="category.color"
-                            [style.color]="'white'">
+                <td class="col-color">
+                  <span
+                    *ngIf="category.color"
+                    class="color-badge"
+                    [style.background-color]="category.color"
+                  >
                     {{ category.color }}
-                  </mat-chip>
-                  <span *ngIf="!category.color" class="no-color">-</span>
+                  </span>
+                  <span *ngIf="!category.color" class="no-value">-</span>
                 </td>
-              </ng-container>
-
-              <!-- Description Column -->
-              <ng-container matColumnDef="description">
-                <th mat-header-cell *matHeaderCellDef>Description</th>
-                <td mat-cell *matCellDef="let category">
-                  <span class="description-text">{{ category.description || '-' }}</span>
+                <td class="col-description">
+                  <span class="description-text" [title]="category.description">
+                    {{ category.description || '-' }}
+                  </span>
                 </td>
-              </ng-container>
-
-              <!-- Usage Count Column -->
-              <ng-container matColumnDef="usageCount">
-                <th mat-header-cell *matHeaderCellDef>Usage</th>
-                <td mat-cell *matCellDef="let category">
-                  <mat-chip class="usage-chip">
+                <td class="col-usage">
+                  <span class="usage-badge">
                     {{ category.usageCount !== undefined ? category.usageCount : '...' }}
-                  </mat-chip>
+                  </span>
                 </td>
-              </ng-container>
-
-              <!-- Status Column -->
-              <ng-container matColumnDef="isActive">
-                <th mat-header-cell *matHeaderCellDef>Status</th>
-                <td mat-cell *matCellDef="let category">
-                  <mat-chip [class.active-chip]="category.isActive"
-                            [class.inactive-chip]="!category.isActive">
+                <td class="col-status">
+                  <span
+                    class="status-badge"
+                    [class.status-active]="category.isActive"
+                    [class.status-inactive]="!category.isActive"
+                  >
                     {{ category.isActive ? 'Active' : 'Inactive' }}
-                  </mat-chip>
+                  </span>
                 </td>
-              </ng-container>
-
-              <!-- Actions Column -->
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Actions</th>
-                <td mat-cell *matCellDef="let category">
+                <td class="col-actions">
                   <div class="action-buttons">
-                    <button mat-icon-button
-                            color="primary"
-                            (click)="editCategory(category)"
-                            matTooltip="Edit">
+                    <button
+                      class="action-btn edit-btn"
+                      (click)="editCategory(category)"
+                      title="Edit category"
+                    >
                       <mat-icon>edit</mat-icon>
                     </button>
-
-                    <button mat-icon-button
-                            [color]="category.isActive ? 'warn' : 'accent'"
-                            (click)="toggleActivation(category)"
-                            [matTooltip]="category.isActive ? 'Deactivate' : 'Activate'"
-                            [disabled]="category.isActive && category.usageCount && category.usageCount > 0">
+                    <button
+                      class="action-btn toggle-btn"
+                      [class.inactive-mode]="!category.isActive"
+                      (click)="toggleActivation(category)"
+                      [disabled]="
+                        category.isActive && category.usageCount && category.usageCount > 0
+                      "
+                      [title]="category.isActive ? 'Deactivate' : 'Activate'"
+                    >
                       <mat-icon>{{ category.isActive ? 'toggle_on' : 'toggle_off' }}</mat-icon>
                     </button>
-
-                    <button mat-icon-button
-                            color="warn"
-                            (click)="deleteCategory(category)"
-                            matTooltip="Delete (Deactivate)"
-                            [disabled]="category.usageCount && category.usageCount > 0">
+                    <button
+                      class="action-btn delete-btn"
+                      (click)="deleteCategory(category)"
+                      [disabled]="category.usageCount && category.usageCount > 0"
+                      title="Delete category"
+                    >
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
                 </td>
-              </ng-container>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;" cdkDrag></tr>
-            </table>
+        <!-- Empty State -->
+        <div *ngIf="!isLoading && filteredCategories.length === 0" class="modern-empty-state">
+          <div class="empty-illustration">
+            <mat-icon>inbox</mat-icon>
+          </div>
+          <h3 class="empty-title">No categories found</h3>
+          <p class="empty-message">
+            {{
+              filterStatus === 'all'
+                ? 'Start by creating your first expense category.'
+                : 'No ' + filterStatus + ' categories available.'
+            }}
+          </p>
+        </div>
+      </div>
+    </mat-tab>
 
-            <div *ngIf="filteredCategories.length === 0" class="no-data">
-              <mat-icon>inbox</mat-icon>
-              <p>No categories found</p>
+    <!-- Add/Edit Category Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>{{ isEditMode ? 'edit' : 'add_circle_outline' }}</mat-icon>
+        {{ isEditMode ? 'Edit' : 'Add' }} Category
+      </ng-template>
+
+      <div class="tab-content modern-form-container">
+        <div class="modern-form-card">
+          <!-- Form Header -->
+          <div class="form-header">
+            <div class="header-icon" [ngClass]="isEditMode ? 'edit-mode' : 'add-mode'">
+              <mat-icon>{{ isEditMode ? 'edit' : 'add_circle_outline' }}</mat-icon>
+            </div>
+            <div class="header-text">
+              <h2 class="form-title">{{ isEditMode ? 'Edit' : 'Create New' }} Category</h2>
+              <p class="form-subtitle">
+                {{
+                  isEditMode
+                    ? 'Update the category information below'
+                    : 'Configure a new expense category'
+                }}
+              </p>
             </div>
           </div>
-        </div>
-      </mat-tab>
 
-      <!-- Tab 2: Add/Edit Category Form -->
-      <mat-tab label="Add/Edit Category">
-        <div class="tab-content">
-          <div class="form-container">
-            <h3>{{ isEditMode ? 'Edit Category' : 'Add New Category' }}</h3>
-
-            <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
+          <!-- Form Body -->
+          <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()" class="modern-category-form">
+            <div class="form-grid">
               <!-- Name Field -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Category Name *</mat-label>
-                <input matInput
-                       formControlName="name"
-                       placeholder="Enter category name"
-                       required>
-                <mat-error *ngIf="categoryForm.get('name')?.hasError('required')">
-                  Name is required
-                </mat-error>
-                <mat-error *ngIf="categoryForm.get('name')?.hasError('minlength')">
-                  Name must be at least 3 characters
-                </mat-error>
-                <mat-error *ngIf="categoryForm.get('name')?.hasError('maxlength')">
-                  Name must not exceed 100 characters
-                </mat-error>
-              </mat-form-field>
-
-              <!-- Description Field -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Description</mat-label>
-                <textarea matInput
-                          formControlName="description"
-                          placeholder="Enter category description"
-                          rows="3"></textarea>
-                <mat-error *ngIf="categoryForm.get('description')?.hasError('maxlength')">
-                  Description must not exceed 500 characters
-                </mat-error>
-              </mat-form-field>
-
-              <!-- Color Field -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Color (Hex Format)</mat-label>
-                <input matInput
-                       formControlName="color"
-                       placeholder="#FF5733"
-                       type="color">
-                <mat-hint>Format: #RRGGBB</mat-hint>
-                <mat-error *ngIf="categoryForm.get('color')?.hasError('pattern')">
-                  Color must be in hex format (#RRGGBB)
-                </mat-error>
-              </mat-form-field>
-
-              <!-- Icon Field -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Icon</mat-label>
-                <mat-select formControlName="icon" placeholder="Select icon">
-                  <mat-option [value]="''">None</mat-option>
-                  <mat-option *ngFor="let icon of materialIcons" [value]="icon">
-                    <mat-icon>{{ icon }}</mat-icon>
-                    {{ icon }}
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <!-- Action Buttons -->
-              <div class="form-actions">
-                <button mat-raised-button
-                        color="primary"
-                        type="submit"
-                        [disabled]="categoryForm.invalid || isSaving">
-                  <mat-icon>{{ isEditMode ? 'save' : 'add' }}</mat-icon>
-                  {{ isEditMode ? 'Update Category' : 'Create Category' }}
-                </button>
-
-                <button mat-stroked-button
-                        type="button"
-                        (click)="cancelEdit()"
-                        [disabled]="isSaving">
-                  Cancel
-                </button>
+              <div class="form-group full-width">
+                <label for="categoryName" class="form-label">
+                  <mat-icon class="label-icon">label</mat-icon>
+                  <span>Category Name</span>
+                  <span class="required-mark">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="categoryName"
+                  class="modern-input"
+                  [class.input-error]="
+                    categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched
+                  "
+                  formControlName="name"
+                  placeholder="Enter category name"
+                  maxlength="100"
+                  required
+                />
+                <div class="char-counter">
+                  {{ categoryForm.get('name')?.value?.length || 0 }} / 100 characters
+                </div>
+                <div
+                  class="error-message"
+                  *ngIf="
+                    categoryForm.get('name')?.hasError('required') &&
+                    categoryForm.get('name')?.touched
+                  "
+                >
+                  <mat-icon>error</mat-icon>
+                  <span>Category name is required</span>
+                </div>
+                <div
+                  class="error-message"
+                  *ngIf="
+                    categoryForm.get('name')?.hasError('minlength') &&
+                    categoryForm.get('name')?.touched
+                  "
+                >
+                  <mat-icon>error</mat-icon>
+                  <span>Name must be at least 3 characters</span>
+                </div>
               </div>
 
-              <mat-spinner *ngIf="isSaving" diameter="30" class="form-spinner"></mat-spinner>
-            </form>
-          </div>
+              <!-- Description Field -->
+              <div class="form-group full-width">
+                <label for="categoryDescription" class="form-label">
+                  <mat-icon class="label-icon">description</mat-icon>
+                  <span>Description</span>
+                </label>
+                <textarea
+                  id="categoryDescription"
+                  class="modern-textarea"
+                  [class.input-error]="
+                    categoryForm.get('description')?.invalid &&
+                    categoryForm.get('description')?.touched
+                  "
+                  formControlName="description"
+                  rows="3"
+                  placeholder="Enter a brief description (optional)"
+                  maxlength="500"
+                ></textarea>
+                <div class="char-counter">
+                  {{ categoryForm.get('description')?.value?.length || 0 }} / 500 characters
+                </div>
+                <div
+                  class="error-message"
+                  *ngIf="
+                    categoryForm.get('description')?.hasError('maxlength') &&
+                    categoryForm.get('description')?.touched
+                  "
+                >
+                  <mat-icon>error</mat-icon>
+                  <span>Description must not exceed 500 characters</span>
+                </div>
+              </div>
+
+              <!-- Color Field -->
+              <div class="form-group">
+                <label for="categoryColor" class="form-label">
+                  <mat-icon class="label-icon">palette</mat-icon>
+                  <span>Color</span>
+                </label>
+                <div class="color-input-wrapper">
+                  <input
+                    type="color"
+                    id="categoryColor"
+                    class="modern-color-input"
+                    [class.input-error]="
+                      categoryForm.get('color')?.invalid && categoryForm.get('color')?.touched
+                    "
+                    formControlName="color"
+                  />
+                  <input
+                    type="text"
+                    class="modern-input color-text-input"
+                    [class.input-error]="
+                      categoryForm.get('color')?.invalid && categoryForm.get('color')?.touched
+                    "
+                    formControlName="color"
+                    placeholder="#FF5733"
+                    maxlength="7"
+                    pattern="^#[0-9A-Fa-f]{6}$"
+                  />
+                </div>
+                <div class="input-hint">Select a color or enter hex code (e.g., #FF5733)</div>
+                <div
+                  class="error-message"
+                  *ngIf="
+                    categoryForm.get('color')?.hasError('pattern') &&
+                    categoryForm.get('color')?.touched
+                  "
+                >
+                  <mat-icon>error</mat-icon>
+                  <span>Color must be in hex format (#RRGGBB)</span>
+                </div>
+              </div>
+
+              <!-- Icon Field -->
+              <div class="form-group">
+                <label for="categoryIcon" class="form-label">
+                  <mat-icon class="label-icon">emoji_symbols</mat-icon>
+                  <span>Icon</span>
+                </label>
+                <select id="categoryIcon" class="modern-select icon-select" formControlName="icon">
+                  <option value="">No icon</option>
+                  <option *ngFor="let icon of materialIcons" [value]="icon">
+                    {{ icon }}
+                  </option>
+                </select>
+                <div class="icon-preview" *ngIf="categoryForm.get('icon')?.value">
+                  <mat-icon>{{ categoryForm.get('icon')?.value }}</mat-icon>
+                  <span>Preview</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button
+                type="button"
+                class="modern-btn cancel-btn"
+                (click)="cancelEdit()"
+                [disabled]="isSaving"
+              >
+                <mat-icon>close</mat-icon>
+                <span>Cancel</span>
+              </button>
+              <button
+                type="submit"
+                class="modern-btn submit-btn"
+                [class.submitting]="isSaving"
+                [disabled]="categoryForm.invalid || isSaving"
+              >
+                <mat-icon>{{
+                  isSaving ? 'hourglass_empty' : isEditMode ? 'save' : 'add_circle'
+                }}</mat-icon>
+                <span>{{
+                  isSaving ? 'Saving...' : isEditMode ? 'Update Category' : 'Create Category'
+                }}</span>
+              </button>
+            </div>
+          </form>
         </div>
-      </mat-tab>
-    </mat-tab-group>
-  </mat-card>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>

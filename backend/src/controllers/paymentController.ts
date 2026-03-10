@@ -3154,10 +3154,12 @@ export const assignExpense = asyncHandler(async (req: AuthenticatedRequest, res:
   }
 
   const createdPayments: any[] = [];
-  const skippedMembers: string[] = [];
+  const updatedPayments: any[] = [];
 
   for (const member of members) {
-    // Duplicate guard: skip if a pending assigned expense with the same title already exists for this member
+    const memberName = (member as any).fullName || (member as any).username;
+
+    // If a pending assigned expense with the same title already exists, update its amount instead of skipping
     const existing = await Payment.findOne({
       userId: member._id.toString(),
       description: title,
@@ -3166,7 +3168,10 @@ export const assignExpense = asyncHandler(async (req: AuthenticatedRequest, res:
     });
 
     if (existing) {
-      skippedMembers.push((member as any).fullName || (member as any).username);
+      existing.amount = Number(amount);
+      if (description) (existing.metadata as any).reason = description;
+      await existing.save();
+      updatedPayments.push({ memberName, amount: existing.amount });
       continue;
     }
 
@@ -3190,18 +3195,23 @@ export const assignExpense = asyncHandler(async (req: AuthenticatedRequest, res:
     createdPayments.push({
       paymentId: payment._id,
       memberId: member._id,
-      memberName: (member as any).fullName || (member as any).username,
+      memberName,
       amount: payment.amount,
       referenceNumber: payment.referenceNumber
     });
   }
 
+  const parts: string[] = [];
+  if (createdPayments.length > 0) parts.push(`${createdPayments.length} payment(s) created`);
+  if (updatedPayments.length > 0) parts.push(`${updatedPayments.length} payment(s) updated to ₱${Number(amount).toFixed(2)}`);
+  const message = parts.length > 0 ? parts.join(', ') + ` for "${title}"` : `No changes made for "${title}"`;
+
   return res.status(201).json({
     success: true,
-    message: `${createdPayments.length} pending payment(s) created${skippedMembers.length > 0 ? `. Skipped ${skippedMembers.length} member(s) with existing pending payment for this expense.` : ''}`,
+    message,
     data: {
       created: createdPayments,
-      skipped: skippedMembers,
+      updated: updatedPayments,
       count: createdPayments.length
     }
   });
@@ -3265,6 +3275,23 @@ export const renameAssignedExpense = asyncHandler(async (req: AuthenticatedReque
     success: true,
     message: `${result.modifiedCount} payment(s) renamed to "${newTitle.trim()}"`,
     data: { modifiedCount: result.modifiedCount }
+  });
+});
+
+export const deleteAssignedExpense = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { title } = req.body;
+  if (!title?.trim()) {
+    return res.status(400).json({ success: false, message: 'title is required' });
+  }
+  const result = await Payment.deleteMany({
+    description: title.trim(),
+    'metadata.isAssignedExpense': true
+  });
+  console.log(`🗑️ Deleted assigned expense "${title}": ${result.deletedCount} payments removed`);
+  return res.json({
+    success: true,
+    message: `${result.deletedCount} payment(s) deleted for "${title.trim()}"`,
+    data: { deletedCount: result.deletedCount }
   });
 });
 

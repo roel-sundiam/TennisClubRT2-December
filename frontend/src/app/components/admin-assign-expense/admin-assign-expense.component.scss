@@ -155,12 +155,14 @@
   align-items: center;
   gap: 2px;
 
-  &:hover .rename-icon-btn {
+  &:hover .rename-icon-btn,
+  &:hover .delete-icon-btn {
     opacity: 1;
   }
 }
 
-.rename-icon-btn {
+.rename-icon-btn,
+.delete-icon-btn {
   opacity: 0;
   transition: opacity 0.2s;
   background: none;
@@ -178,10 +180,20 @@
     height: 16px;
   }
 
-  &:hover {
-    color: #f59e0b;
-    background: #fef3c7;
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
+}
+
+.rename-icon-btn:hover {
+  color: #f59e0b;
+  background: #fef3c7;
+}
+
+.delete-icon-btn:hover:not(:disabled) {
+  color: #ef4444;
+  background: #fee2e2;
 }
 
 .template-rename-chip {

@@ -1,418 +1,922 @@
-<div class="payment-management-container">
-  <!-- Header Section -->
-  <div class="page-header">
+<div class="modern-payment-management">
+  <!-- Modern Header -->
+  <div class="modern-header">
     <div class="header-content">
-      <mat-icon class="header-icon">payments</mat-icon>
+      <div class="icon-wrapper">
+        <span class="material-icons">account_balance_wallet</span>
+      </div>
       <div class="header-text">
         <h1>Payment Management</h1>
-        <p>Manage and track all payment transactions</p>
+        <p>Comprehensive payment tracking and overdue monitoring</p>
       </div>
     </div>
   </div>
 
-  <!-- Tabs -->
-  <mat-tab-group [(selectedIndex)]="selectedTabIndex" animationDuration="0ms">
-    <!-- All Payments Tab -->
-    <mat-tab label="All Payments">
-      <!-- Filters Section -->
-  <mat-card class="filters-card">
-    <mat-card-content>
-      <div class="filters-header">
-        <div class="filters-title">
-          <mat-icon>filter_list</mat-icon>
-          <span>Filter Payments</span>
-        </div>
-        <button mat-button (click)="clearFilters()" class="clear-filters-btn">
-          <mat-icon>restart_alt</mat-icon>
-          Reset Filters
-        </button>
-      </div>
+  <!-- Modern Native Tabs -->
+  <div class="modern-tabs">
+    <button
+      type="button"
+      class="tab-button"
+      [class.active]="selectedTabIndex === 0"
+      (click)="selectedTabIndex = 0"
+    >
+      <span class="material-icons">receipt_long</span>
+      <span>All Payments</span>
+    </button>
+    <button
+      type="button"
+      class="tab-button"
+      [class.active]="selectedTabIndex === 1"
+      (click)="selectedTabIndex = 1"
+    >
+      <span class="material-icons">warning_amber</span>
+      <span>Overdue Report</span>
+      <span *ngIf="overdueSummaries.length > 0" class="badge-count">{{
+        overdueSummaries.length
+      }}</span>
+    </button>
+  </div>
 
-      <div class="filters-grid">
-        <div class="filter-group">
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Status</mat-label>
-            <mat-select [(ngModel)]="filterStatus" (selectionChange)="applyFilters()">
-              <mat-option value="all">
-                <mat-icon class="option-icon">check_circle_outline</mat-icon>
-                All Statuses
-              </mat-option>
-              <mat-option value="pending">
-                <mat-icon class="option-icon status-pending-icon">schedule</mat-icon>
-                Pending
-              </mat-option>
-              <mat-option value="completed">
-                <mat-icon class="option-icon status-completed-icon">check_circle</mat-icon>
-                Completed
-              </mat-option>
-              <mat-option value="record">
-                <mat-icon class="option-icon status-recorded-icon">lock</mat-icon>
-                Recorded
-              </mat-option>
-              <mat-option value="failed">
-                <mat-icon class="option-icon status-failed-icon">cancel</mat-icon>
-                Failed
-              </mat-option>
-              <mat-option value="refunded">
-                <mat-icon class="option-icon status-refunded-icon">undo</mat-icon>
-                Refunded
-              </mat-option>
-            </mat-select>
-            <mat-icon matPrefix class="field-icon">assignment</mat-icon>
-          </mat-form-field>
+  <!-- Tab Content Container -->
+  <div class="tab-content">
+    <!-- ============================================ -->
+    <!-- ALL PAYMENTS TAB -->
+    <!-- ============================================ -->
+    <div *ngIf="selectedTabIndex === 0" class="tab-panel" [@fadeIn]>
+      <!-- Enhanced Filters Card -->
+      <div class="enhanced-filters-card">
+        <div class="filters-header-enhanced">
+          <div class="header-left">
+            <div class="header-icon-badge">
+              <span class="material-icons">tune</span>
+            </div>
+            <div class="header-text">
+              <h3>Filter Payments</h3>
+              <p>Refine your search with multiple criteria</p>
+            </div>
+          </div>
+          <button type="button" class="reset-filters-btn" (click)="clearFilters()">
+            <span class="material-icons">restart_alt</span>
+            <span>Reset All</span>
+          </button>
         </div>
 
-        <div class="filter-group">
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Payment Method</mat-label>
-            <mat-select [(ngModel)]="filterMethod" (selectionChange)="applyFilters()">
-              <mat-option value="all">
-                <mat-icon class="option-icon">payment</mat-icon>
-                All Methods
-              </mat-option>
-              <mat-option value="cash">
-                <mat-icon class="option-icon">payments</mat-icon>
-                Cash
-              </mat-option>
-              <mat-option value="bank_transfer">
-                <mat-icon class="option-icon">account_balance</mat-icon>
-                Bank Transfer
-              </mat-option>
-              <mat-option value="gcash">
-                <mat-icon class="option-icon">phone_android</mat-icon>
-                GCash
-              </mat-option>
-            </mat-select>
-            <mat-icon matPrefix class="field-icon">credit_card</mat-icon>
-          </mat-form-field>
+        <div class="filters-grid-enhanced">
+          <!-- Status Filter -->
+          <div class="filter-field-enhanced">
+            <label class="field-label">
+              <span class="material-icons">assignment_turned_in</span>
+              <span>Status</span>
+            </label>
+            <div class="select-wrapper">
+              <select class="enhanced-select" [(ngModel)]="filterStatus" (change)="applyFilters()">
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="record">Recorded</option>
+                <option value="failed">Failed</option>
+                <option value="refunded">Refunded</option>
+              </select>
+              <span class="material-icons select-icon">expand_more</span>
+            </div>
+          </div>
+
+          <!-- Method Filter -->
+          <div class="filter-field-enhanced">
+            <label class="field-label">
+              <span class="material-icons">payment</span>
+              <span>Payment Method</span>
+            </label>
+            <div class="select-wrapper">
+              <select class="enhanced-select" [(ngModel)]="filterMethod" (change)="applyFilters()">
+                <option value="all">All Methods</option>
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="gcash">GCash</option>
+              </select>
+              <span class="material-icons select-icon">expand_more</span>
+            </div>
+          </div>
+
+          <!-- Type Filter -->
+          <div class="filter-field-enhanced">
+            <label class="field-label">
+              <span class="material-icons">category</span>
+              <span>Payment Type</span>
+            </label>
+            <div class="select-wrapper">
+              <select class="enhanced-select" [(ngModel)]="filterType" (change)="applyFilters()">
+                <option value="all">All Types</option>
+                <option value="court_usage">Court Usage</option>
+                <option value="membership_fee">Membership Fee</option>
+                <option value="tournament_entry">Tournament Entry</option>
+              </select>
+              <span class="material-icons select-icon">expand_more</span>
+            </div>
+          </div>
+
+          <!-- Search -->
+          <div class="filter-field-enhanced search-field-enhanced">
+            <label class="field-label">
+              <span class="material-icons">search</span>
+              <span>Search</span>
+            </label>
+            <div class="search-input-container">
+              <span class="material-icons search-icon-input">search</span>
+              <input
+                type="text"
+                class="enhanced-input"
+                [(ngModel)]="searchTerm"
+                (input)="applyFilters()"
+                placeholder="Search by name, username, or reference..."
+              />
+              <button
+                *ngIf="searchTerm"
+                type="button"
+                class="clear-input-btn"
+                (click)="searchTerm = ''; applyFilters()"
+              >
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Date From -->
+          <div class="filter-field-enhanced">
+            <label class="field-label">
+              <span class="material-icons">event</span>
+              <span>Reservation From</span>
+            </label>
+            <div class="date-input-container">
+              <input
+                type="date"
+                class="enhanced-input date-input"
+                [value]="formatDateForInput(reservationDateStart)"
+                (change)="onDateFromChange($event)"
+              />
+            </div>
+          </div>
+
+          <!-- Date To -->
+          <div class="filter-field-enhanced">
+            <label class="field-label">
+              <span class="material-icons">event</span>
+              <span>Reservation To</span>
+            </label>
+            <div class="date-input-container">
+              <input
+                type="date"
+                class="enhanced-input date-input"
+                [value]="formatDateForInput(reservationDateEnd)"
+                (change)="onDateToChange($event)"
+              />
+            </div>
+          </div>
         </div>
 
-        <div class="filter-group">
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Payment Type</mat-label>
-            <mat-select [(ngModel)]="filterType" (selectionChange)="applyFilters()">
-              <mat-option value="all">
-                <mat-icon class="option-icon">category</mat-icon>
-                All Types
-              </mat-option>
-              <mat-option value="court_usage">
-                <mat-icon class="option-icon">sports_tennis</mat-icon>
-                Court Usage
-              </mat-option>
-              <mat-option value="membership_fee">
-                <mat-icon class="option-icon">card_membership</mat-icon>
-                Membership Fee
-              </mat-option>
-              <mat-option value="tournament_entry">
-                <mat-icon class="option-icon">emoji_events</mat-icon>
-                Tournament Entry
-              </mat-option>
-            </mat-select>
-            <mat-icon matPrefix class="field-icon">label</mat-icon>
-          </mat-form-field>
-        </div>
-
-        <div class="filter-group search-group">
-          <mat-form-field appearance="outline" class="filter-field search-field" subscriptSizing="dynamic">
-            <input matInput [(ngModel)]="searchTerm" (input)="applyFilters()">
-            <mat-icon matPrefix class="field-icon">search</mat-icon>
-            <button mat-icon-button matSuffix *ngIf="searchTerm" (click)="searchTerm=''; applyFilters()" class="clear-search-btn">
-              <mat-icon>close</mat-icon>
+        <!-- Active Filters Chips -->
+        <div
+          class="active-filters-enhanced"
+          *ngIf="
+            filterStatus !== 'all' ||
+            filterMethod !== 'all' ||
+            filterType !== 'all' ||
+            searchTerm ||
+            reservationDateStart ||
+            reservationDateEnd
+          "
+        >
+          <div class="chips-header">
+            <span class="material-icons">filter_alt</span>
+            <span class="chips-label">Active Filters</span>
+            <span class="chips-count">{{ getActiveFiltersCount() }}</span>
+          </div>
+          <div class="chips-container">
+            <button
+              *ngIf="filterStatus !== 'all'"
+              class="filter-chip-enhanced status"
+              (click)="filterStatus = 'all'; applyFilters()"
+            >
+              <span class="chip-label">{{ filterStatus }}</span>
+              <span class="material-icons">close</span>
             </button>
-          </mat-form-field>
+            <button
+              *ngIf="filterMethod !== 'all'"
+              class="filter-chip-enhanced method"
+              (click)="filterMethod = 'all'; applyFilters()"
+            >
+              <span class="chip-label">{{
+                filterMethod === 'bank_transfer'
+                  ? 'Bank Transfer'
+                  : filterMethod === 'gcash'
+                    ? 'GCash'
+                    : 'Cash'
+              }}</span>
+              <span class="material-icons">close</span>
+            </button>
+            <button
+              *ngIf="filterType !== 'all'"
+              class="filter-chip-enhanced type"
+              (click)="filterType = 'all'; applyFilters()"
+            >
+              <span class="chip-label">{{
+                filterType === 'court_usage'
+                  ? 'Court Usage'
+                  : filterType === 'membership_fee'
+                    ? 'Membership Fee'
+                    : 'Tournament Entry'
+              }}</span>
+              <span class="material-icons">close</span>
+            </button>
+            <button
+              *ngIf="searchTerm"
+              class="filter-chip-enhanced search"
+              (click)="searchTerm = ''; applyFilters()"
+            >
+              <span class="chip-label">"{{ searchTerm }}"</span>
+              <span class="material-icons">close</span>
+            </button>
+            <button
+              *ngIf="reservationDateStart"
+              class="filter-chip-enhanced date"
+              (click)="reservationDateStart = null; applyFilters()"
+            >
+              <span class="chip-label"
+                >From: {{ reservationDateStart | date: 'MMM dd, yyyy' }}</span
+              >
+              <span class="material-icons">close</span>
+            </button>
+            <button
+              *ngIf="reservationDateEnd"
+              class="filter-chip-enhanced date"
+              (click)="reservationDateEnd = null; applyFilters()"
+            >
+              <span class="chip-label">To: {{ reservationDateEnd | date: 'MMM dd, yyyy' }}</span>
+              <span class="material-icons">close</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="active-filters" *ngIf="filterStatus !== 'all' || filterMethod !== 'all' || filterType !== 'all' || searchTerm">
-        <span class="active-filters-label">Active filters:</span>
-        <mat-chip *ngIf="filterStatus !== 'all'" class="filter-chip" (removed)="filterStatus='all'; applyFilters()">
-          {{ filterStatus }}
-          <button matChipRemove><mat-icon>cancel</mat-icon></button>
-        </mat-chip>
-        <mat-chip *ngIf="filterMethod !== 'all'" class="filter-chip" (removed)="filterMethod='all'; applyFilters()">
-          {{ filterMethod === 'bank_transfer' ? 'Bank Transfer' : filterMethod === 'gcash' ? 'GCash' : 'Cash' }}
-          <button matChipRemove><mat-icon>cancel</mat-icon></button>
-        </mat-chip>
-        <mat-chip *ngIf="filterType !== 'all'" class="filter-chip" (removed)="filterType='all'; applyFilters()">
-          {{ filterType === 'court_usage' ? 'Court Usage' : filterType === 'membership_fee' ? 'Membership Fee' : 'Tournament Entry' }}
-          <button matChipRemove><mat-icon>cancel</mat-icon></button>
-        </mat-chip>
-        <mat-chip *ngIf="searchTerm" class="filter-chip" (removed)="searchTerm=''; applyFilters()">
-          "{{ searchTerm }}"
-          <button matChipRemove><mat-icon>cancel</mat-icon></button>
-        </mat-chip>
-      </div>
-    </mat-card-content>
-  </mat-card>
+      <!-- Enhanced Stats Bar -->
+      <div class="enhanced-stats-grid">
+        <div class="enhanced-stat-card total">
+          <div class="stat-card-header">
+            <div class="stat-icon-wrapper">
+              <span class="material-icons">receipt_long</span>
+            </div>
+            <div class="stat-badge">All</div>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-main-value">{{ summary.total | number }}</div>
+            <div class="stat-main-label">Total Payments</div>
+            <div class="stat-amount">{{ formatAmount(summary.totalAmount) }}</div>
+          </div>
+          <div class="stat-card-footer">
+            <div class="stat-progress-bar">
+              <div class="progress-fill" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
 
-  <!-- Summary Section -->
-  <mat-card class="summary-card">
-    <mat-card-content>
-      <div class="summary-grid">
-        <div class="summary-item">
-          <div class="summary-label">Total</div>
-          <div class="summary-value">{{ summary.total }} ({{ formatAmount(summary.totalAmount) }})</div>
+        <div class="enhanced-stat-card pending">
+          <div class="stat-card-header">
+            <div class="stat-icon-wrapper">
+              <span class="material-icons">schedule</span>
+            </div>
+            <div class="stat-badge">Pending</div>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-main-value">{{ summary.pending | number }}</div>
+            <div class="stat-main-label">Pending</div>
+            <div class="stat-percentage" *ngIf="summary.total > 0">
+              {{ (summary.pending / summary.total) * 100 | number: '1.0-1' }}% of total
+            </div>
+          </div>
+          <div class="stat-card-footer">
+            <div class="stat-progress-bar">
+              <div
+                class="progress-fill"
+                [style.width.%]="(summary.pending / summary.total) * 100"
+              ></div>
+            </div>
+          </div>
         </div>
-        <div class="summary-item">
-          <div class="summary-label">Pending</div>
-          <div class="summary-value status-pending">{{ summary.pending }}</div>
+
+        <div class="enhanced-stat-card completed">
+          <div class="stat-card-header">
+            <div class="stat-icon-wrapper">
+              <span class="material-icons">check_circle</span>
+            </div>
+            <div class="stat-badge">Success</div>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-main-value">{{ summary.completed | number }}</div>
+            <div class="stat-main-label">Completed</div>
+            <div class="stat-percentage" *ngIf="summary.total > 0">
+              {{ (summary.completed / summary.total) * 100 | number: '1.0-1' }}% of total
+            </div>
+          </div>
+          <div class="stat-card-footer">
+            <div class="stat-progress-bar">
+              <div
+                class="progress-fill"
+                [style.width.%]="(summary.completed / summary.total) * 100"
+              ></div>
+            </div>
+          </div>
         </div>
-        <div class="summary-item">
-          <div class="summary-label">Completed</div>
-          <div class="summary-value status-completed">{{ summary.completed }}</div>
+
+        <div class="enhanced-stat-card recorded">
+          <div class="stat-card-header">
+            <div class="stat-icon-wrapper">
+              <span class="material-icons">lock</span>
+            </div>
+            <div class="stat-badge">Locked</div>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-main-value">{{ summary.recorded | number }}</div>
+            <div class="stat-main-label">Recorded</div>
+            <div class="stat-percentage" *ngIf="summary.total > 0">
+              {{ (summary.recorded / summary.total) * 100 | number: '1.0-1' }}% of total
+            </div>
+          </div>
+          <div class="stat-card-footer">
+            <div class="stat-progress-bar">
+              <div
+                class="progress-fill"
+                [style.width.%]="(summary.recorded / summary.total) * 100"
+              ></div>
+            </div>
+          </div>
         </div>
-        <div class="summary-item">
-          <div class="summary-label">Recorded</div>
-          <div class="summary-value status-recorded">{{ summary.recorded }}</div>
+
+        <div class="enhanced-stat-card failed">
+          <div class="stat-card-header">
+            <div class="stat-icon-wrapper">
+              <span class="material-icons">cancel</span>
+            </div>
+            <div class="stat-badge">Failed</div>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-main-value">{{ summary.failed | number }}</div>
+            <div class="stat-main-label">Failed</div>
+            <div class="stat-percentage" *ngIf="summary.total > 0">
+              {{ (summary.failed / summary.total) * 100 | number: '1.0-1' }}% of total
+            </div>
+          </div>
+          <div class="stat-card-footer">
+            <div class="stat-progress-bar">
+              <div
+                class="progress-fill"
+                [style.width.%]="(summary.failed / summary.total) * 100"
+              ></div>
+            </div>
+          </div>
         </div>
-        <div class="summary-item">
-          <div class="summary-label">Failed</div>
-          <div class="summary-value status-failed">{{ summary.failed }}</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-label">Refunded</div>
-          <div class="summary-value status-refunded">{{ summary.refunded }}</div>
+
+        <div class="enhanced-stat-card refunded">
+          <div class="stat-card-header">
+            <div class="stat-icon-wrapper">
+              <span class="material-icons">undo</span>
+            </div>
+            <div class="stat-badge">Refunded</div>
+          </div>
+          <div class="stat-card-body">
+            <div class="stat-main-value">{{ summary.refunded | number }}</div>
+            <div class="stat-main-label">Refunded</div>
+            <div class="stat-percentage" *ngIf="summary.total > 0">
+              {{ (summary.refunded / summary.total) * 100 | number: '1.0-1' }}% of total
+            </div>
+          </div>
+          <div class="stat-card-footer">
+            <div class="stat-progress-bar">
+              <div
+                class="progress-fill"
+                [style.width.%]="(summary.refunded / summary.total) * 100"
+              ></div>
+            </div>
+          </div>
         </div>
       </div>
-    </mat-card-content>
-  </mat-card>
 
-  <!-- Payments Table -->
-  <mat-card class="table-card">
-    <mat-card-content>
+      <!-- Loading State -->
       <div *ngIf="isLoading" class="loading-container">
-        <mat-spinner diameter="50"></mat-spinner>
+        <div class="spinner"></div>
         <p>Loading payments...</p>
       </div>
 
-      <div *ngIf="!isLoading && filteredPayments.length === 0" class="no-data">
-        <mat-icon>inbox</mat-icon>
-        <p>No payments found</p>
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && filteredPayments.length === 0" class="empty-state">
+        <div class="empty-state-icon">
+          <span class="material-icons">inbox</span>
+        </div>
+        <h3>No Payments Found</h3>
+        <p>Try adjusting your filters to see more results</p>
       </div>
 
-      <div *ngIf="!isLoading && filteredPayments.length > 0" class="table-container">
-        <table mat-table [dataSource]="paginatedPayments" class="payments-table">
-          <!-- Reference Number Column -->
-          <ng-container matColumnDef="reference">
-            <th mat-header-cell *matHeaderCellDef>Reference</th>
-            <td mat-cell *matCellDef="let payment">
-              <span class="ref-number">{{ payment.referenceNumber }}</span>
-            </td>
-          </ng-container>
+      <!-- Payments Table -->
+      <div *ngIf="!isLoading && filteredPayments.length > 0" class="enhanced-table-section">
+        <div class="enhanced-table-header">
+          <div class="header-left">
+            <span class="material-icons">list_alt</span>
+            <h3>Payment Records</h3>
+            <span class="record-count-badge">{{ filteredPayments.length }} payments</span>
+          </div>
+          <div class="header-right">
+            <button type="button" class="export-btn">
+              <span class="material-icons">download</span>
+              <span>Export</span>
+            </button>
+          </div>
+        </div>
 
-          <!-- User Column -->
-          <ng-container matColumnDef="user">
-            <th mat-header-cell *matHeaderCellDef>User</th>
-            <td mat-cell *matCellDef="let payment">
-              <div class="user-info">
-                <span class="user-name">{{ payment.userId.fullName }}</span>
-                <span class="user-username">@{{ payment.userId.username }}</span>
-              </div>
-            </td>
-          </ng-container>
+        <div class="enhanced-table-wrapper">
+          <table class="enhanced-table">
+            <thead>
+              <tr>
+                <th class="col-reference">
+                  <div class="th-cell">
+                    <span class="material-icons">tag</span>
+                    <span>Reference</span>
+                  </div>
+                </th>
+                <th class="col-user">
+                  <div class="th-cell">
+                    <span class="material-icons">person</span>
+                    <span>User</span>
+                  </div>
+                </th>
+                <th class="col-amount">
+                  <div class="th-cell">
+                    <span class="material-icons">payments</span>
+                    <span>Amount</span>
+                  </div>
+                </th>
+                <th class="col-method">
+                  <div class="th-cell">
+                    <span class="material-icons">credit_card</span>
+                    <span>Method</span>
+                  </div>
+                </th>
+                <th class="col-status">
+                  <div class="th-cell">
+                    <span class="material-icons">assignment</span>
+                    <span>Status</span>
+                  </div>
+                </th>
+                <th class="col-type">
+                  <div class="th-cell">
+                    <span class="material-icons">label</span>
+                    <span>Type</span>
+                  </div>
+                </th>
+                <th class="col-reservation">
+                  <div class="th-cell">
+                    <span class="material-icons">event</span>
+                    <span>Reservation</span>
+                  </div>
+                </th>
+                <th class="col-payment-date">
+                  <div class="th-cell">
+                    <span class="material-icons">today</span>
+                    <span>Payment Date</span>
+                  </div>
+                </th>
+                <th class="col-actions">
+                  <div class="th-cell">
+                    <span class="material-icons">settings</span>
+                    <span>Actions</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let payment of paginatedPayments" class="enhanced-payment-row">
+                <td class="col-reference">
+                  <div class="ref-cell">
+                    <span class="ref-number">{{ payment.referenceNumber }}</span>
+                  </div>
+                </td>
+                <td class="col-user">
+                  <div class="user-cell-enhanced">
+                    <div class="user-avatar">
+                      <span class="material-icons">account_circle</span>
+                    </div>
+                    <div class="user-info-enhanced">
+                      <div class="user-name">{{ payment.userId.fullName }}</div>
+                      <div class="user-username">@{{ payment.userId.username }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="col-amount">
+                  <div class="amount-cell-enhanced">
+                    <div class="amount-value">
+                      {{ formatAmount(payment.amount, payment.currency) }}
+                    </div>
+                    <div *ngIf="isOverdue(payment)" class="overdue-indicator">
+                      <span class="material-icons">warning</span>
+                      <span>Overdue {{ getDaysOverdue(payment) }}d</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="col-method">
+                  <div class="method-badge-enhanced">
+                    <div class="method-icon-wrapper">
+                      <span class="material-icons">{{ getMethodIcon(payment.paymentMethod) }}</span>
+                    </div>
+                    <span class="method-label">{{
+                      formatPaymentMethod(payment.paymentMethod)
+                    }}</span>
+                  </div>
+                </td>
+                <td class="col-status">
+                  <div class="status-badge-enhanced" [ngClass]="'status-' + payment.status">
+                    <span class="material-icons">{{ getStatusIcon(payment.status) }}</span>
+                    <span class="status-label">{{
+                      payment.status === 'record' ? 'Recorded' : payment.status
+                    }}</span>
+                  </div>
+                </td>
+                <td class="col-type">
+                  <div class="type-badge-enhanced">
+                    <span class="type-label">{{ getPaymentTypeLabel(payment.paymentType) }}</span>
+                    <span *ngIf="payment.membershipYear" class="year-badge">{{
+                      payment.membershipYear
+                    }}</span>
+                  </div>
+                </td>
+                <td class="col-reservation">
+                  <div class="date-cell-enhanced">
+                    <span class="material-icons">calendar_today</span>
+                    <span>{{
+                      payment.reservationId?.date ? formatDate(payment.reservationId.date) : 'N/A'
+                    }}</span>
+                  </div>
+                </td>
+                <td class="col-payment-date">
+                  <div class="date-cell-enhanced">
+                    <span class="material-icons">schedule</span>
+                    <span>{{ formatDate(payment.paymentDate) }}</span>
+                  </div>
+                </td>
+                <td class="col-actions">
+                  <button
+                    type="button"
+                    class="action-menu-btn-enhanced"
+                    [matMenuTriggerFor]="actionsMenu"
+                  >
+                    <span class="material-icons">more_vert</span>
+                  </button>
+                  <mat-menu #actionsMenu="matMenu" class="enhanced-action-menu">
+                    <button
+                      mat-menu-item
+                      (click)="openEditDialog(payment)"
+                      [disabled]="!canEdit(payment)"
+                    >
+                      <mat-icon>edit</mat-icon>
+                      <span>Edit Details</span>
+                    </button>
+                    <button
+                      mat-menu-item
+                      (click)="recordPayment(payment)"
+                      [disabled]="!canRecord(payment)"
+                    >
+                      <mat-icon>lock</mat-icon>
+                      <span>Record Payment</span>
+                    </button>
+                    <button
+                      mat-menu-item
+                      (click)="unrecordPayment(payment)"
+                      [disabled]="!canUnrecord(payment)"
+                    >
+                      <mat-icon>lock_open</mat-icon>
+                      <span>Unrecord</span>
+                    </button>
+                  </mat-menu>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-          <!-- Amount Column -->
-          <ng-container matColumnDef="amount">
-            <th mat-header-cell *matHeaderCellDef>Amount</th>
-            <td mat-cell *matCellDef="let payment">
-              <div class="amount-container">
-                <span class="amount">{{ formatAmount(payment.amount, payment.currency) }}</span>
-                <span class="overdue-badge" *ngIf="isOverdue(payment)">
-                  Overdue {{ getDaysOverdue(payment) }} {{ getDaysOverdue(payment) === 1 ? 'day' : 'days' }}
-                </span>
-              </div>
-            </td>
-          </ng-container>
-
-          <!-- Method Column -->
-          <ng-container matColumnDef="method">
-            <th mat-header-cell *matHeaderCellDef>Method</th>
-            <td mat-cell *matCellDef="let payment">
-              <div class="method-display">
-                <mat-icon [matTooltip]="payment.paymentMethod">{{ getMethodIcon(payment.paymentMethod) }}</mat-icon>
-                <span>{{ payment.paymentMethod === 'bank_transfer' ? 'Bank' : payment.paymentMethod === 'gcash' ? 'GCash' : 'Cash' }}</span>
-              </div>
-            </td>
-          </ng-container>
-
-          <!-- Status Column -->
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let payment">
-              <mat-chip [class]="getStatusChipClass(payment.status)">
-                <mat-icon>{{ getStatusIcon(payment.status) }}</mat-icon>
-                {{ payment.status === 'record' ? 'Recorded' : payment.status }}
-              </mat-chip>
-            </td>
-          </ng-container>
-
-          <!-- Type Column -->
-          <ng-container matColumnDef="type">
-            <th mat-header-cell *matHeaderCellDef>Type</th>
-            <td mat-cell *matCellDef="let payment">
-              {{ getPaymentTypeLabel(payment.paymentType) }}
-              <span *ngIf="payment.membershipYear" class="year-badge">{{ payment.membershipYear }}</span>
-            </td>
-          </ng-container>
-
-          <!-- Reservation Date Column -->
-          <ng-container matColumnDef="reservationDate">
-            <th mat-header-cell *matHeaderCellDef>Reservation Date</th>
-            <td mat-cell *matCellDef="let payment">
-              {{ payment.reservationId?.date ? formatDate(payment.reservationId.date) : 'N/A' }}
-            </td>
-          </ng-container>
-
-          <!-- Payment Date Column -->
-          <ng-container matColumnDef="paymentDate">
-            <th mat-header-cell *matHeaderCellDef>Payment Date</th>
-            <td mat-cell *matCellDef="let payment">
-              {{ formatDate(payment.paymentDate) }}
-            </td>
-          </ng-container>
-
-          <!-- Actions Column -->
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let payment">
-              <button mat-icon-button [matMenuTriggerFor]="actionsMenu">
-                <mat-icon>more_vert</mat-icon>
+        <!-- Enhanced Pagination -->
+        <div class="enhanced-pagination">
+          <div class="pagination-info-enhanced">
+            <span class="material-icons">info</span>
+            <span class="info-text"
+              >Showing <strong>{{ pageIndex * pageSize + 1 }}</strong> to
+              <strong>{{ Math.min((pageIndex + 1) * pageSize, filteredPayments.length) }}</strong>
+              of <strong>{{ filteredPayments.length }}</strong> payments</span
+            >
+          </div>
+          <div class="pagination-controls-enhanced">
+            <div class="page-size-selector">
+              <label class="page-size-label">
+                <span class="material-icons">view_list</span>
+                <span>Rows:</span>
+                <select
+                  class="page-size-select-enhanced"
+                  [(ngModel)]="pageSize"
+                  (change)="onPageSizeChange()"
+                >
+                  <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+                </select>
+              </label>
+            </div>
+            <div class="page-navigation">
+              <button
+                type="button"
+                class="page-btn-enhanced first"
+                (click)="goToFirstPage()"
+                [disabled]="pageIndex === 0"
+                title="First page"
+              >
+                <mat-icon>first_page</mat-icon>
               </button>
-              <mat-menu #actionsMenu="matMenu">
-                <button mat-menu-item (click)="openEditDialog(payment)" [disabled]="!canEdit(payment)">
-                  <mat-icon>edit</mat-icon>
-                  <span>Edit Details</span>
-                </button>
-                <button mat-menu-item (click)="recordPayment(payment)" [disabled]="!canRecord(payment)">
-                  <mat-icon>lock</mat-icon>
-                  <span>Record Payment</span>
-                </button>
-                <button mat-menu-item (click)="unrecordPayment(payment)" [disabled]="!canUnrecord(payment)">
-                  <mat-icon>lock_open</mat-icon>
-                  <span>Unrecord</span>
-                </button>
-              </mat-menu>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
-
-        <mat-paginator
-          [length]="filteredPayments.length"
-          [pageSize]="pageSize"
-          [pageIndex]="pageIndex"
-          [pageSizeOptions]="pageSizeOptions"
-          (page)="onPageChange($event)"
-          showFirstLastButtons>
-        </mat-paginator>
-      </div>
-    </mat-card-content>
-  </mat-card>
-    </mat-tab>
-
-    <!-- Overdue Report Tab -->
-    <mat-tab label="Overdue Report">
-      <mat-card class="overdue-summary-card">
-        <mat-card-content>
-          <div class="overdue-header">
-            <div class="overdue-stats">
-              <div class="stat-item">
-                <mat-icon>people</mat-icon>
-                <div>
-                  <div class="stat-label">Members with Overdues</div>
-                  <div class="stat-value">{{ overdueSummaries.length }}</div>
-                </div>
+              <button
+                type="button"
+                class="page-btn-enhanced prev"
+                (click)="goToPreviousPage()"
+                [disabled]="pageIndex === 0"
+                title="Previous page"
+              >
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <div class="page-indicator-enhanced">
+                <span class="current-page">{{ pageIndex + 1 }}</span>
+                <span class="separator">/</span>
+                <span class="total-pages">{{ getTotalPages() }}</span>
               </div>
-              <div class="stat-item">
-                <mat-icon>receipt_long</mat-icon>
-                <div>
-                  <div class="stat-label">Total Overdue Payments</div>
-                  <div class="stat-value">{{ getTotalOverdueCount() }}</div>
-                </div>
-              </div>
-              <div class="stat-item">
-                <mat-icon>attach_money</mat-icon>
-                <div>
-                  <div class="stat-label">Total Overdue Amount</div>
-                  <div class="stat-value">{{ formatAmount(getTotalOverdueAmount()) }}</div>
-                </div>
-              </div>
+              <button
+                type="button"
+                class="page-btn-enhanced next"
+                (click)="goToNextPage()"
+                [disabled]="pageIndex >= getTotalPages() - 1"
+                title="Next page"
+              >
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="page-btn-enhanced last"
+                (click)="goToLastPage()"
+                [disabled]="pageIndex >= getTotalPages() - 1"
+                title="Last page"
+              >
+                <mat-icon>last_page</mat-icon>
+              </button>
             </div>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
+    </div>
 
-      <mat-card class="table-card">
-        <mat-card-content>
-          <div *ngIf="isLoading" class="loading-container">
-            <mat-spinner diameter="50"></mat-spinner>
-            <p>Loading overdue report...</p>
+    <!-- ============================================ -->
+    <!-- OVERDUE REPORT TAB -->
+    <!-- ============================================ -->
+    <div *ngIf="selectedTabIndex === 1" class="tab-panel" [@fadeIn]>
+      <!-- Enhanced Overdue Stats -->
+      <div class="overdue-stats-grid">
+        <div class="overdue-stat-card urgent">
+          <div class="stat-card-icon">
+            <span class="material-icons">people_outline</span>
           </div>
-
-          <div *ngIf="!isLoading && overdueSummaries.length === 0" class="no-data">
-            <mat-icon>celebration</mat-icon>
-            <p>No overdue payments found!</p>
+          <div class="stat-card-content">
+            <div class="stat-card-value">{{ overdueSummaries.length }}</div>
+            <div class="stat-card-label">Members with Overdues</div>
+            <div class="stat-card-sublabel">Requires attention</div>
           </div>
+          <div class="stat-card-decoration"></div>
+        </div>
 
-          <div *ngIf="!isLoading && overdueSummaries.length > 0" class="table-container">
-            <table mat-table [dataSource]="overdueSummaries" class="overdue-table">
-              <!-- Member Name Column -->
-              <ng-container matColumnDef="fullName">
-                <th mat-header-cell *matHeaderCellDef>Member</th>
-                <td mat-cell *matCellDef="let member">
-                  <div class="user-info">
-                    <span class="user-name">{{ member.fullName }}</span>
-                    <span class="user-username">@{{ member.username }}</span>
+        <div class="overdue-stat-card warning">
+          <div class="stat-card-icon">
+            <span class="material-icons">receipt_long</span>
+          </div>
+          <div class="stat-card-content">
+            <div class="stat-card-value">{{ getTotalOverdueCount() }}</div>
+            <div class="stat-card-label">Overdue Payments</div>
+            <div class="stat-card-sublabel">Total count</div>
+          </div>
+          <div class="stat-card-decoration"></div>
+        </div>
+
+        <div class="overdue-stat-card critical">
+          <div class="stat-card-icon">
+            <span class="material-icons">payments</span>
+          </div>
+          <div class="stat-card-content">
+            <div class="stat-card-value">{{ formatAmount(getTotalOverdueAmount()) }}</div>
+            <div class="stat-card-label">Total Overdue Amount</div>
+            <div class="stat-card-sublabel">Outstanding balance</div>
+          </div>
+          <div class="stat-card-decoration"></div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading overdue report...</p>
+      </div>
+
+      <!-- Success Empty State -->
+      <div *ngIf="!isLoading && overdueSummaries.length === 0" class="empty-state success-state">
+        <div class="empty-state-icon">
+          <span class="material-icons">check_circle</span>
+        </div>
+        <h3>All Clear!</h3>
+        <p>No overdue payments found. All members are up to date.</p>
+      </div>
+
+      <!-- Enhanced Overdue Table -->
+      <div *ngIf="!isLoading && overdueSummaries.length > 0" class="overdue-table-section">
+        <!-- Table Header with Actions -->
+        <div class="table-section-header">
+          <div class="header-left">
+            <span class="material-icons">warning_amber</span>
+            <h3>Overdue Members</h3>
+            <span class="record-count"
+              >{{ overdueSummaries.length }}
+              {{ overdueSummaries.length === 1 ? 'member' : 'members' }}</span
+            >
+          </div>
+          <div class="header-actions">
+            <button type="button" class="action-btn secondary">
+              <span class="material-icons">download</span>
+              <span>Export Report</span>
+            </button>
+            <button type="button" class="action-btn primary">
+              <span class="material-icons">email</span>
+              <span>Send Reminders</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Modern Table -->
+        <div class="modern-table-wrapper enhanced">
+          <table class="modern-table overdue-enhanced">
+            <thead>
+              <tr>
+                <th class="col-member">
+                  <div class="th-content">
+                    <span class="material-icons">account_circle</span>
+                    <span>Member Information</span>
+                  </div>
+                </th>
+                <th class="col-count">
+                  <div class="th-content">
+                    <span class="material-icons">format_list_numbered</span>
+                    <span>Payments</span>
+                  </div>
+                </th>
+                <th class="col-amount">
+                  <div class="th-content">
+                    <span class="material-icons">account_balance_wallet</span>
+                    <span>Total Overdue</span>
+                  </div>
+                </th>
+                <th class="col-days">
+                  <div class="th-content">
+                    <span class="material-icons">schedule</span>
+                    <span>Oldest Overdue</span>
+                  </div>
+                </th>
+                <th class="col-urgency">
+                  <div class="th-content">
+                    <span class="material-icons">priority_high</span>
+                    <span>Urgency</span>
+                  </div>
+                </th>
+                <th class="col-actions">
+                  <div class="th-content">
+                    <span class="material-icons">more_horiz</span>
+                    <span>Actions</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let member of overdueSummaries; let i = index"
+                class="overdue-row-enhanced"
+              >
+                <td class="col-member">
+                  <div class="member-info-cell">
+                    <div class="member-avatar">
+                      <span class="material-icons">person</span>
+                    </div>
+                    <div class="member-details">
+                      <div class="member-name">{{ member.fullName }}</div>
+                      <div class="member-username">@{{ member.username }}</div>
+                      <div class="member-id">
+                        ID: {{ member.userId.substring(member.userId.length - 6) }}
+                      </div>
+                    </div>
                   </div>
                 </td>
-              </ng-container>
-
-              <!-- Overdue Count Column -->
-              <ng-container matColumnDef="overdueCount">
-                <th mat-header-cell *matHeaderCellDef>Overdue Payments</th>
-                <td mat-cell *matCellDef="let member">
-                  <mat-chip class="count-chip">{{ member.overdueCount }}</mat-chip>
-                </td>
-              </ng-container>
-
-              <!-- Total Overdue Amount Column -->
-              <ng-container matColumnDef="totalOverdueAmount">
-                <th mat-header-cell *matHeaderCellDef>Total Amount</th>
-                <td mat-cell *matCellDef="let member">
-                  <span class="overdue-amount">{{ formatAmount(member.totalOverdueAmount) }}</span>
-                </td>
-              </ng-container>
-
-              <!-- Oldest Overdue Days Column -->
-              <ng-container matColumnDef="oldestOverdueDays">
-                <th mat-header-cell *matHeaderCellDef>Oldest Overdue</th>
-                <td mat-cell *matCellDef="let member">
-                  <div class="overdue-days">
-                    <mat-icon class="warning-icon">warning</mat-icon>
-                    <span>{{ member.oldestOverdueDays }} {{ member.oldestOverdueDays === 1 ? 'day' : 'days' }}</span>
+                <td class="col-count">
+                  <div class="count-display">
+                    <span class="count-number">{{ member.overdueCount }}</span>
+                    <span class="count-label">{{
+                      member.overdueCount === 1 ? 'payment' : 'payments'
+                    }}</span>
                   </div>
                 </td>
-              </ng-container>
-
-              <!-- Actions Column -->
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef>Actions</th>
-                <td mat-cell *matCellDef="let member">
-                  <button mat-stroked-button color="primary" (click)="viewMemberOverdueDetails(member)">
-                    <mat-icon>visibility</mat-icon>
-                    View Details
-                  </button>
+                <td class="col-amount">
+                  <div class="amount-display">
+                    <span class="amount-value">{{ formatAmount(member.totalOverdueAmount) }}</span>
+                    <span class="amount-label">outstanding</span>
+                  </div>
                 </td>
-              </ng-container>
+                <td class="col-days">
+                  <div
+                    class="days-display"
+                    [class.critical]="member.oldestOverdueDays > 30"
+                    [class.warning]="
+                      member.oldestOverdueDays > 14 && member.oldestOverdueDays <= 30
+                    "
+                  >
+                    <span class="material-icons">access_time</span>
+                    <span class="days-number">{{ member.oldestOverdueDays }}</span>
+                    <span class="days-label">{{
+                      member.oldestOverdueDays === 1 ? 'day' : 'days'
+                    }}</span>
+                  </div>
+                </td>
+                <td class="col-urgency">
+                  <span
+                    class="urgency-badge"
+                    [class.critical]="member.oldestOverdueDays > 30"
+                    [class.high]="member.oldestOverdueDays > 14 && member.oldestOverdueDays <= 30"
+                    [class.medium]="member.oldestOverdueDays > 7 && member.oldestOverdueDays <= 14"
+                    [class.low]="member.oldestOverdueDays <= 7"
+                  >
+                    <span class="material-icons">
+                      {{
+                        member.oldestOverdueDays > 30
+                          ? 'error'
+                          : member.oldestOverdueDays > 14
+                            ? 'warning'
+                            : member.oldestOverdueDays > 7
+                              ? 'info'
+                              : 'pending'
+                      }}
+                    </span>
+                    <span>
+                      {{
+                        member.oldestOverdueDays > 30
+                          ? 'Critical'
+                          : member.oldestOverdueDays > 14
+                            ? 'High'
+                            : member.oldestOverdueDays > 7
+                              ? 'Medium'
+                              : 'Low'
+                      }}
+                    </span>
+                  </span>
+                </td>
+                <td class="col-actions">
+                  <div class="action-buttons-group">
+                    <button
+                      type="button"
+                      class="action-btn-table primary"
+                      (click)="viewMemberOverdueDetails(member)"
+                      title="View payment details"
+                    >
+                      <span class="material-icons">visibility</span>
+                      <span class="btn-text">View Details</span>
+                    </button>
+                    <button type="button" class="action-btn-table secondary" title="Send reminder">
+                      <span class="material-icons">mail_outline</span>
+                      <span class="btn-text">Remind</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-              <tr mat-header-row *matHeaderRowDef="overdueDisplayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: overdueDisplayedColumns;"></tr>
-            </table>
+        <!-- Summary Footer -->
+        <div class="table-footer">
+          <div class="footer-summary">
+            <div class="summary-item">
+              <span class="material-icons">info</span>
+              <span>Showing all {{ overdueSummaries.length }} members with overdue payments</span>
+            </div>
+            <div class="summary-item">
+              <span class="material-icons">trending_down</span>
+              <span
+                >Average overdue:
+                {{ getTotalOverdueAmount() / overdueSummaries.length | number: '1.2-2' }} PHP per
+                member</span
+              >
+            </div>
           </div>
-        </mat-card-content>
-      </mat-card>
-    </mat-tab>
-  </mat-tab-group>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

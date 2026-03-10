@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { trigger, transition, style, animate } from '@angular/animations';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -48,6 +49,7 @@ interface Payment {
     date: Date;
     timeSlot: number;
   };
+  description?: string;
   notes?: string;
   recordedBy?: {
     _id: string;
@@ -104,10 +106,18 @@ interface OverdueMemberSummary {
     MatTabsModule,
     MatCheckboxModule,
     MatListModule,
-    MatDividerModule
+    MatDividerModule,
   ],
   templateUrl: './admin-payment-management.component.html',
-  styleUrl: './admin-payment-management.component.scss'
+  styleUrl: './admin-payment-management.component.scss',
+  animations: [
+    trigger('fadeIn', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(10px)' }),
+        animate('300ms ease-out', style({ opacity: 1, transform: 'translateY(0)' })),
+      ]),
+    ]),
+  ],
 })
 export class AdminPaymentManagementComponent implements OnInit {
   private apiUrl = environment.apiUrl;
@@ -122,12 +132,28 @@ export class AdminPaymentManagementComponent implements OnInit {
   filterMethod: string = 'all';
   filterType: string = 'all';
   searchTerm: string = '';
-  dateRangeStart: Date | null = null;
-  dateRangeEnd: Date | null = null;
+  reservationDateStart: Date | null = null;
+  reservationDateEnd: Date | null = null;
 
   // Table
-  displayedColumns = ['reference', 'user', 'amount', 'method', 'status', 'type', 'reservationDate', 'paymentDate', 'actions'];
-  overdueDisplayedColumns = ['fullName', 'overdueCount', 'totalOverdueAmount', 'oldestOverdueDays', 'actions'];
+  displayedColumns = [
+    'reference',
+    'user',
+    'amount',
+    'method',
+    'status',
+    'type',
+    'reservationDate',
+    'paymentDate',
+    'actions',
+  ];
+  overdueDisplayedColumns = [
+    'fullName',
+    'overdueCount',
+    'totalOverdueAmount',
+    'oldestOverdueDays',
+    'actions',
+  ];
 
   // Pagination
   pageSize = 100;
@@ -154,7 +180,7 @@ export class AdminPaymentManagementComponent implements OnInit {
     title: '',
     description: '',
     amount: null as number | null,
-    dueDate: null as Date | null
+    dueDate: null as Date | null,
   };
 
   // Summary
@@ -165,7 +191,7 @@ export class AdminPaymentManagementComponent implements OnInit {
     completed: 0,
     recorded: 0,
     failed: 0,
-    refunded: 0
+    refunded: 0,
   };
 
   constructor(
@@ -173,12 +199,12 @@ export class AdminPaymentManagementComponent implements OnInit {
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private memberService: MemberService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
     this.loadPayments();
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe((params) => {
       if (params['action'] === 'assign-expense') {
         this.showAssignExpensePanel = true;
         this.loadMembersForExpense();
@@ -189,8 +215,8 @@ export class AdminPaymentManagementComponent implements OnInit {
   private getAuthHeaders(): HttpHeaders {
     const token = localStorage.getItem('token');
     return new HttpHeaders({
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
     });
   }
 
@@ -198,23 +224,22 @@ export class AdminPaymentManagementComponent implements OnInit {
     this.isLoading = true;
 
     // Fetch all payments without limit (client-side pagination handles display)
-    this.http.get<any>(
-      `${this.apiUrl}/payments?limit=999999`,
-      { headers: this.getAuthHeaders() }
-    ).subscribe({
-      next: (response) => {
-        this.payments = response.data || [];
-        this.applyFilters();
-        this.calculateSummary();
-        this.calculateOverdueSummaries();
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading payments:', error);
-        this.snackBar.open('Failed to load payments', 'Close', { duration: 3000 });
-        this.isLoading = false;
-      }
-    });
+    this.http
+      .get<any>(`${this.apiUrl}/payments?limit=999999`, { headers: this.getAuthHeaders() })
+      .subscribe({
+        next: (response) => {
+          this.payments = response.data || [];
+          this.applyFilters();
+          this.calculateSummary();
+          this.calculateOverdueSummaries();
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('Error loading payments:', error);
+          this.snackBar.open('Failed to load payments', 'Close', { duration: 3000 });
+          this.isLoading = false;
+        },
+      });
   }
 
   applyFilters(): void {
@@ -222,51 +247,55 @@ export class AdminPaymentManagementComponent implements OnInit {
 
     // Status filter
     if (this.filterStatus !== 'all') {
-      filtered = filtered.filter(p => p.status === this.filterStatus);
+      filtered = filtered.filter((p) => p.status === this.filterStatus);
     }
 
     // Method filter
     if (this.filterMethod !== 'all') {
-      filtered = filtered.filter(p => p.paymentMethod === this.filterMethod);
+      filtered = filtered.filter((p) => p.paymentMethod === this.filterMethod);
     }
 
     // Type filter
     if (this.filterType !== 'all') {
-      filtered = filtered.filter(p => p.paymentType === this.filterType);
+      filtered = filtered.filter((p) => p.paymentType === this.filterType);
     }
 
     // Search filter
     if (this.searchTerm) {
       const search = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.userId.fullName.toLowerCase().includes(search) ||
-        p.userId.username.toLowerCase().includes(search) ||
-        p.referenceNumber.toLowerCase().includes(search)
+      filtered = filtered.filter(
+        (p) =>
+          (p.userId?.fullName || '').toLowerCase().includes(search) ||
+          (p.userId?.username || '').toLowerCase().includes(search) ||
+          p.referenceNumber.toLowerCase().includes(search) ||
+          (p.description || '').toLowerCase().includes(search),
       );
     }
 
-    // Date range filter
-    if (this.dateRangeStart) {
-      filtered = filtered.filter(p => {
-        if (!p.paymentDate) return false;
-        return new Date(p.paymentDate) >= this.dateRangeStart!;
+    // Reservation date range filter
+    if (this.reservationDateStart) {
+      filtered = filtered.filter((p) => {
+        if (!p.reservationId?.date) return false;
+        return new Date(p.reservationId.date) >= this.reservationDateStart!;
       });
     }
 
-    if (this.dateRangeEnd) {
-      filtered = filtered.filter(p => {
-        if (!p.paymentDate) return false;
-        return new Date(p.paymentDate) <= this.dateRangeEnd!;
+    if (this.reservationDateEnd) {
+      const endOfDay = new Date(this.reservationDateEnd);
+      endOfDay.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((p) => {
+        if (!p.reservationId?.date) return false;
+        return new Date(p.reservationId.date) <= endOfDay;
       });
     }
 
     // Sort by status: pending → completed → recorded → failed → refunded
     const statusOrder: { [key: string]: number } = {
-      'pending': 1,
-      'completed': 2,
-      'record': 3,
-      'failed': 4,
-      'refunded': 5
+      pending: 1,
+      completed: 2,
+      record: 3,
+      failed: 4,
+      refunded: 5,
     };
 
     filtered.sort((a, b) => {
@@ -279,8 +308,12 @@ export class AdminPaymentManagementComponent implements OnInit {
 
       // Secondary sort by reservation date (oldest first)
       // Payments without reservation date go to the end
-      const dateA = a.reservationId?.date ? new Date(a.reservationId.date).getTime() : Number.MAX_SAFE_INTEGER;
-      const dateB = b.reservationId?.date ? new Date(b.reservationId.date).getTime() : Number.MAX_SAFE_INTEGER;
+      const dateA = a.reservationId?.date
+        ? new Date(a.reservationId.date).getTime()
+        : Number.MAX_SAFE_INTEGER;
+      const dateB = b.reservationId?.date
+        ? new Date(b.reservationId.date).getTime()
+        : Number.MAX_SAFE_INTEGER;
       return dateA - dateB;
     });
 
@@ -306,31 +339,42 @@ export class AdminPaymentManagementComponent implements OnInit {
     this.filterMethod = 'all';
     this.filterType = 'all';
     this.searchTerm = '';
-    this.dateRangeStart = null;
-    this.dateRangeEnd = null;
+    this.reservationDateStart = null;
+    this.reservationDateEnd = null;
     this.applyFilters();
+  }
+
+  getActiveFiltersCount(): number {
+    let count = 0;
+    if (this.filterStatus !== 'all') count++;
+    if (this.filterMethod !== 'all') count++;
+    if (this.filterType !== 'all') count++;
+    if (this.searchTerm) count++;
+    if (this.reservationDateStart) count++;
+    if (this.reservationDateEnd) count++;
+    return count;
   }
 
   calculateSummary(): void {
     this.summary = {
       total: this.payments.length,
       totalAmount: this.payments.reduce((sum, p) => sum + p.amount, 0),
-      pending: this.payments.filter(p => p.status === 'pending').length,
-      completed: this.payments.filter(p => p.status === 'completed').length,
-      recorded: this.payments.filter(p => p.status === 'record').length,
-      failed: this.payments.filter(p => p.status === 'failed').length,
-      refunded: this.payments.filter(p => p.status === 'refunded').length
+      pending: this.payments.filter((p) => p.status === 'pending').length,
+      completed: this.payments.filter((p) => p.status === 'completed').length,
+      recorded: this.payments.filter((p) => p.status === 'record').length,
+      failed: this.payments.filter((p) => p.status === 'failed').length,
+      refunded: this.payments.filter((p) => p.status === 'refunded').length,
     };
   }
 
   calculateOverdueSummaries(): void {
     // Get all overdue payments
-    const overduePayments = this.payments.filter(p => this.isOverdue(p));
+    const overduePayments = this.payments.filter((p) => this.isOverdue(p));
 
     // Group by user
     const memberMap = new Map<string, OverdueMemberSummary>();
 
-    overduePayments.forEach(payment => {
+    overduePayments.forEach((payment) => {
       const userId = payment.userId._id;
 
       if (!memberMap.has(userId)) {
@@ -341,7 +385,7 @@ export class AdminPaymentManagementComponent implements OnInit {
           totalOverdueAmount: 0,
           overdueCount: 0,
           oldestOverdueDays: 0,
-          payments: []
+          payments: [],
         });
       }
 
@@ -358,23 +402,26 @@ export class AdminPaymentManagementComponent implements OnInit {
     });
 
     // Convert map to array and sort by total overdue amount (descending)
-    this.overdueSummaries = Array.from(memberMap.values())
-      .sort((a, b) => b.totalOverdueAmount - a.totalOverdueAmount);
+    this.overdueSummaries = Array.from(memberMap.values()).sort(
+      (a, b) => b.totalOverdueAmount - a.totalOverdueAmount,
+    );
   }
 
   openEditDialog(payment: Payment): void {
     if (payment.status === 'record') {
-      this.snackBar.open('Recorded payments cannot be edited. Unrecord first.', 'Close', { duration: 3000 });
+      this.snackBar.open('Recorded payments cannot be edited. Unrecord first.', 'Close', {
+        duration: 3000,
+      });
       return;
     }
 
     const dialogRef = this.dialog.open(PaymentEditDialogComponent, {
       width: '600px',
       data: { payment },
-      disableClose: true
+      disableClose: true,
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result === 'updated' || (result && result.updated)) {
         this.loadPayments();
       }
@@ -388,19 +435,23 @@ export class AdminPaymentManagementComponent implements OnInit {
     }
 
     if (confirm(`Record payment ${payment.referenceNumber} in financial reports?`)) {
-      this.http.put<any>(
-        `${this.apiUrl}/payments/${payment._id}/record`,
-        {},
-        { headers: this.getAuthHeaders() }
-      ).subscribe({
-        next: (response) => {
-          this.snackBar.open('Payment recorded successfully', 'Close', { duration: 3000 });
-          this.loadPayments();
-        },
-        error: (error) => {
-          this.snackBar.open(error.error?.message || 'Failed to record payment', 'Close', { duration: 5000 });
-        }
-      });
+      this.http
+        .put<any>(
+          `${this.apiUrl}/payments/${payment._id}/record`,
+          {},
+          { headers: this.getAuthHeaders() },
+        )
+        .subscribe({
+          next: (response) => {
+            this.snackBar.open('Payment recorded successfully', 'Close', { duration: 3000 });
+            this.loadPayments();
+          },
+          error: (error) => {
+            this.snackBar.open(error.error?.message || 'Failed to record payment', 'Close', {
+              duration: 5000,
+            });
+          },
+        });
     }
   }
 
@@ -410,51 +461,75 @@ export class AdminPaymentManagementComponent implements OnInit {
       return;
     }
 
-    if (confirm(`Unrecord payment ${payment.referenceNumber}? This will remove it from financial reports.`)) {
-      this.http.put<any>(
-        `${this.apiUrl}/payments/${payment._id}/unrecord`,
-        {},
-        { headers: this.getAuthHeaders() }
-      ).subscribe({
-        next: (response) => {
-          this.snackBar.open('Payment unrecorded successfully', 'Close', { duration: 3000 });
-          this.loadPayments();
-        },
-        error: (error) => {
-          this.snackBar.open(error.error?.message || 'Failed to unrecord payment', 'Close', { duration: 5000 });
-        }
-      });
+    if (
+      confirm(
+        `Unrecord payment ${payment.referenceNumber}? This will remove it from financial reports.`,
+      )
+    ) {
+      this.http
+        .put<any>(
+          `${this.apiUrl}/payments/${payment._id}/unrecord`,
+          {},
+          { headers: this.getAuthHeaders() },
+        )
+        .subscribe({
+          next: (response) => {
+            this.snackBar.open('Payment unrecorded successfully', 'Close', { duration: 3000 });
+            this.loadPayments();
+          },
+          error: (error) => {
+            this.snackBar.open(error.error?.message || 'Failed to unrecord payment', 'Close', {
+              duration: 5000,
+            });
+          },
+        });
     }
   }
 
   getStatusChipClass(status: string): string {
     switch (status) {
-      case 'pending': return 'status-chip-pending';
-      case 'completed': return 'status-chip-completed';
-      case 'record': return 'status-chip-recorded';
-      case 'failed': return 'status-chip-failed';
-      case 'refunded': return 'status-chip-refunded';
-      default: return '';
+      case 'pending':
+        return 'status-chip-pending';
+      case 'completed':
+        return 'status-chip-completed';
+      case 'record':
+        return 'status-chip-recorded';
+      case 'failed':
+        return 'status-chip-failed';
+      case 'refunded':
+        return 'status-chip-refunded';
+      default:
+        return '';
     }
   }
 
   getStatusIcon(status: string): string {
     switch (status) {
-      case 'pending': return 'schedule';
-      case 'completed': return 'check_circle';
-      case 'record': return 'lock';
-      case 'failed': return 'cancel';
-      case 'refunded': return 'undo';
-      default: return 'help';
+      case 'pending':
+        return 'schedule';
+      case 'completed':
+        return 'check_circle';
+      case 'record':
+        return 'lock';
+      case 'failed':
+        return 'cancel';
+      case 'refunded':
+        return 'undo';
+      default:
+        return 'help';
     }
   }
 
   getMethodIcon(method: string): string {
     switch (method) {
-      case 'cash': return 'payments';
-      case 'bank_transfer': return 'account_balance';
-      case 'gcash': return 'phone_android';
-      default: return 'payment';
+      case 'cash':
+        return 'payments';
+      case 'bank_transfer':
+        return 'account_balance';
+      case 'gcash':
+        return 'phone_android';
+      default:
+        return 'payment';
     }
   }
 
@@ -463,7 +538,7 @@ export class AdminPaymentManagementComponent implements OnInit {
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   }
 
@@ -476,10 +551,14 @@ export class AdminPaymentManagementComponent implements OnInit {
 
   getPaymentTypeLabel(type: string): string {
     switch (type) {
-      case 'court_usage': return 'Court';
-      case 'membership_fee': return 'Membership';
-      case 'tournament_entry': return 'Tournament';
-      default: return type;
+      case 'court_usage':
+        return 'Court';
+      case 'membership_fee':
+        return 'Membership';
+      case 'tournament_entry':
+        return 'Tournament';
+      default:
+        return type;
     }
   }
 
@@ -548,7 +627,11 @@ export class AdminPaymentManagementComponent implements OnInit {
       this.filterStatus = 'pending'; // Show pending overdue payments
       this.applyFilters();
 
-      this.snackBar.open(`Showing ${member.overdueCount} overdue payment(s) for ${member.fullName}`, 'Close', { duration: 4000 });
+      this.snackBar.open(
+        `Showing ${member.overdueCount} overdue payment(s) for ${member.fullName}`,
+        'Close',
+        { duration: 4000 },
+      );
     }, 100);
   }
 
@@ -576,21 +659,21 @@ export class AdminPaymentManagementComponent implements OnInit {
     this.memberService.getMembers({ approved: true, active: true, includeAll: true }).subscribe({
       next: (response) => {
         this.membersForExpense = (response.data || []).sort((a, b) =>
-          (a.fullName || a.username).localeCompare(b.fullName || b.username)
+          (a.fullName || a.username).localeCompare(b.fullName || b.username),
         );
         this.filteredMembersForExpense = [...this.membersForExpense];
       },
       error: () => {
         this.snackBar.open('Failed to load members', 'Close', { duration: 3000 });
-      }
+      },
     });
   }
 
   filterMembersForExpense(): void {
     const term = this.memberSearchTerm.toLowerCase();
-    this.filteredMembersForExpense = this.membersForExpense.filter(m =>
-      (m.fullName || '').toLowerCase().includes(term) ||
-      m.username.toLowerCase().includes(term)
+    this.filteredMembersForExpense = this.membersForExpense.filter(
+      (m) =>
+        (m.fullName || '').toLowerCase().includes(term) || m.username.toLowerCase().includes(term),
     );
   }
 
@@ -607,7 +690,7 @@ export class AdminPaymentManagementComponent implements OnInit {
   }
 
   selectAllMembers(): void {
-    this.filteredMembersForExpense.forEach(m => this.selectedMemberIds.add(m._id));
+    this.filteredMembersForExpense.forEach((m) => this.selectedMemberIds.add(m._id));
   }
 
   clearMemberSelection(): void {
@@ -646,30 +729,111 @@ export class AdminPaymentManagementComponent implements OnInit {
       description: this.assignExpenseForm.description?.trim() || '',
       amount: this.assignExpenseForm.amount,
       dueDate: this.assignExpenseForm.dueDate,
-      memberIds: Array.from(this.selectedMemberIds)
+      memberIds: Array.from(this.selectedMemberIds),
     };
 
-    this.http.post<any>(
-      `${this.apiUrl}/payments/assign-expense`,
-      payload,
-      { headers: this.getAuthHeaders() }
-    ).subscribe({
-      next: (response) => {
-        this.assignExpenseLoading = false;
-        const { count, skipped } = response.data;
-        let msg = `${count} pending payment(s) created for "${payload.title}"`;
-        if (skipped?.length > 0) {
-          msg += `. ${skipped.length} skipped (already assigned).`;
-        }
-        this.snackBar.open(msg, 'Close', { duration: 6000 });
-        this.showAssignExpensePanel = false;
-        this.resetAssignExpenseForm();
-        this.loadPayments();
-      },
-      error: (error) => {
-        this.assignExpenseLoading = false;
-        this.snackBar.open(error.error?.message || 'Failed to assign expense', 'Close', { duration: 5000 });
-      }
-    });
+    this.http
+      .post<any>(`${this.apiUrl}/payments/assign-expense`, payload, {
+        headers: this.getAuthHeaders(),
+      })
+      .subscribe({
+        next: (response) => {
+          this.assignExpenseLoading = false;
+          const { count, skipped } = response.data;
+          let msg = `${count} pending payment(s) created for "${payload.title}"`;
+          if (skipped?.length > 0) {
+            msg += `. ${skipped.length} skipped (already assigned).`;
+          }
+          this.snackBar.open(msg, 'Close', { duration: 6000 });
+          this.showAssignExpensePanel = false;
+          this.resetAssignExpenseForm();
+          this.loadPayments();
+        },
+        error: (error) => {
+          this.assignExpenseLoading = false;
+          this.snackBar.open(error.error?.message || 'Failed to assign expense', 'Close', {
+            duration: 5000,
+          });
+        },
+      });
+  }
+
+  // Helper methods for modern native HTML template
+
+  // Expose Math to template for pagination
+  Math = Math;
+
+  // Format Date object to YYYY-MM-DD string for native date input
+  formatDateForInput(date: Date | null): string {
+    if (!date) return '';
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Handle date input change for reservation date start filter
+  onDateFromChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.reservationDateStart = input.value ? new Date(input.value) : null;
+    this.applyFilters();
+  }
+
+  // Handle date input change for reservation date end filter
+  onDateToChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.reservationDateEnd = input.value ? new Date(input.value) : null;
+    this.applyFilters();
+  }
+
+  // Format payment method for display
+  formatPaymentMethod(method: string): string {
+    switch (method) {
+      case 'cash':
+        return 'Cash';
+      case 'bank_transfer':
+        return 'Bank Transfer';
+      case 'gcash':
+        return 'GCash';
+      default:
+        return method;
+    }
+  }
+
+  // Pagination navigation methods
+  goToFirstPage(): void {
+    this.pageIndex = 0;
+    this.updatePaginatedPayments();
+  }
+
+  goToPreviousPage(): void {
+    if (this.pageIndex > 0) {
+      this.pageIndex--;
+      this.updatePaginatedPayments();
+    }
+  }
+
+  goToNextPage(): void {
+    if (this.pageIndex < this.getTotalPages() - 1) {
+      this.pageIndex++;
+      this.updatePaginatedPayments();
+    }
+  }
+
+  goToLastPage(): void {
+    this.pageIndex = Math.max(0, this.getTotalPages() - 1);
+    this.updatePaginatedPayments();
+  }
+
+  // Calculate total number of pages
+  getTotalPages(): number {
+    return Math.ceil(this.filteredPayments.length / this.pageSize);
+  }
+
+  // Handle page size change
+  onPageSizeChange(): void {
+    this.pageIndex = 0; // Reset to first page when changing page size
+    this.updatePaginatedPayments();
   }
 }

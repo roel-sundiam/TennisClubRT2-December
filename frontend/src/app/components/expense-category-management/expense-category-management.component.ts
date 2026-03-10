@@ -1,6 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+  FormsModule,
+} from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,7 +22,11 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTabsModule } from '@angular/material/tabs';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ExpenseCategoryService } from '../../services/expense-category.service';
-import { ExpenseCategory, CreateCategoryDto, UpdateCategoryDto } from '../../models/expense-category.model';
+import {
+  ExpenseCategory,
+  CreateCategoryDto,
+  UpdateCategoryDto,
+} from '../../models/expense-category.model';
 
 interface CategoryWithUsage extends ExpenseCategory {
   usageCount?: number;
@@ -28,6 +38,7 @@ interface CategoryWithUsage extends ExpenseCategory {
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -41,10 +52,10 @@ interface CategoryWithUsage extends ExpenseCategory {
     MatSnackBarModule,
     MatDialogModule,
     MatTabsModule,
-    DragDropModule
+    DragDropModule,
   ],
   templateUrl: './expense-category-management.component.html',
-  styleUrl: './expense-category-management.component.scss'
+  styleUrl: './expense-category-management.component.scss',
 })
 export class ExpenseCategoryManagementComponent implements OnInit {
   categories: CategoryWithUsage[] = [];
@@ -58,7 +69,15 @@ export class ExpenseCategoryManagementComponent implements OnInit {
   isLoading = false;
   isSaving = false;
 
-  displayedColumns: string[] = ['dragHandle', 'name', 'color', 'description', 'usageCount', 'isActive', 'actions'];
+  displayedColumns: string[] = [
+    'dragHandle',
+    'name',
+    'color',
+    'description',
+    'usageCount',
+    'isActive',
+    'actions',
+  ];
 
   // Material icon options (common icons)
   materialIcons = [
@@ -74,7 +93,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
     'checkroom',
     'scoreboard',
     'emoji_events',
-    'water_drop'
+    'water_drop',
   ];
 
   // Stats
@@ -86,13 +105,13 @@ export class ExpenseCategoryManagementComponent implements OnInit {
     private fb: FormBuilder,
     private categoryService: ExpenseCategoryService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
   ) {
     this.categoryForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
       description: ['', [Validators.maxLength(500)]],
       color: ['', [Validators.pattern(/^#[0-9A-F]{6}$/i)]],
-      icon: ['']
+      icon: [''],
     });
   }
 
@@ -121,7 +140,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
         console.error('Error loading categories:', error);
         this.snackBar.open('Failed to load categories', 'Close', { duration: 3000 });
         this.isLoading = false;
-      }
+      },
     });
   }
 
@@ -129,7 +148,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
    * Load usage counts for all categories
    */
   loadUsageCounts(): void {
-    this.categories.forEach(category => {
+    this.categories.forEach((category) => {
       this.categoryService.getCategoryUsage(category._id).subscribe({
         next: (response) => {
           if (response.success && response.data) {
@@ -138,7 +157,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
         },
         error: (error) => {
           console.error(`Error loading usage for category ${category._id}:`, error);
-        }
+        },
       });
     });
   }
@@ -150,9 +169,9 @@ export class ExpenseCategoryManagementComponent implements OnInit {
     if (this.filterStatus === 'all') {
       this.filteredCategories = [...this.categories];
     } else if (this.filterStatus === 'active') {
-      this.filteredCategories = this.categories.filter(cat => cat.isActive);
+      this.filteredCategories = this.categories.filter((cat) => cat.isActive);
     } else {
-      this.filteredCategories = this.categories.filter(cat => !cat.isActive);
+      this.filteredCategories = this.categories.filter((cat) => !cat.isActive);
     }
   }
 
@@ -161,8 +180,8 @@ export class ExpenseCategoryManagementComponent implements OnInit {
    */
   updateStats(): void {
     this.totalCategories = this.categories.length;
-    this.activeCategories = this.categories.filter(cat => cat.isActive).length;
-    this.inactiveCategories = this.categories.filter(cat => !cat.isActive).length;
+    this.activeCategories = this.categories.filter((cat) => cat.isActive).length;
+    this.inactiveCategories = this.categories.filter((cat) => !cat.isActive).length;
   }
 
   /**
@@ -199,7 +218,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
         const errorMessage = error.error?.message || 'Failed to create category';
         this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
         this.isSaving = false;
-      }
+      },
     });
   }
 
@@ -214,7 +233,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
       name: category.name,
       description: category.description || '',
       color: category.color || '',
-      icon: category.icon || ''
+      icon: category.icon || '',
     });
   }
 
@@ -244,7 +263,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
         const errorMessage = error.error?.message || 'Failed to update category';
         this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
         this.isSaving = false;
-      }
+      },
     });
   }
 
@@ -265,7 +284,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
       this.snackBar.open(
         `Cannot delete category. It is used in ${category.usageCount} expense(s)`,
         'Close',
-        { duration: 5000 }
+        { duration: 5000 },
       );
       return;
     }
@@ -282,7 +301,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
           console.error('Error deleting category:', error);
           const errorMessage = error.error?.message || 'Failed to delete category';
           this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-        }
+        },
       });
     }
   }
@@ -307,7 +326,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
           console.error('Error activating category:', error);
           const errorMessage = error.error?.message || 'Failed to activate category';
           this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-        }
+        },
       });
     }
   }
@@ -319,7 +338,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
     moveItemInArray(this.filteredCategories, event.previousIndex, event.currentIndex);
 
     // Get the new order of category IDs
-    const categoryIds = this.filteredCategories.map(cat => cat._id);
+    const categoryIds = this.filteredCategories.map((cat) => cat._id);
 
     // Update display order on server
     this.categoryService.reorderCategories(categoryIds).subscribe({
@@ -333,7 +352,7 @@ export class ExpenseCategoryManagementComponent implements OnInit {
         this.snackBar.open('Failed to reorder categories', 'Close', { duration: 3000 });
         // Reload to restore original order
         this.loadCategories();
-      }
+      },
     });
   }
 

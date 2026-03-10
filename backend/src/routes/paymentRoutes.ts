@@ -28,6 +28,7 @@ import {
   getGCashConfig,
   assignExpense,
   assignExpenseValidation,
+  deleteAssignedExpense,
   getExpenseTemplates,
   renameAssignedExpense,
   rebuildCourtUsageReport
@@ -121,6 +122,18 @@ router.patch(
   authenticateToken,
   requireRole(['admin', 'superadmin']),
   renameAssignedExpense
+);
+
+/**
+ * @route DELETE /api/payments/delete-assigned-expense
+ * @desc Delete all payments for a given assigned expense title (all statuses)
+ * @access Private (Admin/SuperAdmin)
+ */
+router.delete(
+  '/delete-assigned-expense',
+  authenticateToken,
+  requireRole(['admin', 'superadmin']),
+  deleteAssignedExpense
 );
 
 /**

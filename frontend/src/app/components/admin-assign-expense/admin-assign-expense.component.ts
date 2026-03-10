@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ConfirmationDialogComponent, ConfirmationDialogData } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { MemberService, Member } from '../../services/member.service';
 import { environment } from '../../../environments/environment';
 
@@ -26,7 +28,8 @@ interface ExpenseTemplate {
     FormsModule,
     MatIconModule,
     MatSnackBarModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatDialogModule
   ],
   templateUrl: './admin-assign-expense.component.html',
   styleUrl: './admin-assign-expense.component.scss'
@@ -56,6 +59,9 @@ export class AdminAssignExpenseComponent implements OnInit {
   renamingTitle: string | null = null;
   renameValue = '';
 
+  // Delete
+  deletingTitle: string | null = null;
+
   // Submit
   submitting = false;
 
@@ -63,7 +69,8 @@ export class AdminAssignExpenseComponent implements OnInit {
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private memberService: MemberService,
-    private router: Router
+    private router: Router,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -183,12 +190,7 @@ export class AdminAssignExpenseComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         this.submitting = false;
-        const { count, skipped } = response.data;
-        let msg = `${count} pending payment(s) created for "${payload.title}"`;
-        if (skipped?.length > 0) {
-          msg += `. ${skipped.length} skipped (already assigned).`;
-        }
-        this.snackBar.open(msg, 'Close', { duration: 6000 });
+        this.snackBar.open(response.message, 'Close', { duration: 6000 });
         this.reset();
         this.loadTemplates(); // Refresh templates after new assignment
       },
@@ -239,6 +241,39 @@ export class AdminAssignExpenseComponent implements OnInit {
   cancelRename(): void {
     this.renamingTitle = null;
     this.renameValue = '';
+  }
+
+  deleteExpense(template: ExpenseTemplate, event: Event): void {
+    event.stopPropagation();
+    const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
+      data: {
+        title: 'Delete Expense',
+        message: `This will permanently delete all ${template.useCount} payment(s) for "${template.title}" from all members. This cannot be undone.`,
+        confirmText: 'Delete All',
+        cancelText: 'Cancel',
+        type: 'danger',
+        icon: 'delete_forever'
+      } as ConfirmationDialogData
+    });
+    dialogRef.afterClosed().subscribe(confirmed => {
+      if (!confirmed) return;
+      this.deletingTitle = template.title;
+      this.http.delete<any>(
+        `${this.apiUrl}/payments/delete-assigned-expense`,
+        { headers: this.getAuthHeaders(), body: { title: template.title } }
+      ).subscribe({
+        next: (response) => {
+          this.deletingTitle = null;
+          this.snackBar.open(response.message || 'Expense deleted', 'Close', { duration: 4000 });
+          if (this.form.title === template.title) this.form.title = '';
+          this.loadTemplates();
+        },
+        error: (error) => {
+          this.deletingTitle = null;
+          this.snackBar.open(error.error?.message || 'Failed to delete expense', 'Close', { duration: 5000 });
+        }
+      });
+    });
   }
 
   goBack(): void {
