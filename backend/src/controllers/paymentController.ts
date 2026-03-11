@@ -1974,7 +1974,7 @@ export const approvePayment = asyncHandler(async (req: AuthenticatedRequest, res
 // Record payment (mark as recorded after approval)
 export const recordPayment = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { notes, paymentDate } = req.body;
+  const { notes, paymentDate, applyCredit, creditAmount } = req.body;
 
   console.log('📝 Recording payment:', id, 'by admin:', req.user?.username);
 
@@ -2031,12 +2031,15 @@ export const recordPayment = asyncHandler(async (req: AuthenticatedRequest, res:
 
     await payment.save();
 
-    // Deduct from credit balance if member has credits available
+    // Deduct from credit balance only if admin chose to apply it
     try {
       const paymentUser = await User.findById(payment.userId);
-      if (paymentUser && (paymentUser.creditBalance || 0) > 0) {
+      if (applyCredit === true && paymentUser && (paymentUser.creditBalance || 0) > 0) {
         const creditBalance = paymentUser.creditBalance || 0;
-        const deductAmount = Math.min(creditBalance, payment.amount);
+        const maxDeduct = Math.min(creditBalance, payment.amount);
+        // Use admin-specified amount if valid, otherwise fall back to max
+        const requestedAmount = typeof creditAmount === 'number' && creditAmount > 0 ? creditAmount : maxDeduct;
+        const deductAmount = Math.min(requestedAmount, maxDeduct);
         await CreditTransaction.createTransaction(
           paymentUser._id.toString(),
           'deduction',

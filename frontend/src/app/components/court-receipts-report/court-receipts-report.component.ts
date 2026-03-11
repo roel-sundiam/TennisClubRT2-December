@@ -11,6 +11,7 @@ import { PaymentConfirmationDialogComponent, PaymentConfirmationData } from '../
 import { UnrecordConfirmationDialogComponent, UnrecordDialogData } from '../unrecord-confirmation-dialog/unrecord-confirmation-dialog.component';
 import { EditPaymentAmountDialogComponent, EditPaymentAmountData } from '../edit-payment-amount-dialog/edit-payment-amount-dialog.component';
 import { CreditDepositConfirmDialogComponent } from '../credit-deposit-confirm-dialog/credit-deposit-confirm-dialog.component';
+import { RecordPaymentDialogComponent } from '../admin-payment-management/record-payment-dialog/record-payment-dialog.component';
 import { environment } from '../../../environments/environment';
 
 interface PaymentRecord {
@@ -391,7 +392,7 @@ export class CourtReceiptsReportComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(confirmed => {
-      if (confirmed) {
+      if (confirmed?.confirmed) {
         this.executeApprovePayment(payment._id);
       }
     });
@@ -420,40 +421,60 @@ export class CourtReceiptsReportComponent implements OnInit {
   }
 
   recordPayment(payment: PaymentRecord): void {
-    const dialogData: PaymentConfirmationData = {
-      action: 'record',
-      paymentId: payment._id,
-      memberName: payment.memberName,
-      amount: payment.amount,
-      paymentMethod: payment.paymentMethod,
-      referenceNumber: payment.referenceNumber,
-      reservationDate: this.formatDate(payment.reservationDate),
-      timeSlot: payment.timeSlotDisplay,
-      existingPaymentDate: payment.paymentDate
-    };
+    const creditBalance = payment.userId?.creditBalance || 0;
 
-    const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
-      width: '500px',
-      maxWidth: '90vw',
-      data: dialogData,
-      disableClose: true
-    });
+    if (creditBalance > 0) {
+      const dialogRef = this.dialog.open(RecordPaymentDialogComponent, {
+        data: {
+          referenceNumber: payment.referenceNumber,
+          amount: payment.amount,
+          memberName: payment.memberName,
+          creditBalance,
+        },
+        disableClose: true,
+      });
 
-    dialogRef.afterClosed().subscribe(confirmed => {
-      if (confirmed) {
-        this.executeRecordPayment(payment._id);
-      }
-    });
+      dialogRef.afterClosed().subscribe((result) => {
+        if (result === null || result === undefined) return;
+        this.executeRecordPayment(payment._id, result.applyCredit, result.creditAmount);
+      });
+    } else {
+      const dialogData: PaymentConfirmationData = {
+        action: 'record',
+        paymentId: payment._id,
+        memberName: payment.memberName,
+        amount: payment.amount,
+        paymentMethod: payment.paymentMethod,
+        referenceNumber: payment.referenceNumber,
+        reservationDate: this.formatDate(payment.reservationDate),
+        timeSlot: payment.timeSlotDisplay,
+        existingPaymentDate: payment.paymentDate
+      };
+
+      const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
+        width: '500px',
+        maxWidth: '90vw',
+        data: dialogData,
+        disableClose: true
+      });
+
+      dialogRef.afterClosed().subscribe(confirmed => {
+        if (confirmed?.confirmed) {
+          this.executeRecordPayment(payment._id, false);
+        }
+      });
+    }
   }
 
-  private executeRecordPayment(paymentId: string): void {
+  private executeRecordPayment(paymentId: string, applyCredit: boolean, creditAmount?: number): void {
     this.processing.push(paymentId);
 
-    this.http.put<any>(`${this.apiUrl}/payments/${paymentId}/record`, {})
+    this.http.put<any>(`${this.apiUrl}/payments/${paymentId}/record`, { applyCredit, creditAmount })
       .subscribe({
         next: (response) => {
           if (response.success) {
-            this.showMessage('Payment recorded successfully', 'success');
+            const msg = applyCredit ? 'Payment recorded with credit applied' : 'Payment recorded successfully';
+            this.showMessage(msg, 'success');
             this.loadReport();
           } else {
             this.showMessage(response.message || 'Failed to record payment', 'error');

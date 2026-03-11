@@ -25,6 +25,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { PaymentEditDialogComponent } from './payment-edit-dialog/payment-edit-dialog.component';
+import { RecordPaymentDialogComponent } from './record-payment-dialog/record-payment-dialog.component';
 import { MemberService, Member } from '../../services/member.service';
 import { environment } from '../../../environments/environment';
 
@@ -35,6 +36,7 @@ interface Payment {
     _id: string;
     fullName: string;
     username: string;
+    creditBalance?: number;
   };
   amount: number;
   currency: string;
@@ -434,25 +436,51 @@ export class AdminPaymentManagementComponent implements OnInit {
       return;
     }
 
-    if (confirm(`Record payment ${payment.referenceNumber} in financial reports?`)) {
-      this.http
-        .put<any>(
-          `${this.apiUrl}/payments/${payment._id}/record`,
-          {},
-          { headers: this.getAuthHeaders() },
-        )
-        .subscribe({
-          next: (response) => {
-            this.snackBar.open('Payment recorded successfully', 'Close', { duration: 3000 });
-            this.loadPayments();
-          },
-          error: (error) => {
-            this.snackBar.open(error.error?.message || 'Failed to record payment', 'Close', {
-              duration: 5000,
-            });
-          },
-        });
+    const creditBalance = payment.userId?.creditBalance || 0;
+
+    if (creditBalance > 0) {
+      const dialogRef = this.dialog.open(RecordPaymentDialogComponent, {
+        data: {
+          referenceNumber: payment.referenceNumber,
+          amount: payment.amount,
+          memberName: payment.userId?.fullName || 'Unknown',
+          creditBalance,
+        },
+        disableClose: true,
+      });
+
+      dialogRef.afterClosed().subscribe((result) => {
+        if (result === null || result === undefined) return;
+        this.doRecordPayment(payment, result.applyCredit);
+      });
+    } else {
+      if (confirm(`Record payment ${payment.referenceNumber} in financial reports?`)) {
+        this.doRecordPayment(payment, false);
+      }
     }
+  }
+
+  private doRecordPayment(payment: Payment, applyCredit: boolean): void {
+    this.http
+      .put<any>(
+        `${this.apiUrl}/payments/${payment._id}/record`,
+        { applyCredit },
+        { headers: this.getAuthHeaders() },
+      )
+      .subscribe({
+        next: () => {
+          const msg = applyCredit
+            ? 'Payment recorded with credit applied'
+            : 'Payment recorded successfully';
+          this.snackBar.open(msg, 'Close', { duration: 3000 });
+          this.loadPayments();
+        },
+        error: (error) => {
+          this.snackBar.open(error.error?.message || 'Failed to record payment', 'Close', {
+            duration: 5000,
+          });
+        },
+      });
   }
 
   unrecordPayment(payment: Payment): void {
