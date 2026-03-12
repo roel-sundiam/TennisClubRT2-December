@@ -539,6 +539,17 @@ app-reservations {
   background: transparent !important;
 }
 
+/* Modern Share Dialog Specific Styles */
+.modern-share-dialog-panel .mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 20px !important;
+  box-shadow: 0 20px 48px rgba(102, 126, 234, 0.25) !important;
+}
+
+.modern-share-dialog-panel .cdk-overlay-backdrop {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
 /* Custom Snackbar Styles */
 .success-snack {
   background-color: #4caf50 !important;
