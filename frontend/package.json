@@ -43,6 +43,7 @@
     "@fullcalendar/interaction": "^6.1.19",
     "@primeng/themes": "^20.0.1",
     "@types/socket.io": "^3.0.1",
+    "html2canvas": "^1.4.1",
     "primeicons": "^7.0.0",
     "primeng": "^20.0.1",
     "rxjs": "~7.8.0",

@@ -1,0 +1,193 @@
+<div class="modern-dialog-container">
+  <!-- Modern Header with Date Badge -->
+  <div class="modern-header">
+    <div class="header-top">
+      <div class="date-badge">
+        <div class="month">{{ tomorrowDate | date: 'MMM' }}</div>
+        <div class="day-num">{{ tomorrowDate | date: 'd' }}</div>
+      </div>
+      <div class="header-info">
+        <h2 class="dialog-title">{{ tomorrowDate | date: 'EEEE' }}</h2>
+        <p class="dialog-subtitle">{{ formattedDate }}</p>
+        <div class="header-tags">
+          <span class="tag share-tag">
+            <mat-icon>share</mat-icon>
+            Ready to Share
+          </span>
+          <span *ngIf="!loading && !error" class="tag count-tag">
+            <mat-icon>event</mat-icon>
+            {{ reservations.length }} booking(s)
+          </span>
+        </div>
+      </div>
+      <button mat-icon-button (click)="close()" class="modern-close-btn">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <mat-dialog-content class="dialog-content" *ngIf="loading">
+    <div class="loading-state">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p class="loading-text">Loading tomorrow's schedule…</p>
+    </div>
+  </mat-dialog-content>
+
+  <!-- Error State -->
+  <mat-dialog-content class="dialog-content" *ngIf="error && !loading">
+    <div class="error-state">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p class="error-title">Failed to Load Schedule</p>
+      <p class="error-message">Please check your connection and try again.</p>
+    </div>
+  </mat-dialog-content>
+
+  <!-- Main Content -->
+  <mat-dialog-content class="dialog-content" *ngIf="!loading && !error">
+    <div class="instructions-banner">
+      <mat-icon>info</mat-icon>
+      <span>Copy or download the schedule to share on social media or messaging apps</span>
+    </div>
+
+    <!-- Preview of Schedule Card -->
+    <div #scheduleCard class="schedule-preview-card">
+      <!-- Card Inner Header -->
+      <div class="preview-card-header">
+        <div class="club-branding">
+          <div class="club-logo-container">
+            <img src="images/rt2-logo.png" alt="RT2 Tennis Club" class="club-logo-img">
+          </div>
+          <div class="club-text">
+            <h3 class="club-name">RT2 TENNIS CLUB</h3>
+            <p class="club-date">{{ formattedDate }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Booked Slots Section -->
+      <div class="preview-section">
+        <div class="section-header booked-header">
+          <mat-icon>sports_tennis</mat-icon>
+          <span class="section-title">BOOKED SLOTS</span>
+          <span class="section-count">{{ bookedReservations.length }}</span>
+        </div>
+
+        <div *ngIf="bookedReservations.length === 0" class="empty-message">
+          <mat-icon>event_available</mat-icon>
+          <span>No bookings yet for tomorrow</span>
+        </div>
+
+        <div class="reservations-grid">
+          <div *ngFor="let r of bookedReservations" class="mini-reservation-card">
+            <div class="mini-time">{{ getTimeRange(r) }}</div>
+            <div class="mini-details">
+              <div class="mini-reserver">{{ getReserverName(r) }}</div>
+              <div class="mini-players" *ngIf="getMemberPlayers(r)">
+                <mat-icon>groups</mat-icon>
+                {{ getMemberPlayers(r) }}
+              </div>
+              <div class="mini-guests" *ngIf="getGuestCount(r) > 0">
+                <mat-icon>person_add</mat-icon>
+                +{{ getGuestCount(r) }} guest{{ getGuestCount(r) > 1 ? 's' : '' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Blocked Slots Section (if any) -->
+      <div *ngIf="blockedReservations.length > 0" class="preview-section">
+        <div class="section-header blocked-header">
+          <mat-icon>block</mat-icon>
+          <span class="section-title">BLOCKED SLOTS</span>
+          <span class="section-count">{{ blockedReservations.length }}</span>
+        </div>
+
+        <div class="reservations-grid">
+          <div *ngFor="let r of blockedReservations" class="mini-reservation-card blocked">
+            <div class="mini-time blocked">{{ getTimeRange(r) }}</div>
+            <div class="mini-details">
+              <div class="mini-block-reason">{{ getReserverName(r) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available Slots Section -->
+      <div class="preview-section">
+        <div class="section-header available-header">
+          <mat-icon>check_circle</mat-icon>
+          <span class="section-title">AVAILABLE SLOTS</span>
+          <span class="section-count">{{ availableSlots.length }}</span>
+        </div>
+
+        <div *ngIf="availableSlots.length === 0" class="empty-message fully-booked-message">
+          <mat-icon>event_busy</mat-icon>
+          <span>Fully booked for tomorrow</span>
+        </div>
+
+        <div *ngIf="availableSlots.length > 0" class="available-slots-grid">
+          <span *ngFor="let slot of availableSlots" class="available-chip">
+            {{ formatSlot(slot) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Preview Card Footer -->
+      <div class="preview-card-footer">
+        <mat-icon>verified</mat-icon>
+        <span>RT2 Court Management System</span>
+      </div>
+    </div>
+
+    <!-- Schedule Summary Stats -->
+    <div class="schedule-summary">
+      <div class="summary-stat booked-stat">
+        <div class="stat-icon">
+          <mat-icon>sports_tennis</mat-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-value">{{ bookedReservations.length }}</div>
+          <div class="stat-label">Booked</div>
+        </div>
+      </div>
+      <div class="summary-stat available-stat" *ngIf="availableSlots.length > 0">
+        <div class="stat-icon">
+          <mat-icon>check_circle</mat-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-value">{{ availableSlots.length }}</div>
+          <div class="stat-label">Available</div>
+        </div>
+      </div>
+      <div class="summary-stat blocked-stat" *ngIf="blockedReservations.length > 0">
+        <div class="stat-icon">
+          <mat-icon>block</mat-icon>
+        </div>
+        <div class="stat-info">
+          <div class="stat-value">{{ blockedReservations.length }}</div>
+          <div class="stat-label">Blocked</div>
+        </div>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <!-- Modern Actions Footer -->
+  <div class="modern-actions" *ngIf="!loading && !error">
+    <button mat-button (click)="close()" class="action-btn secondary-btn">
+      <mat-icon>close</mat-icon>
+      Close
+    </button>
+    <button mat-flat-button color="primary" class="action-btn primary-btn" (click)="copyImage()" [disabled]="isCopying">
+      <mat-spinner *ngIf="isCopying" diameter="20" class="btn-spinner"></mat-spinner>
+      <mat-icon *ngIf="!isCopying">content_copy</mat-icon>
+      {{ isCopying ? 'Copying…' : 'Copy Image' }}
+    </button>
+    <button mat-flat-button color="accent" class="action-btn accent-btn" (click)="downloadImage()" [disabled]="isDownloading">
+      <mat-spinner *ngIf="isDownloading" diameter="20" class="btn-spinner"></mat-spinner>
+      <mat-icon *ngIf="!isDownloading">download</mat-icon>
+      {{ isDownloading ? 'Saving…' : 'Save as Image' }}
+    </button>
+  </div>
+</div>

@@ -144,6 +144,10 @@
         <p class="calendar-subtitle">View all court reservations and availability</p>
       </div>
       <div class="header-actions">
+        <button *ngIf="authService.isAdmin()" mat-raised-button color="accent" class="share-schedule-btn" (click)="shareTomorrowSchedule()">
+          <mat-icon>share</mat-icon>
+          Share Tomorrow
+        </button>
         <button mat-raised-button color="primary" class="dashboard-btn" (click)="goToDashboard()">
           <mat-icon>dashboard</mat-icon>
           Dashboard

@@ -12,6 +12,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { CalendarService, DayReservationInfo, Reservation } from '../../services/calendar.service';
 import { CalendarDayDetailsDialogComponent } from '../calendar-day-details-dialog/calendar-day-details-dialog.component';
+import { TomorrowScheduleShareDialogComponent } from '../tomorrow-schedule-share-dialog/tomorrow-schedule-share-dialog.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-calendar-view',
@@ -227,7 +229,8 @@ export class CalendarViewComponent implements OnInit {
     private calendarService: CalendarService,
     private router: Router,
     private cdr: ChangeDetectorRef,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    public authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -432,6 +435,19 @@ export class CalendarViewComponent implements OnInit {
 
     this.router.navigate(['/reservations'], {
       queryParams: { date: dateStr }
+    });
+  }
+
+  /**
+   * Open tomorrow's schedule share dialog (admin only)
+   */
+  shareTomorrowSchedule(): void {
+    this.dialog.open(TomorrowScheduleShareDialogComponent, {
+      width: '750px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: ['modern-dialog', 'modern-share-dialog-panel'],
+      disableClose: false
     });
   }
 
