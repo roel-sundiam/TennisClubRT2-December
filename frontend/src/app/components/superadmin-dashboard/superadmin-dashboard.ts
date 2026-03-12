@@ -5,9 +5,11 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { interval, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { TomorrowScheduleShareDialogComponent } from '../tomorrow-schedule-share-dialog/tomorrow-schedule-share-dialog.component';
 
 // Interfaces for API response
 interface UserInfo {
@@ -118,7 +120,8 @@ interface DashboardData {
   imports: [
     CommonModule,
     FormsModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatDialogModule
   ],
   templateUrl: './superadmin-dashboard.html',
   styleUrls: ['./superadmin-dashboard.component.css']
@@ -142,8 +145,18 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private router: Router,
-    private location: Location
+    private location: Location,
+    private dialog: MatDialog
   ) {}
+
+  shareTomorrowSchedule(): void {
+    this.dialog.open(TomorrowScheduleShareDialogComponent, {
+      width: '750px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: ['modern-dialog', 'modern-share-dialog-panel']
+    });
+  }
 
   ngOnInit() {
     this.loadDashboardData();

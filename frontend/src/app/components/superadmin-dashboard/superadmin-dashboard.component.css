@@ -123,6 +123,16 @@
   height: 20px;
 }
 
+.btn-share {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-share:hover {
+  background: linear-gradient(135deg, #5a6fd6 0%, #6a3f96 100%);
+  transform: translateY(-2px);
+}
+
 .btn-refresh {
   background: rgba(255, 255, 255, 0.5);
   color: #1e293b;
