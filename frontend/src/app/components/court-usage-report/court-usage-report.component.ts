@@ -45,7 +45,7 @@ interface CourtUsageData {
     MatIconModule,
     MatTableModule,
     MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
   ],
   template: `
     <div class="modern-page-container">
@@ -63,14 +63,24 @@ interface CourtUsageData {
             </div>
           </div>
           <div class="header-actions">
-            <button mat-raised-button class="refresh-btn" (click)="refreshData()" [disabled]="loading">
+            <button
+              mat-raised-button
+              class="refresh-btn"
+              (click)="refreshData()"
+              [disabled]="loading"
+            >
               <mat-icon>refresh</mat-icon>
               Refresh
             </button>
             <div class="toggle-container">
               <span class="toggle-label">Auto-refresh</span>
               <div class="toggle-switch">
-                <input type="checkbox" id="autoRefresh" [checked]="autoRefreshEnabled" (change)="toggleAutoRefresh()">
+                <input
+                  type="checkbox"
+                  id="autoRefresh"
+                  [checked]="autoRefreshEnabled"
+                  (change)="toggleAutoRefresh()"
+                />
                 <label for="autoRefresh"></label>
               </div>
             </div>
@@ -137,26 +147,46 @@ interface CourtUsageData {
               <span class="record-count">{{ reportData.rawData.length }} records</span>
             </div>
           </div>
-          
+
           <div class="table-wrapper">
             <table mat-table [dataSource]="reportData.rawData" class="modern-data-table">
-              <ng-container *ngFor="let column of reportData.headers; trackBy: trackByColumn" [matColumnDef]="column">
-                <th mat-header-cell *matHeaderCellDef 
-                    [ngClass]="['table-header-cell', column === 'Players/Members' ? 'frozen-header-cell' : '']">
+              <ng-container
+                *ngFor="let column of reportData.headers; trackBy: trackByColumn"
+                [matColumnDef]="column"
+              >
+                <th
+                  mat-header-cell
+                  *matHeaderCellDef
+                  [ngClass]="[
+                    'table-header-cell',
+                    column === 'Players/Members' ? 'frozen-header-cell' : '',
+                  ]"
+                >
                   {{ column }}
                 </th>
-                <td mat-cell *matCellDef="let element" 
-                    [ngClass]="{
-                      'member-name-cell': column === 'Players/Members',
-                      'amount-cell': column === 'Total' || column.includes('2025'),
-                      'total-cell': column === 'Total'
-                    }">
+                <td
+                  mat-cell
+                  *matCellDef="let element"
+                  [ngClass]="{
+                    'member-name-cell': column === 'Players/Members',
+                    'amount-cell': column === 'Total' || column.includes('2025'),
+                    'total-cell': column === 'Total',
+                  }"
+                >
                   {{ element[column] }}
                 </td>
               </ng-container>
 
-              <tr mat-header-row *matHeaderRowDef="reportData.headers; sticky: true" class="table-header-row"></tr>
-              <tr mat-row *matRowDef="let row; columns: reportData.headers;" class="table-data-row"></tr>
+              <tr
+                mat-header-row
+                *matHeaderRowDef="reportData.headers; sticky: true"
+                class="table-header-row"
+              ></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: reportData.headers"
+                class="table-data-row"
+              ></tr>
             </table>
           </div>
         </div>
@@ -176,7 +206,7 @@ interface CourtUsageData {
       </div>
     </div>
   `,
-  styleUrls: ['./court-usage-report.component.scss']
+  styleUrls: ['./court-usage-report.component.scss'],
 })
 export class CourtUsageReportComponent implements OnInit, OnDestroy {
   reportData: CourtUsageData | null = null;
@@ -185,7 +215,7 @@ export class CourtUsageReportComponent implements OnInit, OnDestroy {
   lastUpdated: string | null = null;
   autoRefreshEnabled = true;
   nextUpdateCountdown = 30;
-  
+
   private apiUrl = environment.apiBaseUrl;
   private autoRefreshSubscription?: Subscription;
   private countdownSubscription?: Subscription;
@@ -195,7 +225,7 @@ export class CourtUsageReportComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private authService: AuthService,
     private snackBar: MatSnackBar,
-    private location: Location
+    private location: Location,
   ) {}
 
   ngOnInit(): void {
@@ -217,71 +247,77 @@ export class CourtUsageReportComponent implements OnInit, OnDestroy {
     console.log('🌍 Environment:', environment.production ? 'production' : 'development');
 
     const headers = new HttpHeaders({
-      'Authorization': `Bearer ${this.authService.token}`,
+      Authorization: `Bearer ${this.authService.token}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json'
+      Accept: 'application/json',
     });
 
-    this.http.get<CourtUsageAPIResponse>(apiEndpoint, { 
-      headers,
-      observe: 'response'  // Get full response to see status codes
-    }).subscribe({
-      next: (httpResponse) => {
-        const response = httpResponse.body;
-        console.log('📊 Court Usage API Response:', httpResponse.status, response);
-        
-        if (response && response.success) {
-          const isDataChanged = this.hasDataChanged(response.data);
-          this.reportData = response.data;
-          this.lastUpdated = response.metadata?.lastModified || response.data.summary.lastUpdated;
-          
-          if (isDataChanged && this.lastUpdated) {
-            this.snackBar.open('📊 Recorded payments updated!', 'Close', {
-              duration: 4000,
-              panelClass: ['success-snack']
-            });
+    this.http
+      .get<CourtUsageAPIResponse>(apiEndpoint, {
+        headers,
+        observe: 'response', // Get full response to see status codes
+      })
+      .subscribe({
+        next: (httpResponse) => {
+          const response = httpResponse.body;
+          console.log('📊 Court Usage API Response:', httpResponse.status, response);
+
+          if (response && response.success) {
+            const isDataChanged = this.hasDataChanged(response.data);
+            this.reportData = response.data;
+            this.lastUpdated = response.metadata?.lastModified || response.data.summary.lastUpdated;
+
+            if (isDataChanged && this.lastUpdated) {
+              this.snackBar.open('📊 Recorded payments updated!', 'Close', {
+                duration: 4000,
+                panelClass: ['success-snack'],
+              });
+            }
+          } else {
+            this.error = response?.message || 'Failed to load court usage data';
+            console.error('❌ API returned unsuccessful response:', response);
           }
-        } else {
-          this.error = response?.message || 'Failed to load court usage data';
-          console.error('❌ API returned unsuccessful response:', response);
-        }
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('❌ Error loading court usage data:', error);
-        console.error('❌ Error status:', error.status);
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Full error object:', JSON.stringify(error, null, 2));
-        
-        let errorMessage = 'Failed to load recorded payments data';
-        if (error.status === 0) {
-          errorMessage = 'Network error: Unable to connect to server. Please check your internet connection and try again.';
-        } else if (error.status === 401) {
-          errorMessage = 'Authentication error: Please log in again';
-          // Redirect to login if authentication fails
-          this.authService.logout();
-        } else if (error.status === 403) {
-          errorMessage = 'Access denied: You do not have permission to view this report';
-        } else if (error.status === 404) {
-          errorMessage = 'API endpoint not found. Please contact support if this persists.';
-        } else if (error.status === 500) {
-          errorMessage = 'Server error: There was a problem processing your request. Please try again later.';
-        } else if (error.status >= 500) {
-          errorMessage = 'Server unavailable: The service is temporarily unavailable. Please try again later.';
-        } else if (error.error?.message) {
-          errorMessage = error.error.message;
-        } else if (error.name === 'TimeoutError') {
-          errorMessage = 'Request timeout: The server is taking too long to respond. Please try again.';
-        }
-        
-        this.error = errorMessage;
-        this.loading = false;
-        this.snackBar.open(`Error: ${errorMessage}`, 'Close', {
-          duration: 10000,
-          panelClass: ['error-snack']
-        });
-      }
-    });
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('❌ Error loading court usage data:', error);
+          console.error('❌ Error status:', error.status);
+          console.error('❌ Error message:', error.message);
+          console.error('❌ Full error object:', JSON.stringify(error, null, 2));
+
+          let errorMessage = 'Failed to load recorded payments data';
+          if (error.status === 0) {
+            errorMessage =
+              'Network error: Unable to connect to server. Please check your internet connection and try again.';
+          } else if (error.status === 401) {
+            errorMessage = 'Authentication error: Please log in again';
+            // Redirect to login if authentication fails
+            this.authService.logout();
+          } else if (error.status === 403) {
+            errorMessage = 'Access denied: You do not have permission to view this report';
+          } else if (error.status === 404) {
+            errorMessage = 'API endpoint not found. Please contact support if this persists.';
+          } else if (error.status === 500) {
+            errorMessage =
+              'Server error: There was a problem processing your request. Please try again later.';
+          } else if (error.status >= 500) {
+            errorMessage =
+              'Server unavailable: The service is temporarily unavailable. Please try again later.';
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          } else if (error.name === 'TimeoutError') {
+            errorMessage =
+              'Request timeout: The server is taking too long to respond. Please try again.';
+          }
+
+          this.error = errorMessage;
+          this.loading = false;
+          this.snackBar.open(`Error: ${errorMessage}`, 'Close', {
+            duration: 10000,
+            panelClass: ['error-snack'],
+          });
+        },
+      });
   }
 
   refreshData(): void {
@@ -318,35 +354,36 @@ export class CourtUsageReportComponent implements OnInit, OnDestroy {
                 `${this.apiUrl}/api/reports/static-court-usage`,
                 {
                   headers: new HttpHeaders({
-                    'Authorization': `Bearer ${this.authService.token}`,
+                    Authorization: `Bearer ${this.authService.token}`,
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                  })
-                }
+                    Accept: 'application/json',
+                  }),
+                },
               );
             }
             return [];
-          })
+          }),
         )
         .subscribe({
           next: (response: CourtUsageAPIResponse) => {
             if (response.success) {
               const isDataChanged = this.hasDataChanged(response.data);
               this.reportData = response.data;
-              this.lastUpdated = response.metadata?.lastModified || response.data.summary.lastUpdated;
-              
+              this.lastUpdated =
+                response.metadata?.lastModified || response.data.summary.lastUpdated;
+
               if (isDataChanged) {
                 console.log('🔄 Recorded payments data auto-updated');
                 this.snackBar.open('📊 Data refreshed automatically', 'Close', {
                   duration: 2000,
-                  panelClass: ['info-snack']
+                  panelClass: ['info-snack'],
                 });
               }
             }
           },
           error: (error) => {
             console.error('Auto-refresh error:', error);
-          }
+          },
         });
 
       this.startCountdown();
@@ -371,18 +408,18 @@ export class CourtUsageReportComponent implements OnInit, OnDestroy {
 
   toggleAutoRefresh(): void {
     this.autoRefreshEnabled = !this.autoRefreshEnabled;
-    
+
     if (this.autoRefreshEnabled) {
       this.startAutoRefresh();
       this.snackBar.open('🔄 Auto-refresh enabled', 'Close', {
         duration: 2000,
-        panelClass: ['success-snack']
+        panelClass: ['success-snack'],
       });
     } else {
       this.stopAutoRefresh();
       this.snackBar.open('⏸️ Auto-refresh disabled', 'Close', {
         duration: 2000,
-        panelClass: ['info-snack']
+        panelClass: ['info-snack'],
       });
     }
   }
@@ -391,13 +428,10 @@ export class CourtUsageReportComponent implements OnInit, OnDestroy {
     const now = new Date().getTime();
     const updated = new Date(dateString).getTime();
     const diffSeconds = Math.floor((now - updated) / 1000);
-    
+
     if (diffSeconds < 60) return `${diffSeconds}s ago`;
     if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m ago`;
     if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)}h ago`;
     return `${Math.floor(diffSeconds / 86400)}d ago`;
   }
-
-
-
 }
