@@ -57,6 +57,8 @@ export class TomorrowScheduleShareDialogComponent implements OnInit {
   isCopying = false;
 
   private readonly ALL_SLOTS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+  readonly HOMEOWNER_TIME_START = 18; // 6 PM
+  readonly HOMEOWNER_TIME_END = 20;   // 8 PM
 
   private dialogRef = inject(MatDialogRef<TomorrowScheduleShareDialogComponent>);
   private http = inject(HttpClient);
@@ -112,6 +114,12 @@ export class TomorrowScheduleShareDialogComponent implements OnInit {
         bookedHours.add(h);
       }
     }
+    // Exclude Homeowner's Time slots on Wednesdays
+    if (this.isTomorrowWednesday) {
+      for (let h = this.HOMEOWNER_TIME_START; h < this.HOMEOWNER_TIME_END; h++) {
+        bookedHours.add(h);
+      }
+    }
     this.availableSlots = this.ALL_SLOTS.filter(slot => !bookedHours.has(slot));
   }
 
@@ -149,6 +157,14 @@ export class TomorrowScheduleShareDialogComponent implements OnInit {
     if (h < 12) return `${h}AM`;
     if (h === 12) return '12PM';
     return `${h - 12}PM`;
+  }
+
+  get isTomorrowWednesday(): boolean {
+    return this.tomorrowDate?.getDay() === 3;
+  }
+
+  get homeownerTimeRange(): string {
+    return `${this.formatHour(this.HOMEOWNER_TIME_START)} – ${this.formatHour(this.HOMEOWNER_TIME_END)}`;
   }
 
   get formattedDate(): string {

@@ -323,6 +323,10 @@
   color: #dc2626;
 }
 
+.homeowner-header {
+  color: #d97706;
+}
+
 .available-header {
   color: #16a34a;
 }
@@ -387,6 +391,11 @@
   background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
 }
 
+.mini-reservation-card.homeowner {
+  border-left-color: #d97706;
+  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+}
+
 .mini-time {
   background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
   color: #1e40af;
@@ -404,6 +413,12 @@
   background: linear-gradient(135deg, #fecaca 0%, #fef2f2 100%);
   color: #991b1b;
   border-color: #fca5a5;
+}
+
+.mini-time.homeowner {
+  background: linear-gradient(135deg, #fde68a 0%, #fffbeb 100%);
+  color: #92400e;
+  border-color: #fcd34d;
 }
 
 .mini-details {
