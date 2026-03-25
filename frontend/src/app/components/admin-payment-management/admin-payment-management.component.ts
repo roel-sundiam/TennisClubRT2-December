@@ -815,6 +815,13 @@ export class AdminPaymentManagementComponent implements OnInit {
     this.applyFilters();
   }
 
+  formatTimeSlot(timeSlot: number | undefined): string {
+    if (timeSlot === undefined || timeSlot === null) return '';
+    const hour = timeSlot % 12 || 12;
+    const period = timeSlot < 12 ? 'AM' : 'PM';
+    return `${hour}:00 ${period}`;
+  }
+
   // Format payment method for display
   formatPaymentMethod(method: string): string {
     switch (method) {

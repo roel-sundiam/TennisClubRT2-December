@@ -51,39 +51,51 @@ async function convertPlayersToObjects(playerNames: string[]): Promise<any[]> {
   const allMembers = await User.find({ isApproved: true, isActive: true, role: { $in: ['member', 'admin', 'superadmin'] } });
   const memberNames = allMembers.map(m => m.fullName.toLowerCase().trim());
   const memberMap = new Map(allMembers.map(m => [m.fullName.toLowerCase().trim(), m._id.toString()]));
+  const homeownerMap = new Map(allMembers.map(m => [m.fullName.toLowerCase().trim(), m.isHomeowner === true]));
 
   const players: any[] = [];
 
   for (const playerName of playerNames) {
     const cleanName = playerName.toLowerCase().trim();
     let isMember = false;
-    let userId: string | null = null;
+    let matchedMemberName: string | null = null;
 
     // Exact match first
     if (memberNames.includes(cleanName)) {
       isMember = true;
-      userId = memberMap.get(cleanName) || null;
+      matchedMemberName = cleanName;
     } else {
       // Fuzzy matching
       for (const memberName of memberNames) {
         const similarity = calculateStringSimilarity(cleanName, memberName);
         if (similarity > 0.8) {
           isMember = true;
-          userId = memberMap.get(memberName) || null;
+          matchedMemberName = memberName;
           break;
         }
       }
     }
 
+    const userId = matchedMemberName ? (memberMap.get(matchedMemberName) || null) : null;
+    const isHomeowner = matchedMemberName ? (homeownerMap.get(matchedMemberName) ?? false) : false;
+
     players.push({
       name: playerName.trim(),
-      userId: userId,
-      isMember: isMember,
-      isGuest: !isMember
+      userId,
+      isMember,
+      isGuest: !isMember,
+      isHomeowner
     });
   }
 
   return players;
+}
+
+// Helper to determine if all players are homeowners (court fee waiver applies)
+function isAllHomeownerReservation(playerObjects: any[]): boolean {
+  if (playerObjects.length === 0) return false;
+  if (playerObjects.some((p: any) => p.isGuest)) return false;
+  return playerObjects.every((p: any) => p.isMember && p.isHomeowner === true);
 }
 
 // Get all reservations with filtering and pagination
@@ -680,10 +692,17 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     console.log(`✅ Using frontend calculated fee: ₱${finalTotalFee}`);
   }
 
-  const paymentStatus = 'pending';
+  // Will be overridden below if homeowner waiver applies
+  let paymentStatus = 'pending';
 
   // Convert players to ReservationPlayer objects for December 2025 pricing
   const playerObjects = await convertPlayersToObjects(trimmedPlayers);
+
+  // Check homeowner fee waiver: all members + no guests + booked at least 6 hours before slot = court fee waived
+  const slotDateTime = new Date(reservationDate);
+  slotDateTime.setHours(timeSlot, 0, 0, 0);
+  const hoursUntilSlot = (slotDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+  const allHomeowners = isAllHomeownerReservation(playerObjects) && hoursUntilSlot <= 6;
 
   // Handle tennis balls if requested
   let tennisBallsData: { quantity: number; costPerCan: number; totalCost: number } | undefined;
@@ -703,6 +722,13 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     console.log(`🎾 Tennis balls requested: ${quantity} cans × ₱${costPerCan} = ₱${tennisBallsData.totalCost}`);
   }
 
+  // Apply homeowner fee waiver: court fee is free, only tennis balls charged
+  if (allHomeowners) {
+    finalTotalFee = tennisBallsData?.totalCost || 0;
+    paymentStatus = tennisBallsData ? 'pending' : 'not_applicable';
+    console.log(`🏠 All-homeowner reservation: court fee waived. Total fee: ₱${finalTotalFee}`);
+  }
+
   // Create reservation with new player format
   const reservation = new Reservation({
     userId: req.user._id,
@@ -714,6 +740,7 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     paymentStatus,
     tournamentTier,
     totalFee: finalTotalFee,
+    feeWaived: allHomeowners,
     weatherForecast,
     tennisBalls: tennisBallsData,
     paymentIds: [] // Will be populated with payment IDs
@@ -729,78 +756,123 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
   const peakHours = (process.env.PEAK_HOURS || '5,18,19,20,21').split(',').map(h => parseInt(h));
 
   if (members.length > 0) {
-    // Calculate payment amounts
-    const PEAK_BASE_FEE = 150;
-    const NON_PEAK_BASE_FEE = 100;
-    const GUEST_FEE = 70;
+    if (allHomeowners) {
+      // Homeowner waiver: court fee is free. Only charge reserver for tennis balls (if any).
+      if (tennisBallsData && tennisBallsData.totalCost > 0) {
+        const reserverId = req.user._id.toString();
+        const reserver = members.find(m => m.userId === reserverId) || members[0];
 
-    // Calculate base fee for one hour (will multiply by duration later)
-    const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
-    let totalBaseFee = 0;
-    let totalGuestFee = 0;
+        const paymentDueDate = new Date(reservationDate);
+        paymentDueDate.setDate(paymentDueDate.getDate() + 1);
+        paymentDueDate.setHours(23, 59, 59, 999);
 
-    for (let hour = reservation.timeSlot; hour < calculatedEndTimeSlot; hour++) {
-      const isPeakHour = peakHours.includes(hour);
-      totalBaseFee += isPeakHour ? PEAK_BASE_FEE : NON_PEAK_BASE_FEE;
-      totalGuestFee += guests.length * GUEST_FEE;
-    }
+        const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
+        const payment = new Payment({
+          userId: reserver.userId,
+          reservationId: reservation._id,
+          amount: Math.round(tennisBallsData.totalCost * 100) / 100,
+          currency: 'PHP',
+          paymentMethod: 'cash',
+          status: 'pending',
+          dueDate: paymentDueDate,
+          description: `Tennis balls - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
+          metadata: {
+            timeSlot: reservation.timeSlot,
+            date: reservation.date,
+            playerCount: playerObjects.length,
+            memberCount: members.length,
+            guestCount: 0,
+            isReserver: true,
+            memberShare: 0,
+            guestFees: 0,
+            tennisBalls: {
+              quantity: tennisBallsData.quantity,
+              costPerCan: tennisBallsData.costPerCan,
+              totalCost: Math.round(tennisBallsData.totalCost * 100) / 100
+            }
+          }
+        });
 
-    // Each member pays their share of the base fee
-    const memberShare = totalBaseFee / members.length;
+        await payment.save();
+        paymentIds.push((payment._id as any).toString());
+        reservation.paymentIds = paymentIds;
+        await reservation.save({ validateBeforeSave: false });
+      }
+    } else {
+      // Regular pricing: calculate member shares + guest fees
+      const PEAK_BASE_FEE = 150;
+      const NON_PEAK_BASE_FEE = 100;
+      const GUEST_FEE = 70;
 
-    // Reserver pays their share + all guest fees
-    const reserverId = req.user._id.toString();
+      const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
+      let totalBaseFee = 0;
+      let totalGuestFee = 0;
 
-    for (const member of members) {
-      const isReserver = member.userId === reserverId;
-      let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
-
-      // Add tennis balls cost to reserver's payment ONLY
-      if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
-        paymentAmount += reservation.tennisBalls.totalCost;
+      for (let hour = reservation.timeSlot; hour < calculatedEndTimeSlot; hour++) {
+        const isPeakHour = peakHours.includes(hour);
+        totalBaseFee += isPeakHour ? PEAK_BASE_FEE : NON_PEAK_BASE_FEE;
+        totalGuestFee += guests.length * GUEST_FEE;
       }
 
-      // Set due date to the day after reservation (payment enabled after playing)
-      const paymentDueDate = new Date(reservationDate);
-      paymentDueDate.setDate(paymentDueDate.getDate() + 1);
-      paymentDueDate.setHours(23, 59, 59, 999);
+      // Each member pays their share of the base fee
+      const memberShare = totalBaseFee / members.length;
 
-      const payment = new Payment({
-        userId: member.userId,
-        reservationId: reservation._id,
-        amount: Math.round(paymentAmount * 100) / 100, // Round to 2 decimal places
-        currency: 'PHP',
-        paymentMethod: 'cash', // Default, can be changed when paid
-        status: 'pending',
-        dueDate: paymentDueDate,
-        description: `Court reservation ${isReserver ? '(Reserver)' : ''} - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
-        metadata: {
-          timeSlot: reservation.timeSlot,
-          date: reservation.date,
-          playerCount: playerObjects.length,
-          memberCount: members.length,
-          guestCount: guests.length,
-          isReserver: isReserver,
-          memberShare: Math.round(memberShare * 100) / 100,
-          guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
-          tennisBalls: {
-            quantity: reservation.tennisBalls?.quantity || 0,
-            costPerCan: reservation.tennisBalls?.costPerCan || 0,
-            totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
-          }
+      // Reserver pays their share + all guest fees
+      const reserverId = req.user._id.toString();
+
+      for (const member of members) {
+        const isReserver = member.userId === reserverId;
+        let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+
+        // Add tennis balls cost to reserver's payment ONLY
+        if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+          paymentAmount += reservation.tennisBalls.totalCost;
         }
-      });
 
-      await payment.save();
-      paymentIds.push((payment._id as any).toString());
+        // Set due date to the day after reservation (payment enabled after playing)
+        const paymentDueDate = new Date(reservationDate);
+        paymentDueDate.setDate(paymentDueDate.getDate() + 1);
+        paymentDueDate.setHours(23, 59, 59, 999);
+
+        const payment = new Payment({
+          userId: member.userId,
+          reservationId: reservation._id,
+          amount: Math.round(paymentAmount * 100) / 100, // Round to 2 decimal places
+          currency: 'PHP',
+          paymentMethod: 'cash', // Default, can be changed when paid
+          status: 'pending',
+          dueDate: paymentDueDate,
+          description: `Court reservation ${isReserver ? '(Reserver)' : ''} - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
+          metadata: {
+            timeSlot: reservation.timeSlot,
+            date: reservation.date,
+            playerCount: playerObjects.length,
+            memberCount: members.length,
+            guestCount: guests.length,
+            isReserver: isReserver,
+            memberShare: Math.round(memberShare * 100) / 100,
+            guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
+            tennisBalls: {
+              quantity: reservation.tennisBalls?.quantity || 0,
+              costPerCan: reservation.tennisBalls?.costPerCan || 0,
+              totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
+            }
+          }
+        });
+
+        await payment.save();
+        paymentIds.push((payment._id as any).toString());
+      }
+
+      // Update reservation with payment IDs
+      reservation.paymentIds = paymentIds;
+      await reservation.save({ validateBeforeSave: false });
     }
-
-    // Update reservation with payment IDs
-    reservation.paymentIds = paymentIds;
-    await reservation.save({ validateBeforeSave: false });
   }
 
-  const message = `Reservation created successfully. ${members.length} payment(s) created for members. Payments can be made after the reservation time.`;
+  const message = allHomeowners
+    ? `Reservation created successfully. Court fee waived — all players are homeowners.${tennisBallsData ? ` Tennis balls payment created for reserver.` : ''}`
+    : `Reservation created successfully. ${members.length} payment(s) created for members. Payments can be made after the reservation time.`;
 
   res.status(201).json({
     success: true,
@@ -938,6 +1010,13 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
     const playerObjects = await convertPlayersToObjects(trimmedPlayers);
     reservation.players = playerObjects;
 
+    // Check homeowner fee waiver: all homeowners + booked at least 6 hours before slot
+    const updateSlotDateTime = new Date(reservation.date);
+    updateSlotDateTime.setHours(reservation.timeSlot, 0, 0, 0);
+    const updateHoursUntilSlot = (updateSlotDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+    const allHomeowners = isAllHomeownerReservation(playerObjects) && updateHoursUntilSlot <= 6;
+    reservation.feeWaived = allHomeowners;
+
     // Handle tennis balls update
     if (tennisBalls !== undefined) {
       if (tennisBalls.quantity > 0) {
@@ -958,8 +1037,14 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
       }
     }
 
-    // Recalculate total fee (will be done by pre-save hook)
+    // Recalculate total fee (pre-save hook handles feeWaived logic)
     reservation.totalFee = 0;
+    if (allHomeowners) {
+      reservation.paymentStatus = reservation.tennisBalls ? 'pending' : 'not_applicable';
+      console.log(`🏠 All-homeowner reservation update: court fee waived`);
+    } else {
+      reservation.paymentStatus = 'pending';
+    }
 
     // Save with recalculated fee
     await reservation.save();
@@ -971,69 +1056,115 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
     const peakHours = (process.env.PEAK_HOURS || '5,18,19,20,21').split(',').map(h => parseInt(h));
 
     if (members.length > 0) {
-      const PEAK_BASE_FEE = 150;
-      const NON_PEAK_BASE_FEE = 100;
-      const GUEST_FEE = 70;
+      if (allHomeowners) {
+        // Homeowner waiver: only charge reserver for tennis balls (if any)
+        if (reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+          const reserverId = reservation.userId.toString();
+          const reserver = members.find((m: any) => m.userId === reserverId) || members[0];
 
-      const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
-      let totalBaseFee = 0;
-      let totalGuestFee = 0;
+          const paymentDueDate = new Date(reservation.date);
+          paymentDueDate.setDate(paymentDueDate.getDate() + 1);
+          paymentDueDate.setHours(23, 59, 59, 999);
 
-      for (let hour = reservation.timeSlot; hour < calculatedEndTimeSlot; hour++) {
-        const isPeakHour = peakHours.includes(hour);
-        totalBaseFee += isPeakHour ? PEAK_BASE_FEE : NON_PEAK_BASE_FEE;
-        totalGuestFee += guests.length * GUEST_FEE;
-      }
+          const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
+          const payment = new Payment({
+            userId: reserver.userId,
+            reservationId: reservation._id,
+            amount: Math.round(reservation.tennisBalls.totalCost * 100) / 100,
+            currency: 'PHP',
+            paymentMethod: 'cash',
+            status: 'pending',
+            dueDate: paymentDueDate,
+            description: `Tennis balls - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
+            metadata: {
+              timeSlot: reservation.timeSlot,
+              date: reservation.date,
+              playerCount: playerObjects.length,
+              memberCount: members.length,
+              guestCount: 0,
+              isReserver: true,
+              memberShare: 0,
+              guestFees: 0,
+              tennisBalls: {
+                quantity: reservation.tennisBalls.quantity,
+                costPerCan: reservation.tennisBalls.costPerCan,
+                totalCost: Math.round(reservation.tennisBalls.totalCost * 100) / 100
+              }
+            }
+          });
 
-      const memberShare = totalBaseFee / members.length;
-      const reserverId = reservation.userId.toString();
+          await payment.save();
+          paymentIds.push((payment._id as any).toString());
+          reservation.paymentIds = paymentIds;
+          await reservation.save({ validateBeforeSave: false });
+          console.log(`✅ Created tennis balls payment for homeowner reservation ${id}`);
+        }
+      } else {
+        // Regular pricing
+        const PEAK_BASE_FEE = 150;
+        const NON_PEAK_BASE_FEE = 100;
+        const GUEST_FEE = 70;
 
-      for (const member of members) {
-        const isReserver = member.userId === reserverId;
-        let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+        const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
+        let totalBaseFee = 0;
+        let totalGuestFee = 0;
 
-        // Add tennis balls cost to reserver's payment ONLY
-        if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
-          paymentAmount += reservation.tennisBalls.totalCost;
+        for (let hour = reservation.timeSlot; hour < calculatedEndTimeSlot; hour++) {
+          const isPeakHour = peakHours.includes(hour);
+          totalBaseFee += isPeakHour ? PEAK_BASE_FEE : NON_PEAK_BASE_FEE;
+          totalGuestFee += guests.length * GUEST_FEE;
         }
 
-        const paymentDueDate = new Date(reservation.date);
-        paymentDueDate.setDate(paymentDueDate.getDate() + 1);
-        paymentDueDate.setHours(23, 59, 59, 999);
+        const memberShare = totalBaseFee / members.length;
+        const reserverId = reservation.userId.toString();
 
-        const payment = new Payment({
-          userId: member.userId,
-          reservationId: reservation._id,
-          amount: Math.round(paymentAmount * 100) / 100,
-          currency: 'PHP',
-          paymentMethod: 'cash',
-          status: 'pending',
-          dueDate: paymentDueDate,
-          description: `Court reservation ${isReserver ? '(Reserver)' : ''} - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
-          metadata: {
-            timeSlot: reservation.timeSlot,
-            date: reservation.date,
-            playerCount: playerObjects.length,
-            memberCount: members.length,
-            guestCount: guests.length,
-            isReserver: isReserver,
-            memberShare: Math.round(memberShare * 100) / 100,
-            guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
-            tennisBalls: {
-              quantity: reservation.tennisBalls?.quantity || 0,
-              costPerCan: reservation.tennisBalls?.costPerCan || 0,
-              totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
-            }
+        for (const member of members) {
+          const isReserver = member.userId === reserverId;
+          let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+
+          // Add tennis balls cost to reserver's payment ONLY
+          if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+            paymentAmount += reservation.tennisBalls.totalCost;
           }
-        });
 
-        await payment.save();
-        paymentIds.push((payment._id as any).toString());
+          const paymentDueDate = new Date(reservation.date);
+          paymentDueDate.setDate(paymentDueDate.getDate() + 1);
+          paymentDueDate.setHours(23, 59, 59, 999);
+
+          const payment = new Payment({
+            userId: member.userId,
+            reservationId: reservation._id,
+            amount: Math.round(paymentAmount * 100) / 100,
+            currency: 'PHP',
+            paymentMethod: 'cash',
+            status: 'pending',
+            dueDate: paymentDueDate,
+            description: `Court reservation ${isReserver ? '(Reserver)' : ''} - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
+            metadata: {
+              timeSlot: reservation.timeSlot,
+              date: reservation.date,
+              playerCount: playerObjects.length,
+              memberCount: members.length,
+              guestCount: guests.length,
+              isReserver: isReserver,
+              memberShare: Math.round(memberShare * 100) / 100,
+              guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
+              tennisBalls: {
+                quantity: reservation.tennisBalls?.quantity || 0,
+                costPerCan: reservation.tennisBalls?.costPerCan || 0,
+                totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
+              }
+            }
+          });
+
+          await payment.save();
+          paymentIds.push((payment._id as any).toString());
+        }
+
+        reservation.paymentIds = paymentIds;
+        await reservation.save({ validateBeforeSave: false });
+        console.log(`✅ Created ${paymentIds.length} new payments for reservation ${id}`);
       }
-
-      reservation.paymentIds = paymentIds;
-      await reservation.save({ validateBeforeSave: false });
-      console.log(`✅ Created ${paymentIds.length} new payments for reservation ${id}`);
     }
   } else if (!players && (endTimeSlot !== undefined || duration !== undefined || tennisBalls !== undefined)) {
     // No player changes but duration/time/tennis balls changed - need to recalculate fee and update payments
@@ -1059,7 +1190,7 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
       }
     }
 
-    // Recalculate total fee (will be done by pre-save hook)
+    // Recalculate total fee (pre-save hook handles feeWaived logic)
     reservation.totalFee = 0;
     await reservation.save();
 
@@ -1079,70 +1210,117 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
     const peakHours = (process.env.PEAK_HOURS || '5,18,19,20,21').split(',').map(h => parseInt(h));
 
     if (members.length > 0) {
-      const PEAK_BASE_FEE = 150;
-      const NON_PEAK_BASE_FEE = 100;
-      const GUEST_FEE = 70;
+      if (reservation.feeWaived) {
+        // Homeowner waiver: only charge reserver for tennis balls (if any)
+        if (reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+          const reserverId = reservation.userId.toString();
+          const reserver = members.find((m: any) => m.userId === reserverId) || members[0]!;
+          const memberUserId = typeof reserver === 'string' ? null : reserver.userId;
 
-      const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
-      let totalBaseFee = 0;
-      let totalGuestFee = 0;
+          const paymentDueDate = new Date(reservation.date);
+          paymentDueDate.setDate(paymentDueDate.getDate() + 1);
+          paymentDueDate.setHours(23, 59, 59, 999);
 
-      for (let hour = reservation.timeSlot; hour < calculatedEndTimeSlot; hour++) {
-        const isPeakHour = peakHours.includes(hour);
-        totalBaseFee += isPeakHour ? PEAK_BASE_FEE : NON_PEAK_BASE_FEE;
-        totalGuestFee += guests.length * GUEST_FEE;
-      }
+          const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
+          const payment = new Payment({
+            userId: memberUserId,
+            reservationId: reservation._id,
+            amount: Math.round(reservation.tennisBalls.totalCost * 100) / 100,
+            currency: 'PHP',
+            paymentMethod: 'cash',
+            status: 'pending',
+            dueDate: paymentDueDate,
+            description: `Tennis balls - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
+            metadata: {
+              timeSlot: reservation.timeSlot,
+              date: reservation.date,
+              playerCount: reservation.players.length,
+              memberCount: members.length,
+              guestCount: 0,
+              isReserver: true,
+              memberShare: 0,
+              guestFees: 0,
+              tennisBalls: {
+                quantity: reservation.tennisBalls.quantity,
+                costPerCan: reservation.tennisBalls.costPerCan,
+                totalCost: Math.round(reservation.tennisBalls.totalCost * 100) / 100
+              }
+            }
+          });
 
-      const memberShare = totalBaseFee / members.length;
-      const reserverId = reservation.userId.toString();
+          await payment.save();
+          paymentIds.push((payment._id as any).toString());
+          reservation.paymentIds = paymentIds;
+          await reservation.save({ validateBeforeSave: false });
+          console.log(`✅ Created tennis balls payment for homeowner reservation ${id}`);
+        }
+      } else {
+        // Regular pricing
+        const PEAK_BASE_FEE = 150;
+        const NON_PEAK_BASE_FEE = 100;
+        const GUEST_FEE = 70;
 
-      for (const member of members) {
-        const memberUserId = typeof member === 'string' ? null : member.userId;
-        const isReserver = memberUserId === reserverId;
-        let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+        const calculatedEndTimeSlot = reservation.endTimeSlot || (reservation.timeSlot + reservation.duration);
+        let totalBaseFee = 0;
+        let totalGuestFee = 0;
 
-        // Add tennis balls cost to reserver's payment ONLY
-        if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
-          paymentAmount += reservation.tennisBalls.totalCost;
+        for (let hour = reservation.timeSlot; hour < calculatedEndTimeSlot; hour++) {
+          const isPeakHour = peakHours.includes(hour);
+          totalBaseFee += isPeakHour ? PEAK_BASE_FEE : NON_PEAK_BASE_FEE;
+          totalGuestFee += guests.length * GUEST_FEE;
         }
 
-        const paymentDueDate = new Date(reservation.date);
-        paymentDueDate.setDate(paymentDueDate.getDate() + 1);
-        paymentDueDate.setHours(23, 59, 59, 999);
+        const memberShare = totalBaseFee / members.length;
+        const reserverId = reservation.userId.toString();
 
-        const payment = new Payment({
-          userId: memberUserId,
-          reservationId: reservation._id,
-          amount: Math.round(paymentAmount * 100) / 100,
-          currency: 'PHP',
-          paymentMethod: 'cash',
-          status: 'pending',
-          dueDate: paymentDueDate,
-          description: `Court reservation ${isReserver ? '(Reserver)' : ''} - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
-          metadata: {
-            timeSlot: reservation.timeSlot,
-            date: reservation.date,
-            playerCount: reservation.players.length,
-            memberCount: members.length,
-            guestCount: guests.length,
-            isReserver: isReserver,
-            memberShare: Math.round(memberShare * 100) / 100,
-            guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
-            tennisBalls: {
-              quantity: reservation.tennisBalls?.quantity || 0,
-              costPerCan: reservation.tennisBalls?.costPerCan || 0,
-              totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
-            }
+        for (const member of members) {
+          const memberUserId = typeof member === 'string' ? null : member.userId;
+          const isReserver = memberUserId === reserverId;
+          let paymentAmount = isReserver ? (memberShare + totalGuestFee) : memberShare;
+
+          // Add tennis balls cost to reserver's payment ONLY
+          if (isReserver && reservation.tennisBalls && reservation.tennisBalls.totalCost > 0) {
+            paymentAmount += reservation.tennisBalls.totalCost;
           }
-        });
 
-        await payment.save();
-        paymentIds.push((payment._id as any).toString());
+          const paymentDueDate = new Date(reservation.date);
+          paymentDueDate.setDate(paymentDueDate.getDate() + 1);
+          paymentDueDate.setHours(23, 59, 59, 999);
+
+          const payment = new Payment({
+            userId: memberUserId,
+            reservationId: reservation._id,
+            amount: Math.round(paymentAmount * 100) / 100,
+            currency: 'PHP',
+            paymentMethod: 'cash',
+            status: 'pending',
+            dueDate: paymentDueDate,
+            description: `Court reservation ${isReserver ? '(Reserver)' : ''} - ${reservation.date.toDateString()} ${reservation.timeSlot}:00-${calculatedEndTimeSlot}:00`,
+            metadata: {
+              timeSlot: reservation.timeSlot,
+              date: reservation.date,
+              playerCount: reservation.players.length,
+              memberCount: members.length,
+              guestCount: guests.length,
+              isReserver: isReserver,
+              memberShare: Math.round(memberShare * 100) / 100,
+              guestFees: isReserver ? Math.round(totalGuestFee * 100) / 100 : 0,
+              tennisBalls: {
+                quantity: reservation.tennisBalls?.quantity || 0,
+                costPerCan: reservation.tennisBalls?.costPerCan || 0,
+                totalCost: isReserver && reservation.tennisBalls ? Math.round(reservation.tennisBalls.totalCost * 100) / 100 : 0
+              }
+            }
+          });
+
+          await payment.save();
+          paymentIds.push((payment._id as any).toString());
+        }
+
+        reservation.paymentIds = paymentIds;
+        await reservation.save({ validateBeforeSave: false });
+        console.log(`✅ Created ${paymentIds.length} new payments for updated reservation ${id}`);
       }
-
-      reservation.paymentIds = paymentIds;
-      await reservation.save({ validateBeforeSave: false });
-      console.log(`✅ Created ${paymentIds.length} new payments for updated reservation ${id}`);
     }
   } else if (!players) {
     // No player changes and no time changes, just save other modifications

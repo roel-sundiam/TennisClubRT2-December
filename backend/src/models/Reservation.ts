@@ -153,6 +153,12 @@ const reservationSchema = new Schema<IReservationDocument>({
       min: [0, 'Total cost cannot be negative'],
       default: 0
     }
+  },
+  // Homeowner fee waiver: true when all players are homeowners (court fee is free)
+  feeWaived: {
+    type: Boolean,
+    default: false,
+    index: true
   }
 }, {
   timestamps: true,
@@ -198,6 +204,16 @@ reservationSchema.pre('save', function(next) {
   // Calculate total fee for multi-hour reservations if not explicitly provided
   if ((reservation.isNew || reservation.isModified('timeSlot') || reservation.isModified('players') || reservation.isModified('duration')) &&
       (!reservation.totalFee || reservation.totalFee === 0)) {
+
+    // Homeowner fee waiver: only charge tennis balls cost, skip court fee
+    if (reservation.feeWaived) {
+      const ballsCost = (reservation.tennisBalls && reservation.tennisBalls.quantity > 0)
+        ? reservation.tennisBalls.totalCost
+        : 0;
+      reservation.totalFee = ballsCost;
+      return next();
+    }
+
     const peakHours = (process.env.PEAK_HOURS || '5,18,19,20,21').split(',').map(h => parseInt(h));
 
     // Check if players use new format (objects with isMember/isGuest)

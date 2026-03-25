@@ -18,6 +18,7 @@ export interface Reservation {
   feePerPlayer: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no-show' | 'blocked';
   paymentStatus: 'pending' | 'paid' | 'overdue' | 'not_applicable';
+  feeWaived?: boolean;
   weatherForecast?: any;
   blockReason?: 'maintenance' | 'private_event' | 'weather' | 'other';
   blockNotes?: string;

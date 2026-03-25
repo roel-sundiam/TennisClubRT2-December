@@ -123,6 +123,7 @@ export interface ReservationPlayer {
   userId?: string | null;  // MongoDB User ID for members, null for guests
   isMember: boolean;
   isGuest: boolean;
+  isHomeowner?: boolean;
 }
 
 export interface CourtReservation {
@@ -136,6 +137,7 @@ export interface CourtReservation {
   paymentStatus: 'pending' | 'paid' | 'overdue' | 'not_applicable';
   paymentIds?: string[]; // Track multiple payment IDs (December 2025 changes)
   totalFee: number;
+  feeWaived?: boolean;
   weatherForecast?: {
     temperature: number;
     description: string;

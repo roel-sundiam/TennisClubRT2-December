@@ -42,6 +42,7 @@ interface Member {
   email: string;
   isApproved: boolean;
   isActive: boolean;
+  isHomeowner?: boolean;
 }
 
 interface Reservation {
@@ -450,7 +451,7 @@ interface Reservation {
           </div>
 
           <!-- Fee Information -->
-          <div class="fee-info" *ngIf="selectedStartTime && selectedEndTime && calculatedFee > 0">
+          <div class="fee-info" *ngIf="selectedStartTime && selectedEndTime && (calculatedFee > 0 || isAllHomeownerBooking())">
             <h3>Fee Information</h3>
             <div class="fee-details">
               <div class="fee-row">
@@ -463,7 +464,8 @@ interface Reservation {
               </div>
               <div class="fee-row">
                 <span>Rate Type:</span>
-                <span>{{ getRateTypeDescription() }}</span>
+                <span *ngIf="!isAllHomeownerBooking()">{{ getRateTypeDescription() }}</span>
+                <span *ngIf="isAllHomeownerBooking()" style="color: #2e7d32; font-weight: 600;">Homeowner Rate</span>
               </div>
               <div class="fee-row">
                 <span>Players:</span>
@@ -473,8 +475,14 @@ interface Reservation {
                 >
               </div>
 
-              <!-- December 2025: New Fee Breakdown -->
-              <div class="fee-breakdown" *ngIf="getMemberCount() > 0 || getNonMemberCount() > 0">
+              <!-- Homeowner waiver notice -->
+              <div *ngIf="isAllHomeownerBooking()" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 12px;margin:8px 0;color:#1b5e20;font-size:14px;">
+                🏠 <strong>All players are homeowners — court fee is FREE!</strong>
+                <span *ngIf="tennisBallQuantity > 0"><br>Tennis balls (₱{{ tennisBallQuantity * tennisBallCostPerCan }}) are still charged to the reserver.</span>
+              </div>
+
+              <!-- December 2025: New Fee Breakdown (regular pricing only) -->
+              <div class="fee-breakdown" *ngIf="!isAllHomeownerBooking() && (getMemberCount() > 0 || getNonMemberCount() > 0)">
                 <!-- Base Fee Calculation -->
                 <div class="fee-row">
                   <span>Base Fee ({{ getRateType() }}):</span>
@@ -512,7 +520,9 @@ interface Reservation {
               </div>
               <div class="fee-row total">
                 <span>Total Fee:</span>
-                <span>₱{{ calculatedFee }}</span>
+                <span *ngIf="!isAllHomeownerBooking()">₱{{ calculatedFee }}</span>
+                <span *ngIf="isAllHomeownerBooking() && calculatedFee === 0" style="color: #2e7d32; font-weight: bold;">FREE</span>
+                <span *ngIf="isAllHomeownerBooking() && calculatedFee > 0">₱{{ calculatedFee }} (tennis balls only)</span>
               </div>
             </div>
           </div>
@@ -1465,6 +1475,14 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Homeowner fee waiver: court fee free, only tennis balls charged
+    if (this.isAllHomeownerBooking()) {
+      const ballsCost = this.tennisBallQuantity > 0 ? this.tennisBallQuantity * this.tennisBallCostPerCan : 0;
+      this.calculatedFee = ballsCost;
+      console.log(`🏠 All-homeowner booking: court fee waived. Fee: ₱${ballsCost}`);
+      return;
+    }
+
     // December 2025 pricing constants
     const PEAK_BASE_FEE = 150;
     const NON_PEAK_BASE_FEE = 100;
@@ -1535,6 +1553,32 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     console.log('🔍 getNonMemberCount() - customPlayerNames:', this.customPlayerNames);
     console.log('🔍 getNonMemberCount() - returning:', count);
     return count;
+  }
+
+  isAllHomeownerBooking(): boolean {
+    // Waiver only applies when booking at least 6 hours before the time slot
+    if (this.selectedDate && this.selectedStartTime !== null) {
+      const slotDateTime = new Date(this.selectedDate);
+      slotDateTime.setHours(this.selectedStartTime, 0, 0, 0);
+      const hoursUntilSlot = (slotDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
+      if (hoursUntilSlot > 6) return false;
+    }
+
+    // Any guest (non-member) player disqualifies the waiver
+    if (this.customPlayerNames.some((n) => n && n.trim())) return false;
+
+    const selectedNames = this.playersArray.controls
+      .map((c) => c.value?.trim())
+      .filter((v) => !!v);
+
+    if (selectedNames.length === 0) return false;
+
+    return selectedNames.every((name: string) => {
+      const member = this.members.find(
+        (m) => m.fullName.toLowerCase() === name.toLowerCase()
+      );
+      return member?.isHomeowner === true;
+    });
   }
 
   getDurationHours(): number {
@@ -1916,9 +1960,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
         this.loading = false;
 
         // Create success message
-        const successMessage = `Court booked for ${this.getTimeRangeDisplay()} on ${new Date(
-          formValue.date
-        ).toLocaleDateString()}\n💰 Payment required: ₱${this.calculatedFee}`;
+        const successMessage = this.isAllHomeownerBooking()
+          ? `Court booked for ${this.getTimeRangeDisplay()} on ${new Date(formValue.date).toLocaleDateString()}\n🏠 Court fee waived — all players are homeowners!${this.calculatedFee > 0 ? `\n💰 Tennis balls payment: ₱${this.calculatedFee}` : ''}`
+          : `Court booked for ${this.getTimeRangeDisplay()} on ${new Date(formValue.date).toLocaleDateString()}\n💰 Payment required: ₱${this.calculatedFee}`;
 
         this.showSuccess('Reservation Confirmed!', successMessage);
         setTimeout(() => {

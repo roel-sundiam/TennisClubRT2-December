@@ -72,7 +72,7 @@ export class AdminReservationManagementComponent implements OnInit {
   paginatedReservations: Reservation[] = [];
 
   filterStatus = 'all';
-  filterPaymentStatus = 'pending';
+  filterPaymentStatus = 'all';
   searchMember = '';
   filterDate: Date | null = null;
   filterDateString = ''; // For native date input

@@ -126,6 +126,8 @@ export class CalendarViewComponent implements OnInit {
               bgColor = '#ff9800'; // pending payment - orange
             } else if (paymentStatus === 'overdue') {
               bgColor = '#dc2626'; // overdue - red
+            } else if (paymentStatus === 'not_applicable' && reservation.feeWaived) {
+              bgColor = '#4caf50'; // homeowner fee waiver - green (nothing to pay)
             }
 
             // Override color for no-show status to show historical reservations in gray-blue
@@ -555,12 +557,13 @@ export class CalendarViewComponent implements OnInit {
   /**
    * Get payment status border color
    */
-  getPaymentStatusBorderColor(status: string): string {
+  getPaymentStatusBorderColor(status: string, feeWaived?: boolean): string {
     switch(status) {
       case 'paid': return '#4caf50';      // green
       case 'pending': return '#ff9800';   // orange
       case 'overdue': return '#dc2626';   // red
-      default: return '#9e9e9e';          // gray for not_applicable
+      case 'not_applicable': return feeWaived ? '#4caf50' : '#9e9e9e'; // green for homeowner waiver, gray otherwise
+      default: return '#9e9e9e';
     }
   }
 
