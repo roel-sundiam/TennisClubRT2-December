@@ -553,9 +553,9 @@
                       payment.reservationId?.date ? formatDate(payment.reservationId.date) : 'N/A'
                     }}</span>
                   </div>
-                  <div *ngIf="payment.reservationId?.timeSlot !== undefined" class="date-cell-enhanced" style="margin-top:2px; font-size:0.8em; color: var(--text-secondary, #666);">
+                  <div *ngIf="payment.reservationId?.timeSlot != null" class="date-cell-enhanced" style="margin-top:2px; font-size:0.8em; color: var(--text-secondary, #666);">
                     <span class="material-icons" style="font-size:14px;">schedule</span>
-                    <span>{{ formatTimeSlot(payment.reservationId!.timeSlot) }}</span>
+                    <span>{{ formatTimeSlot(payment.reservationId?.timeSlot) }}</span>
                   </div>
                 </td>
                 <td class="col-payment-date">
