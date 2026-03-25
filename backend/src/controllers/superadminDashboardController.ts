@@ -61,6 +61,7 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
     // Execute all queries in parallel for optimal performance
     const [
       todaysReservations,
+      todaysBlockedReservations,
       recentReservations,
       recentPayments,
       latestFeedback,
@@ -77,6 +78,15 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
       })
         .populate('userId', 'fullName username')
         .select('userId date timeSlot endTimeSlot players status totalFee')
+        .sort({ timeSlot: 1 })
+        .lean(),
+
+      // 2. Blocked reservations for today
+      Reservation.find({
+        date: { $gte: startOfToday, $lte: endOfToday },
+        status: 'blocked'
+      })
+        .select('date timeSlot endTimeSlot blockReason blockNotes duration status')
         .sort({ timeSlot: 1 })
         .lean(),
 
@@ -330,7 +340,8 @@ export const getDashboardData = asyncHandler(async (req: Request, res: Response)
       data: {
         courtStatus: {
           current: currentReservation,
-          next: nextReservation
+          next: nextReservation,
+          blockedToday: todaysBlockedReservations
         },
         recentReservations,
         recentPayments,

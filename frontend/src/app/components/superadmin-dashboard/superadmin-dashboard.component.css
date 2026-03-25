@@ -1167,8 +1167,34 @@ a:focus-visible {
   .modern-header {
     border: 2px solid white;
   }
-  
+
   .btn {
     border: 2px solid white;
   }
+}
+
+/* Blocked Court Event */
+.status-blocked {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: white;
+}
+
+.blocked-event .info-row svg {
+  color: #ef4444;
+}
+
+.block-notes {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Homeowner's Time Event */
+.status-homeowner {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.homeowner-event .info-row svg {
+  color: #f59e0b;
 }

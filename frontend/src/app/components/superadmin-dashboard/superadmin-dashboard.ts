@@ -32,6 +32,26 @@ interface CourtReservation {
   createdAt?: Date;
 }
 
+interface BlockedReservation {
+  _id: string;
+  timeSlot: number;
+  endTimeSlot: number;
+  blockReason?: string;
+  blockNotes?: string;
+  status: string;
+}
+
+type CourtEventType = 'reservation' | 'blocked' | 'homeowner';
+
+interface CourtEvent {
+  type: CourtEventType;
+  timeSlot: number;
+  endTimeSlot: number;
+  reservation?: CourtReservation;
+  blockReason?: string;
+  blockNotes?: string;
+}
+
 interface PaymentInfo {
   _id: string;
   userId: UserInfo;
@@ -103,6 +123,7 @@ interface DashboardData {
   courtStatus: {
     current: CourtReservation | null;
     next: CourtReservation | null;
+    blockedToday: BlockedReservation[];
   };
   recentReservations: CourtReservation[];
   recentPayments: PaymentInfo[];
@@ -136,6 +157,10 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
   private refreshInterval$?: Subscription;
   private countdownInterval$?: Subscription;
   private audioContext?: AudioContext;
+
+  private readonly HOMEOWNER_TIME_START = 18;
+  private readonly HOMEOWNER_TIME_END = 20;
+  private readonly HOMEOWNER_DAY = 3; // Wednesday
 
   // Table columns
   reservationColumns = ['member', 'date', 'time', 'players', 'amount', 'status'];
@@ -420,6 +445,72 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
       }
       return 'Unknown';
     });
+  }
+
+  get currentCourtEvent(): CourtEvent | null {
+    if (!this.dashboardData) return null;
+    const currentHour = new Date().getHours();
+    const dayOfWeek = new Date().getDay();
+
+    if (this.dashboardData.courtStatus.current) {
+      const r = this.dashboardData.courtStatus.current;
+      return { type: 'reservation', timeSlot: r.timeSlot, endTimeSlot: r.endTimeSlot, reservation: r };
+    }
+
+    const blocked = (this.dashboardData.courtStatus.blockedToday || []).find(
+      b => b.timeSlot <= currentHour && b.endTimeSlot > currentHour
+    );
+    if (blocked) {
+      return { type: 'blocked', timeSlot: blocked.timeSlot, endTimeSlot: blocked.endTimeSlot, blockReason: blocked.blockReason, blockNotes: blocked.blockNotes };
+    }
+
+    if (dayOfWeek === this.HOMEOWNER_DAY && currentHour >= this.HOMEOWNER_TIME_START && currentHour < this.HOMEOWNER_TIME_END) {
+      return { type: 'homeowner', timeSlot: this.HOMEOWNER_TIME_START, endTimeSlot: this.HOMEOWNER_TIME_END };
+    }
+
+    return null;
+  }
+
+  get nextCourtEvent(): CourtEvent | null {
+    if (!this.dashboardData) return null;
+    const currentHour = new Date().getHours();
+    const dayOfWeek = new Date().getDay();
+    const candidates: CourtEvent[] = [];
+
+    if (this.dashboardData.courtStatus.next) {
+      const n = this.dashboardData.courtStatus.next;
+      candidates.push({ type: 'reservation', timeSlot: n.timeSlot, endTimeSlot: n.endTimeSlot, reservation: n });
+    }
+
+    for (const b of (this.dashboardData.courtStatus.blockedToday || [])) {
+      if (b.timeSlot > currentHour) {
+        candidates.push({ type: 'blocked', timeSlot: b.timeSlot, endTimeSlot: b.endTimeSlot, blockReason: b.blockReason, blockNotes: b.blockNotes });
+      }
+    }
+
+    if (dayOfWeek === this.HOMEOWNER_DAY && this.HOMEOWNER_TIME_START > currentHour) {
+      const isCovered = (this.dashboardData.courtStatus.blockedToday || []).some(
+        b => b.timeSlot <= this.HOMEOWNER_TIME_START && b.endTimeSlot > this.HOMEOWNER_TIME_START
+      );
+      const confirmedCovers = this.dashboardData.courtStatus.next?.timeSlot === this.HOMEOWNER_TIME_START;
+      if (!isCovered && !confirmedCovers) {
+        candidates.push({ type: 'homeowner', timeSlot: this.HOMEOWNER_TIME_START, endTimeSlot: this.HOMEOWNER_TIME_END });
+      }
+    }
+
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => a.timeSlot - b.timeSlot);
+    return candidates[0];
+  }
+
+  getBlockReasonLabel(reason?: string): string {
+    const labels: { [key: string]: string } = {
+      'maintenance': 'Court Maintenance',
+      'private_event': 'Private Event',
+      'weather': 'Weather Closure',
+      'other': 'Court Unavailable'
+    };
+    return (reason && labels[reason]) || 'Court Blocked';
   }
 
   private hasNewRecords(oldData: DashboardData, newData: DashboardData): boolean {

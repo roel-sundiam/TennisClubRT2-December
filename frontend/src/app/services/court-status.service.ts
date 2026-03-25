@@ -16,6 +16,7 @@ export interface CourtSlotInfo {
   timeRange: string;
   players: PlayerDisplay[];
   isBlocked: boolean;
+  isHomeownerDay?: boolean;
   blockInfo?: { reason: string; notes: string };
 }
 
@@ -51,6 +52,9 @@ export class CourtStatusService {
 
   private readonly COURT_OPEN_HOUR = 5;  // 5 AM
   private readonly COURT_CLOSE_HOUR = 22; // 10 PM
+  private readonly HOMEOWNER_TIME_START = 18; // 6 PM
+  private readonly HOMEOWNER_TIME_END = 20;   // 8 PM
+  private readonly HOMEOWNER_DAY = 3;         // Wednesday
 
   constructor(private http: HttpClient) {}
 
@@ -177,6 +181,28 @@ export class CourtStatusService {
       return this.getAfterHoursStatus();
     }
 
+    // Inject Homeowner's Day as a virtual blocked reservation if today is Wednesday
+    // and no real reservation already covers that time slot
+    if (phTime.getDay() === this.HOMEOWNER_DAY) {
+      const homeownerCovered = activeReservations.some(
+        r => r.timeSlot <= this.HOMEOWNER_TIME_START && r.endTimeSlot > this.HOMEOWNER_TIME_START
+      );
+      if (!homeownerCovered) {
+        activeReservations.push({
+          _id: 'homeowner-day',
+          userId: null,
+          date: '',
+          timeSlot: this.HOMEOWNER_TIME_START,
+          endTimeSlot: this.HOMEOWNER_TIME_END,
+          duration: 2,
+          players: [],
+          status: 'blocked',
+          blockReason: 'homeowner_day',
+          blockNotes: 'Reserved for homeowners'
+        });
+      }
+    }
+
     // Find current and next reservations
     let currentReservation: Reservation | null = null;
     let nextReservation: Reservation | null = null;
@@ -242,8 +268,9 @@ export class CourtStatusService {
         timeRange: this.formatTimeRange(reservation.timeSlot, reservation.endTimeSlot),
         players: [],
         isBlocked: true,
+        isHomeownerDay: reservation.blockReason === 'homeowner_day',
         blockInfo: {
-          reason: reservation.blockReason || 'maintenance',
+          reason: this.formatBlockReason(reservation.blockReason),
           notes: reservation.blockNotes || 'Court temporarily unavailable'
         }
       };
@@ -327,6 +354,20 @@ export class CourtStatusService {
     );
 
     return colors[Math.abs(hash) % colors.length];
+  }
+
+  /**
+   * Format block reason code to a readable label
+   */
+  private formatBlockReason(reason?: string): string {
+    const labels: { [key: string]: string } = {
+      'maintenance': 'Court Maintenance',
+      'private_event': 'Private Event',
+      'weather': 'Weather Closure',
+      'homeowner_day': "Homeowner's Day",
+      'other': 'Court Unavailable'
+    };
+    return (reason && labels[reason]) || reason || 'Court Blocked';
   }
 
   /**
