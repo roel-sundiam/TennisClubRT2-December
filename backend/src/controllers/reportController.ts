@@ -1890,6 +1890,144 @@ export const forceRefreshCourtUsageReport = asyncHandler(async (req: Authenticat
 });
 
 
+export const getHomeownerDistributionReport = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const year = parseInt(req.query.year as string) || 2026;
+  const yearStart = new Date(`${year}-01-01T00:00:00.000Z`);
+  const yearEnd = new Date(`${year}-12-31T23:59:59.999Z`);
+
+  // --- Court Usage Receipts ---
+  // Match exactly what getFinancialReport does:
+  // status: 'record' only, exclude coins, exclude assigned expenses, exclude membership fees, filter by paymentDate
+  const courtUsageRaw = await Payment.aggregate([
+    {
+      $match: {
+        status: 'record',
+        paymentMethod: { $ne: 'coins' },
+        paymentType: { $ne: 'membership_fee' },
+        'metadata.isAssignedExpense': { $ne: true },
+        paymentDate: { $gte: yearStart, $lte: yearEnd }
+      }
+    },
+    {
+      $addFields: {
+        userObjectId: { $toObjectId: '$userId' }
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'userObjectId',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    {
+      $unwind: {
+        path: '$user',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $addFields: {
+        isHomeowner: { $ifNull: ['$user.isHomeowner', false] },
+        memberName: { $ifNull: ['$user.fullName', 'Unknown Member'] }
+      }
+    },
+    {
+      $project: {
+        userId: 1,
+        memberName: 1,
+        amount: 1,
+        paymentDate: 1,
+        referenceNumber: 1,
+        isHomeowner: 1
+      }
+    },
+    { $sort: { paymentDate: 1 } }
+  ]);
+
+  // --- Membership Fees ---
+  // Match exactly what getFinancialReport does:
+  // paymentType: 'membership_fee', paymentDate in year, membershipYear == year, NO status filter
+  const membershipFeesRaw = await Payment.aggregate([
+    {
+      $match: {
+        paymentType: 'membership_fee',
+        membershipYear: year,
+        paymentDate: { $gte: yearStart, $lte: yearEnd }
+      }
+    },
+    {
+      $addFields: {
+        userObjectId: { $toObjectId: '$userId' }
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'userObjectId',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    {
+      $unwind: {
+        path: '$user',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $addFields: {
+        isHomeowner: { $ifNull: ['$user.isHomeowner', false] },
+        memberName: { $ifNull: ['$user.fullName', 'Unknown Member'] }
+      }
+    },
+    {
+      $project: {
+        userId: 1,
+        memberName: 1,
+        amount: 1,
+        paymentDate: 1,
+        referenceNumber: 1,
+        isHomeowner: 1
+      }
+    },
+    { $sort: { paymentDate: 1 } }
+  ]);
+
+  // Group helper
+  const groupByHomeowner = (records: any[], dateField: string) => {
+    const homeowners = records.filter(r => r.isHomeowner === true);
+    const nonHomeowners = records.filter(r => r.isHomeowner !== true);
+    const toEntry = (r: any) => ({
+      memberName: r.memberName,
+      amount: r.amount,
+      paymentDate: r[dateField],
+      referenceNumber: r.referenceNumber || ''
+    });
+    const subtotal = (arr: any[]) => arr.reduce((s, r) => s + (r.amount || 0), 0);
+    const uniqueMembers = (arr: any[]) => new Set(arr.map(r => r.userId?.toString())).size;
+    return {
+      homeowners: { payments: homeowners.map(toEntry), subtotal: subtotal(homeowners), count: uniqueMembers(homeowners) },
+      nonHomeowners: { payments: nonHomeowners.map(toEntry), subtotal: subtotal(nonHomeowners), count: uniqueMembers(nonHomeowners) },
+      grandTotal: subtotal(records)
+    };
+  };
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      courtUsage: groupByHomeowner(courtUsageRaw, 'paymentDate'),
+      membershipFees2026: groupByHomeowner(membershipFeesRaw, 'paymentDate'),
+      period: {
+        startDate: yearStart.toISOString(),
+        endDate: yearEnd.toISOString()
+      }
+    }
+  });
+});
+
+
 // Validation rules
 export const reportValidation = [
   query('startDate')

@@ -83,6 +83,37 @@ interface CourtUsageData {
   headers: string[];
 }
 
+interface DistributionPaymentEntry {
+  memberName: string;
+  amount: number;
+  paymentDate: string;
+  referenceNumber: string;
+}
+
+interface DistributionGroup {
+  payments: DistributionPaymentEntry[];
+  subtotal: number;
+  count: number;
+}
+
+interface DistributionCategory {
+  homeowners: DistributionGroup;
+  nonHomeowners: DistributionGroup;
+  grandTotal: number;
+}
+
+interface HomeownerDistributionData {
+  courtUsage: DistributionCategory;
+  membershipFees2026: DistributionCategory;
+  period: { startDate: string; endDate: string };
+}
+
+interface HomeownerDistributionAPIResponse {
+  success: boolean;
+  data: HomeownerDistributionData;
+  message?: string;
+}
+
 @Component({
   selector: 'app-financial-report',
   standalone: true,
@@ -134,7 +165,7 @@ interface CourtUsageData {
 
       <!-- Tabbed Content -->
       <div class="tabs-container" *ngIf="!loading && financialData">
-        <mat-tab-group #tabGroup class="financial-tabs">
+        <mat-tab-group #tabGroup class="financial-tabs" (selectedTabChange)="onTabChange($event)">
           <!-- Financial Statement Tab -->
           <mat-tab>
             <ng-template mat-tab-label>
@@ -257,6 +288,199 @@ interface CourtUsageData {
               <app-expense-category-management></app-expense-category-management>
             </div>
           </mat-tab>
+
+          <!-- Distribution Report Tab -->
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>pie_chart</mat-icon>
+              Distribution
+            </ng-template>
+
+            <div class="distribution-tab-content">
+              <!-- Loading -->
+              <div *ngIf="distributionLoading" class="dist-loading">
+                <mat-spinner diameter="40"></mat-spinner>
+                <p>Loading distribution data...</p>
+              </div>
+
+              <!-- Error -->
+              <div *ngIf="!distributionLoading && distributionError" class="dist-error">
+                <mat-icon>error_outline</mat-icon>
+                <p>{{ distributionError }}</p>
+                <button mat-button (click)="loadDistributionReport()">Retry</button>
+              </div>
+
+              <!-- Content -->
+              <div *ngIf="!distributionLoading && distributionData" class="dist-content">
+
+                <!-- Overall Summary Card -->
+                <div class="dist-section dist-summary-card">
+                  <h3 class="dist-section-title">Overall Collections Summary 2026</h3>
+                  <div class="dist-aggregate">
+                    <div class="dist-aggregate-row">
+                      <span class="agg-label court-label">Court Usage</span>
+                      <div class="agg-bar-track">
+                        <div class="agg-bar court-bar"
+                             [style.width]="pct(distributionData.courtUsage.grandTotal, distributionData.courtUsage.grandTotal + distributionData.membershipFees2026.grandTotal) + '%'">
+                        </div>
+                      </div>
+                      <span class="agg-pct">{{ pct(distributionData.courtUsage.grandTotal, distributionData.courtUsage.grandTotal + distributionData.membershipFees2026.grandTotal) }}%</span>
+                      <span class="agg-amount">{{ formatCurrency(distributionData.courtUsage.grandTotal) }}</span>
+                    </div>
+                    <div class="dist-aggregate-row">
+                      <span class="agg-label membership-label">Membership Fees</span>
+                      <div class="agg-bar-track">
+                        <div class="agg-bar membership-bar"
+                             [style.width]="pct(distributionData.membershipFees2026.grandTotal, distributionData.courtUsage.grandTotal + distributionData.membershipFees2026.grandTotal) + '%'">
+                        </div>
+                      </div>
+                      <span class="agg-pct">{{ pct(distributionData.membershipFees2026.grandTotal, distributionData.courtUsage.grandTotal + distributionData.membershipFees2026.grandTotal) }}%</span>
+                      <span class="agg-amount">{{ formatCurrency(distributionData.membershipFees2026.grandTotal) }}</span>
+                    </div>
+                  </div>
+                  <div class="dist-grand-total">
+                    <span>Grand Total Collections</span>
+                    <span>{{ formatCurrency(distributionData.courtUsage.grandTotal + distributionData.membershipFees2026.grandTotal) }}</span>
+                  </div>
+                </div>
+
+                <!-- Section 1: Court Usage Receipts -->
+                <div class="dist-section">
+                  <h3 class="dist-section-title">Tennis Court Usage Receipts</h3>
+
+                  <div class="dist-aggregate">
+                    <div class="dist-aggregate-row">
+                      <span class="agg-label homeowner-label">Homeowners ({{ distributionData.courtUsage.homeowners.count }})</span>
+                      <div class="agg-bar-track">
+                        <div class="agg-bar homeowner-bar"
+                             [style.width]="pct(distributionData.courtUsage.homeowners.subtotal, distributionData.courtUsage.grandTotal) + '%'">
+                        </div>
+                      </div>
+                      <span class="agg-pct">{{ pct(distributionData.courtUsage.homeowners.subtotal, distributionData.courtUsage.grandTotal) }}%</span>
+                      <span class="agg-amount">{{ formatCurrency(distributionData.courtUsage.homeowners.subtotal) }}</span>
+                    </div>
+                    <div class="dist-aggregate-row">
+                      <span class="agg-label non-homeowner-label">Non-Homeowners ({{ distributionData.courtUsage.nonHomeowners.count }})</span>
+                      <div class="agg-bar-track">
+                        <div class="agg-bar non-homeowner-bar"
+                             [style.width]="pct(distributionData.courtUsage.nonHomeowners.subtotal, distributionData.courtUsage.grandTotal) + '%'">
+                        </div>
+                      </div>
+                      <span class="agg-pct">{{ pct(distributionData.courtUsage.nonHomeowners.subtotal, distributionData.courtUsage.grandTotal) }}%</span>
+                      <span class="agg-amount">{{ formatCurrency(distributionData.courtUsage.nonHomeowners.subtotal) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="dist-grand-total">
+                    <span>Total Court Usage Receipts</span>
+                    <span>{{ formatCurrency(distributionData.courtUsage.grandTotal) }}</span>
+                  </div>
+
+                  <div class="dist-group">
+                    <h4 class="dist-group-title">Homeowners ({{ distributionData.courtUsage.homeowners.count }})</h4>
+                    <table class="dist-table" *ngIf="distributionData.courtUsage.homeowners.payments.length > 0">
+                      <thead><tr><th>Member</th><th>Date</th><th>Reference</th><th class="amount-col">Amount</th></tr></thead>
+                      <tbody>
+                        <tr *ngFor="let p of distributionData.courtUsage.homeowners.payments">
+                          <td>{{ p.memberName }}</td>
+                          <td>{{ p.paymentDate | date:'mediumDate' }}</td>
+                          <td>{{ p.referenceNumber }}</td>
+                          <td class="amount-col">{{ formatCurrency(p.amount) }}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot><tr class="subtotal-row"><td colspan="3">Homeowners Subtotal</td><td class="amount-col">{{ formatCurrency(distributionData.courtUsage.homeowners.subtotal) }}</td></tr></tfoot>
+                    </table>
+                    <p *ngIf="distributionData.courtUsage.homeowners.payments.length === 0" class="dist-empty">No payments found.</p>
+                  </div>
+
+                  <div class="dist-group">
+                    <h4 class="dist-group-title">Non-Homeowners ({{ distributionData.courtUsage.nonHomeowners.count }})</h4>
+                    <table class="dist-table" *ngIf="distributionData.courtUsage.nonHomeowners.payments.length > 0">
+                      <thead><tr><th>Member</th><th>Date</th><th>Reference</th><th class="amount-col">Amount</th></tr></thead>
+                      <tbody>
+                        <tr *ngFor="let p of distributionData.courtUsage.nonHomeowners.payments">
+                          <td>{{ p.memberName }}</td>
+                          <td>{{ p.paymentDate | date:'mediumDate' }}</td>
+                          <td>{{ p.referenceNumber }}</td>
+                          <td class="amount-col">{{ formatCurrency(p.amount) }}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot><tr class="subtotal-row"><td colspan="3">Non-Homeowners Subtotal</td><td class="amount-col">{{ formatCurrency(distributionData.courtUsage.nonHomeowners.subtotal) }}</td></tr></tfoot>
+                    </table>
+                    <p *ngIf="distributionData.courtUsage.nonHomeowners.payments.length === 0" class="dist-empty">No payments found.</p>
+                  </div>
+                </div>
+
+                <!-- Section 2: Annual Membership Fees 2026 -->
+                <div class="dist-section">
+                  <h3 class="dist-section-title">Annual Membership Fees 2026</h3>
+
+                  <div class="dist-aggregate">
+                    <div class="dist-aggregate-row">
+                      <span class="agg-label homeowner-label">Homeowners ({{ distributionData.membershipFees2026.homeowners.count }})</span>
+                      <div class="agg-bar-track">
+                        <div class="agg-bar homeowner-bar"
+                             [style.width]="pct(distributionData.membershipFees2026.homeowners.subtotal, distributionData.membershipFees2026.grandTotal) + '%'">
+                        </div>
+                      </div>
+                      <span class="agg-pct">{{ pct(distributionData.membershipFees2026.homeowners.subtotal, distributionData.membershipFees2026.grandTotal) }}%</span>
+                      <span class="agg-amount">{{ formatCurrency(distributionData.membershipFees2026.homeowners.subtotal) }}</span>
+                    </div>
+                    <div class="dist-aggregate-row">
+                      <span class="agg-label non-homeowner-label">Non-Homeowners ({{ distributionData.membershipFees2026.nonHomeowners.count }})</span>
+                      <div class="agg-bar-track">
+                        <div class="agg-bar non-homeowner-bar"
+                             [style.width]="pct(distributionData.membershipFees2026.nonHomeowners.subtotal, distributionData.membershipFees2026.grandTotal) + '%'">
+                        </div>
+                      </div>
+                      <span class="agg-pct">{{ pct(distributionData.membershipFees2026.nonHomeowners.subtotal, distributionData.membershipFees2026.grandTotal) }}%</span>
+                      <span class="agg-amount">{{ formatCurrency(distributionData.membershipFees2026.nonHomeowners.subtotal) }}</span>
+                    </div>
+                  </div>
+
+                  <div class="dist-grand-total">
+                    <span>Total Membership Fees 2026</span>
+                    <span>{{ formatCurrency(distributionData.membershipFees2026.grandTotal) }}</span>
+                  </div>
+
+                  <div class="dist-group">
+                    <h4 class="dist-group-title">Homeowners ({{ distributionData.membershipFees2026.homeowners.count }})</h4>
+                    <table class="dist-table" *ngIf="distributionData.membershipFees2026.homeowners.payments.length > 0">
+                      <thead><tr><th>Member</th><th>Date Paid</th><th>Reference</th><th class="amount-col">Amount</th></tr></thead>
+                      <tbody>
+                        <tr *ngFor="let p of distributionData.membershipFees2026.homeowners.payments">
+                          <td>{{ p.memberName }}</td>
+                          <td>{{ p.paymentDate | date:'mediumDate' }}</td>
+                          <td>{{ p.referenceNumber }}</td>
+                          <td class="amount-col">{{ formatCurrency(p.amount) }}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot><tr class="subtotal-row"><td colspan="3">Homeowners Subtotal</td><td class="amount-col">{{ formatCurrency(distributionData.membershipFees2026.homeowners.subtotal) }}</td></tr></tfoot>
+                    </table>
+                    <p *ngIf="distributionData.membershipFees2026.homeowners.payments.length === 0" class="dist-empty">No payments found.</p>
+                  </div>
+
+                  <div class="dist-group">
+                    <h4 class="dist-group-title">Non-Homeowners ({{ distributionData.membershipFees2026.nonHomeowners.count }})</h4>
+                    <table class="dist-table" *ngIf="distributionData.membershipFees2026.nonHomeowners.payments.length > 0">
+                      <thead><tr><th>Member</th><th>Date Paid</th><th>Reference</th><th class="amount-col">Amount</th></tr></thead>
+                      <tbody>
+                        <tr *ngFor="let p of distributionData.membershipFees2026.nonHomeowners.payments">
+                          <td>{{ p.memberName }}</td>
+                          <td>{{ p.paymentDate | date:'mediumDate' }}</td>
+                          <td>{{ p.referenceNumber }}</td>
+                          <td class="amount-col">{{ formatCurrency(p.amount) }}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot><tr class="subtotal-row"><td colspan="3">Non-Homeowners Subtotal</td><td class="amount-col">{{ formatCurrency(distributionData.membershipFees2026.nonHomeowners.subtotal) }}</td></tr></tfoot>
+                    </table>
+                    <p *ngIf="distributionData.membershipFees2026.nonHomeowners.payments.length === 0" class="dist-empty">No payments found.</p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </mat-tab>
         </mat-tab-group>
       </div>
 
@@ -303,6 +527,10 @@ export class FinancialReportComponent implements OnInit, OnDestroy {
     loaded: false,
     error: null
   };
+
+  distributionData: HomeownerDistributionData | null = null;
+  distributionLoading = false;
+  distributionError: string | null = null;
 
   constructor(
     private http: HttpClient,
@@ -382,6 +610,40 @@ export class FinancialReportComponent implements OnInit, OnDestroy {
 
   refreshData(): void {
     this.loadFinancialStatement();
+  }
+
+  onTabChange(event: any): void {
+    if (event.index === 3 && !this.distributionData && !this.distributionLoading) {
+      this.loadDistributionReport();
+    }
+  }
+
+  pct(part: number, total: number): string {
+    if (!total) return '0.0';
+    return ((part / total) * 100).toFixed(1);
+  }
+
+  loadDistributionReport(): void {
+    this.distributionLoading = true;
+    this.distributionError = null;
+    const headers = new HttpHeaders({ 'Authorization': `Bearer ${this.authService.token}` });
+    this.http.get<HomeownerDistributionAPIResponse>(
+      `${this.apiUrl}/reports/homeowner-distribution`,
+      { headers }
+    ).subscribe({
+      next: (result) => {
+        if (result?.success) {
+          this.distributionData = result.data;
+        } else {
+          this.distributionError = result.message || 'Failed to load distribution report';
+        }
+        this.distributionLoading = false;
+      },
+      error: (err) => {
+        this.distributionError = err.error?.message || 'Failed to load distribution data';
+        this.distributionLoading = false;
+      }
+    });
   }
 
   formatCurrency(amount: number): string {

@@ -12,7 +12,8 @@ import {
   forceRefreshFinancialReport,
   forceRefreshCourtUsageReport,
   triggerSync,
-  getSyncStatus
+  getSyncStatus,
+  getHomeownerDistributionReport
 } from '../controllers/reportController';
 import { getStaticCourtUsageReport } from '../controllers/staticReportController';
 import { authenticateToken, requireRole, requireFinancialAccess } from '../middleware/auth';
@@ -89,6 +90,18 @@ router.get(
   authenticateToken,
   requireFinancialAccess,
   getCourtReceiptsReport
+);
+
+/**
+ * @route GET /api/reports/homeowner-distribution
+ * @desc Get court usage and membership fee receipts grouped by homeowner/non-homeowner
+ * @access Private (Treasurer/Admin/SuperAdmin)
+ */
+router.get(
+  '/homeowner-distribution',
+  authenticateToken,
+  requireFinancialAccess,
+  getHomeownerDistributionReport
 );
 
 /**

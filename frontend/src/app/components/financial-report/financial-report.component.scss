@@ -1014,3 +1014,175 @@
     margin-bottom: 16px;
   }
 }
+// Distribution Report Tab
+.distribution-tab-content {
+  padding: 1.5rem;
+
+  .dist-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    color: #666;
+  }
+
+  .dist-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: #d32f2f;
+  }
+
+  .dist-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .dist-section {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.25rem;
+
+    .dist-section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1976d2;
+      margin: 0 0 1rem 0;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e3f2fd;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .dist-group {
+      margin-bottom: 1.5rem;
+
+      .dist-group-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #333;
+        margin: 0 0 0.5rem 0;
+      }
+    }
+
+    .dist-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+
+      th {
+        background: #f5f5f5;
+        font-weight: 600;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        border-bottom: 2px solid #ddd;
+      }
+
+      td {
+        padding: 0.4rem 0.75rem;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .amount-col {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .subtotal-row td {
+        font-weight: 700;
+        background: #fafafa;
+        border-top: 2px solid #ddd;
+      }
+    }
+
+    .dist-empty {
+      color: #999;
+      font-style: italic;
+      font-size: 0.875rem;
+    }
+
+    .dist-grand-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: #e3f2fd;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+  }
+}
+
+// Distribution aggregate percentage bars
+.dist-aggregate {
+  margin: 0.5rem 0 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .dist-aggregate-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 60px 110px;
+    align-items: center;
+    gap: 0.75rem;
+
+    .agg-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+
+      &.homeowner-label { color: #1976d2; }
+      &.non-homeowner-label { color: #f57c00; }
+    }
+
+    .agg-bar-track {
+      height: 14px;
+      background: #eeeeee;
+      border-radius: 7px;
+      overflow: hidden;
+
+      .agg-bar {
+        height: 100%;
+        border-radius: 7px;
+        transition: width 0.4s ease;
+
+        &.homeowner-bar { background: #1976d2; }
+        &.non-homeowner-bar { background: #f57c00; }
+      }
+    }
+
+    .agg-pct {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-align: right;
+      color: #333;
+    }
+
+    .agg-amount {
+      font-size: 0.8rem;
+      text-align: right;
+      color: #555;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+// Court usage / membership fee label colors in overall summary
+.agg-label {
+  &.court-label { color: #2e7d32; }
+  &.membership-label { color: #6a1b9a; }
+}
+.agg-bar {
+  &.court-bar { background: #2e7d32; }
+  &.membership-bar { background: #6a1b9a; }
+}
+
+.dist-summary-card {
+  border-color: #c8e6c9;
+  background: #f9fff9;
+}
