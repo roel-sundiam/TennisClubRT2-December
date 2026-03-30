@@ -307,12 +307,8 @@ class CalculatedRankingService {
         if (b.totalPoints !== a.totalPoints) {
           return b.totalPoints - a.totalPoints;
         }
-        // Tie-breaker: win rate
-        if (b.winRate !== a.winRate) {
-          return b.winRate - a.winRate;
-        }
-        // Tie-breaker: matches played
-        return b.matchesPlayed - a.matchesPlayed;
+        // Tie-breaker: first name ascending
+        return a.playerName.localeCompare(b.playerName);
       });
 
     // Assign ranks with tie handling
@@ -321,10 +317,9 @@ class CalculatedRankingService {
     rankings.forEach((ranking, index) => {
       if (index > 0) {
         const prevRanking = rankings[index - 1];
-        // Check if this player has same points AND same wins as previous
+        // Check if this player has the same points as previous (tie)
         if (prevRanking &&
-            ranking.totalPoints === prevRanking.totalPoints &&
-            ranking.matchesWon === prevRanking.matchesWon) {
+            ranking.totalPoints === prevRanking.totalPoints) {
           // Same rank as previous player (tie)
           ranking.rank = prevRanking.rank;
         } else {

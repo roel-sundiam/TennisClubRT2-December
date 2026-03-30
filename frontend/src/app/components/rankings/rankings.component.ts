@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -192,7 +193,7 @@ interface Tournament {
         </div>
 
         <!-- No Data State -->
-        <div *ngIf="!loading && !error && rankings.length === 0" class="state-card no-data-card">
+        <div *ngIf="!loading && !error && maleRankings.length === 0 && femaleRankings.length === 0" class="state-card no-data-card">
           <div class="state-content">
             <mat-icon class="state-icon">emoji_events</mat-icon>
             <h3>No Rankings Yet</h3>
@@ -201,7 +202,7 @@ interface Tournament {
         </div>
 
         <!-- Rankings Table -->
-        <div *ngIf="!loading && !error && rankings.length > 0" class="rankings-section">
+        <div *ngIf="!loading && !error && (maleRankings.length > 0 || femaleRankings.length > 0)" class="rankings-section">
           <div class="rankings-card">
             <div class="card-header">
               <div class="header-content">
@@ -216,13 +217,17 @@ interface Tournament {
                 </div>
               </div>
             </div>
-            
+
             <div class="card-content">
               <div class="table-scroll-container">
-                <!-- Desktop: Two Column Layout -->
+                <!-- Desktop: Two Column Layout (Female | Male) -->
                 <div class="rankings-columns-desktop">
-                  <!-- Left Column -->
+                  <!-- Female Rankings Column -->
                   <div class="rankings-table">
+                    <div class="gender-section-header gender-female">
+                      <mat-icon>female</mat-icon>
+                      <span>Female Rankings</span>
+                    </div>
                     <div class="table-header">
                       <div class="rank-col">Rank</div>
                       <div class="player-col">Player</div>
@@ -230,8 +235,10 @@ interface Tournament {
                       <div class="stats-col">Record</div>
                     </div>
 
+                    <div *ngIf="femaleRankings.length === 0" class="no-gender-data">No female rankings yet</div>
+
                     <div
-                      *ngFor="let player of leftColumnRankings; trackBy: trackPlayer"
+                      *ngFor="let player of femaleRankings; trackBy: trackPlayer"
                       class="table-row"
                       [class.current-user]="player._id === currentUserId"
                       [class.top-3]="player.rank <= 3">
@@ -271,8 +278,12 @@ interface Tournament {
                     </div>
                   </div>
 
-                  <!-- Right Column -->
+                  <!-- Male Rankings Column -->
                   <div class="rankings-table">
+                    <div class="gender-section-header gender-male">
+                      <mat-icon>male</mat-icon>
+                      <span>Male Rankings</span>
+                    </div>
                     <div class="table-header">
                       <div class="rank-col">Rank</div>
                       <div class="player-col">Player</div>
@@ -280,8 +291,10 @@ interface Tournament {
                       <div class="stats-col">Record</div>
                     </div>
 
+                    <div *ngIf="maleRankings.length === 0" class="no-gender-data">No male rankings yet</div>
+
                     <div
-                      *ngFor="let player of rightColumnRankings; trackBy: trackPlayer"
+                      *ngFor="let player of maleRankings; trackBy: trackPlayer"
                       class="table-row"
                       [class.current-user]="player._id === currentUserId"
                       [class.top-3]="player.rank <= 3">
@@ -322,9 +335,14 @@ interface Tournament {
                   </div>
                 </div>
 
-                <!-- Mobile: Single Column Layout -->
+                <!-- Mobile: Two Stacked Sections -->
                 <div class="rankings-single-mobile">
+                  <!-- Female Section -->
                   <div class="rankings-table">
+                    <div class="gender-section-header gender-female">
+                      <mat-icon>female</mat-icon>
+                      <span>Female Rankings</span>
+                    </div>
                     <div class="table-header">
                       <div class="rank-col">Rank</div>
                       <div class="player-col">Player</div>
@@ -332,8 +350,66 @@ interface Tournament {
                       <div class="stats-col">Record</div>
                     </div>
 
+                    <div *ngIf="femaleRankings.length === 0" class="no-gender-data">No female rankings yet</div>
+
                     <div
-                      *ngFor="let player of rankings; trackBy: trackPlayer"
+                      *ngFor="let player of femaleRankings; trackBy: trackPlayer"
+                      class="table-row"
+                      [class.current-user]="player._id === currentUserId"
+                      [class.top-3]="player.rank <= 3">
+
+                      <div class="rank-col">
+                        <div class="rank-display" [class]="'rank-' + player.rank">
+                          <span class="rank-number">#{{ player.rank }}</span>
+                        </div>
+                      </div>
+
+                      <div class="player-col">
+                        <div class="player-info">
+                          <div class="player-name">
+                            {{ player.fullName }}
+                            <ng-container *ngIf="player.medals && player.medals.length > 0">
+                              <span *ngFor="let medal of player.medals" class="medal-icon">{{ getMedalEmoji(medal) }}</span>
+                            </ng-container>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="points-col">
+                        <div class="points-display">
+                          <span class="points-value">{{ player.seedPoints }}</span>
+                          <span class="points-label">pts</span>
+                        </div>
+                      </div>
+
+                      <div class="stats-col">
+                        <div class="stats-display">
+                          <span class="wins">{{ player.matchesWon }}W</span>
+                          <span class="separator">-</span>
+                          <span class="total">{{ player.matchesPlayed }}P</span>
+                          <span class="win-rate" *ngIf="player.winRate > 0">({{ player.winRate.toFixed(0) }}%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Male Section -->
+                  <div class="rankings-table" style="margin-top: 24px;">
+                    <div class="gender-section-header gender-male">
+                      <mat-icon>male</mat-icon>
+                      <span>Male Rankings</span>
+                    </div>
+                    <div class="table-header">
+                      <div class="rank-col">Rank</div>
+                      <div class="player-col">Player</div>
+                      <div class="points-col">Points</div>
+                      <div class="stats-col">Record</div>
+                    </div>
+
+                    <div *ngIf="maleRankings.length === 0" class="no-gender-data">No male rankings yet</div>
+
+                    <div
+                      *ngFor="let player of maleRankings; trackBy: trackPlayer"
                       class="table-row"
                       [class.current-user]="player._id === currentUserId"
                       [class.top-3]="player.rank <= 3">
@@ -375,7 +451,7 @@ interface Tournament {
                 </div>
               </div>
 
-              <div *ngIf="rankings.length >= currentLimit" class="load-more-section">
+              <div *ngIf="rankings.length >= currentLimit * 2" class="load-more-section">
                 <button mat-stroked-button (click)="loadMoreRankings()" [disabled]="loadingMore" class="load-more-button">
                   <mat-icon *ngIf="!loadingMore">expand_more</mat-icon>
                   <mat-spinner *ngIf="loadingMore" diameter="20"></mat-spinner>
@@ -506,7 +582,9 @@ interface Tournament {
   styleUrl: './rankings.component.scss'
 })
 export class RankingsComponent implements OnInit {
-  rankings: PlayerRanking[] = [];
+  maleRankings: PlayerRanking[] = [];
+  femaleRankings: PlayerRanking[] = [];
+  get rankings(): PlayerRanking[] { return [...this.maleRankings, ...this.femaleRankings]; }
   tournamentStats: TournamentStats | null = null;
   currentUserStats: any = null;
   tournaments: Tournament[] = [];
@@ -606,23 +684,22 @@ export class RankingsComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    // NEW: Use calculated rankings endpoint
-    this.http.get<any>(`${this.apiUrl}/rankings?limit=${this.currentLimit}`).subscribe({
-      next: (response) => {
-        if (response.success) {
-          // Map new format to component format
-          this.rankings = (response.data.rankings || []).map((player: any) => ({
-            ...player,
-            // Map new fields to legacy fields for compatibility
-            _id: player.playerId,
-            fullName: player.playerName,
-            seedPoints: player.totalPoints
-          }));
+    const mapPlayers = (response: any): PlayerRanking[] =>
+      (response.data?.rankings || []).map((player: any) => ({
+        ...player,
+        _id: player.playerId,
+        fullName: player.playerName,
+        seedPoints: player.totalPoints
+      }));
 
-          console.log(`✅ Loaded ${this.rankings.length} rankings (calculated from ${response.data.totalTournaments} tournaments)`);
-        } else {
-          this.error = response.message || 'Failed to load rankings';
-        }
+    forkJoin({
+      male: this.http.get<any>(`${this.apiUrl}/rankings?gender=male&limit=${this.currentLimit}`),
+      female: this.http.get<any>(`${this.apiUrl}/rankings?gender=female&limit=${this.currentLimit}`)
+    }).subscribe({
+      next: ({ male, female }) => {
+        this.maleRankings = mapPlayers(male);
+        this.femaleRankings = mapPlayers(female);
+        console.log(`✅ Loaded ${this.maleRankings.length} male + ${this.femaleRankings.length} female rankings`);
         this.loading = false;
       },
       error: (error) => {
@@ -675,18 +752,21 @@ export class RankingsComponent implements OnInit {
     this.loadingMore = true;
     this.currentLimit += 50;
 
-    // NEW: Use calculated rankings endpoint
-    this.http.get<any>(`${this.apiUrl}/rankings?limit=${this.currentLimit}`).subscribe({
-      next: (response) => {
-        if (response.success) {
-          // Map new format to component format
-          this.rankings = (response.data.rankings || []).map((player: any) => ({
-            ...player,
-            _id: player.playerId,
-            fullName: player.playerName,
-            seedPoints: player.totalPoints
-          }));
-        }
+    const mapPlayers = (response: any): PlayerRanking[] =>
+      (response.data?.rankings || []).map((player: any) => ({
+        ...player,
+        _id: player.playerId,
+        fullName: player.playerName,
+        seedPoints: player.totalPoints
+      }));
+
+    forkJoin({
+      male: this.http.get<any>(`${this.apiUrl}/rankings?gender=male&limit=${this.currentLimit}`),
+      female: this.http.get<any>(`${this.apiUrl}/rankings?gender=female&limit=${this.currentLimit}`)
+    }).subscribe({
+      next: ({ male, female }) => {
+        this.maleRankings = mapPlayers(male);
+        this.femaleRankings = mapPlayers(female);
         this.loadingMore = false;
       },
       error: (error) => {
@@ -704,16 +784,6 @@ export class RankingsComponent implements OnInit {
 
   trackPlayer(index: number, player: PlayerRanking): string {
     return player._id;
-  }
-
-  get leftColumnRankings(): PlayerRanking[] {
-    const midPoint = Math.ceil(this.rankings.length / 2);
-    return this.rankings.slice(0, midPoint);
-  }
-
-  get rightColumnRankings(): PlayerRanking[] {
-    const midPoint = Math.ceil(this.rankings.length / 2);
-    return this.rankings.slice(midPoint);
   }
 
   goBack(): void {
