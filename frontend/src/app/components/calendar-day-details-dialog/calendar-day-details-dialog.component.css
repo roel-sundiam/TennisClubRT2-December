@@ -194,11 +194,6 @@
   opacity: 0.7;
 }
 
-.reservation-card.homeowner-special {
-  border-left-color: #667eea;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
-}
-
 /* Reservation Header */
 .reservation-header {
   display: flex;
@@ -264,11 +259,6 @@
 
 .status-badge.cancelled {
   background: linear-gradient(135deg, #f44336 0%, #ef5350 100%);
-  color: white;
-}
-
-.status-badge.homeowner {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
 }
 

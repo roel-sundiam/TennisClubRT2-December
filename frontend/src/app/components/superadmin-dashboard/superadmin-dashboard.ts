@@ -41,7 +41,7 @@ interface BlockedReservation {
   status: string;
 }
 
-type CourtEventType = 'reservation' | 'blocked' | 'homeowner';
+type CourtEventType = 'reservation' | 'blocked';
 
 interface CourtEvent {
   type: CourtEventType;
@@ -157,10 +157,6 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
   private refreshInterval$?: Subscription;
   private countdownInterval$?: Subscription;
   private audioContext?: AudioContext;
-
-  private readonly HOMEOWNER_TIME_START = 18;
-  private readonly HOMEOWNER_TIME_END = 20;
-  private readonly HOMEOWNER_DAY = 3; // Wednesday
 
   // Table columns
   reservationColumns = ['member', 'date', 'time', 'players', 'amount', 'status'];
@@ -450,7 +446,6 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
   get currentCourtEvent(): CourtEvent | null {
     if (!this.dashboardData) return null;
     const currentHour = new Date().getHours();
-    const dayOfWeek = new Date().getDay();
 
     if (this.dashboardData.courtStatus.current) {
       const r = this.dashboardData.courtStatus.current;
@@ -464,17 +459,12 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
       return { type: 'blocked', timeSlot: blocked.timeSlot, endTimeSlot: blocked.endTimeSlot, blockReason: blocked.blockReason, blockNotes: blocked.blockNotes };
     }
 
-    if (dayOfWeek === this.HOMEOWNER_DAY && currentHour >= this.HOMEOWNER_TIME_START && currentHour < this.HOMEOWNER_TIME_END) {
-      return { type: 'homeowner', timeSlot: this.HOMEOWNER_TIME_START, endTimeSlot: this.HOMEOWNER_TIME_END };
-    }
-
     return null;
   }
 
   get nextCourtEvent(): CourtEvent | null {
     if (!this.dashboardData) return null;
     const currentHour = new Date().getHours();
-    const dayOfWeek = new Date().getDay();
     const candidates: CourtEvent[] = [];
 
     if (this.dashboardData.courtStatus.next) {
@@ -485,16 +475,6 @@ export class SuperadminDashboard implements OnInit, OnDestroy {
     for (const b of (this.dashboardData.courtStatus.blockedToday || [])) {
       if (b.timeSlot > currentHour) {
         candidates.push({ type: 'blocked', timeSlot: b.timeSlot, endTimeSlot: b.endTimeSlot, blockReason: b.blockReason, blockNotes: b.blockNotes });
-      }
-    }
-
-    if (dayOfWeek === this.HOMEOWNER_DAY && this.HOMEOWNER_TIME_START > currentHour) {
-      const isCovered = (this.dashboardData.courtStatus.blockedToday || []).some(
-        b => b.timeSlot <= this.HOMEOWNER_TIME_START && b.endTimeSlot > this.HOMEOWNER_TIME_START
-      );
-      const confirmedCovers = this.dashboardData.courtStatus.next?.timeSlot === this.HOMEOWNER_TIME_START;
-      if (!isCovered && !confirmedCovers) {
-        candidates.push({ type: 'homeowner', timeSlot: this.HOMEOWNER_TIME_START, endTimeSlot: this.HOMEOWNER_TIME_END });
       }
     }
 

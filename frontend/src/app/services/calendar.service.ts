@@ -34,7 +34,6 @@ export interface DayReservationInfo {
   totalHours: number;
   hasAvailability: boolean;
   isPeakDay: boolean; // Has peak hours
-  isWednesday: boolean;
   maxRainChance?: number; // Highest rain probability from all reservations (0-100)
   hasWeatherData: boolean; // True if at least one reservation has weather data
 }
@@ -149,8 +148,6 @@ export class CalendarService {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       const dateKey = this.getDateKey(date);
-      const isWednesday = date.getDay() === 3;
-
       dayMap.set(dateKey, {
         date: date,
         reservations: [],
@@ -159,7 +156,6 @@ export class CalendarService {
         totalHours: 0,
         hasAvailability: true, // Will calculate below
         isPeakDay: false,
-        isWednesday: isWednesday,
         maxRainChance: undefined,
         hasWeatherData: false
       });

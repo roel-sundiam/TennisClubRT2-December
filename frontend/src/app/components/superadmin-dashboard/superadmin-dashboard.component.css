@@ -1189,12 +1189,3 @@ a:focus-visible {
   font-style: italic;
 }
 
-/* Homeowner's Time Event */
-.status-homeowner {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: white;
-}
-
-.homeowner-event .info-row svg {
-  color: #f59e0b;
-}

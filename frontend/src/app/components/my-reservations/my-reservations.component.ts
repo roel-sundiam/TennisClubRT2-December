@@ -53,7 +53,6 @@ interface Reservation {
   };
   createdAt: Date;
   updatedAt: Date;
-  isHomeownerDay?: boolean; // Flag for Homeowner's Day entries
 }
 
 interface GroupedReservations {
@@ -175,7 +174,6 @@ interface AvatarInfo {
                   <!-- Reservation Cards for this Date -->
                   <div *ngFor="let reservation of group.reservations"
                        class="mobile-event-card"
-                       [class.homeowner-day]="reservation.isHomeownerDay"
                        [class.expanded]="isExpanded(reservation._id)"
                        (click)="toggleExpansion(reservation._id)">
 
@@ -297,7 +295,6 @@ interface AvatarInfo {
                 <!-- Original Desktop Design -->
                 <div *ngFor="let reservation of filteredAllReservations"
                      class="reservation-card-compact all-reservations"
-                     [class.homeowner-day]="reservation.isHomeownerDay"
                      [style.border-left-color]="getWeatherBorderColor(reservation)">
                   <div class="card-left">
                     <div class="date-badge" [ngClass]="isPastReservation(reservation.date) ? 'past' : ''">
@@ -1608,9 +1605,6 @@ click "Try Again" below to reconnect.
         this.convertToAMPMFormat(this.allReservations);
         console.log('🔍 After formatting:', this.allReservations.length);
 
-        // Add Homeowner's Day entries for upcoming Wednesdays
-        this.addHomeownerDayEntries();
-
         // Build member filter options from reservers + all players in each reservation
         const seen = new Set<string>();
         this.memberFilterOptions = [];
@@ -2157,8 +2151,6 @@ click "Try Again" below to reconnect.
   canJoinReservation(reservation: any): boolean {
     if (!['pending', 'confirmed'].includes(reservation.status)) return false;
     if (this.isBlockedReservation(reservation)) return false;
-    if (reservation.isHomeownerDay) return false;
-
     const resDate = new Date(reservation.date);
     resDate.setHours(reservation.timeSlot, 0, 0, 0);
     if (resDate <= new Date()) return false;
@@ -2203,8 +2195,6 @@ click "Try Again" below to reconnect.
   canLeaveReservation(reservation: any): boolean {
     if (!['pending', 'confirmed'].includes(reservation.status)) return false;
     if (this.isBlockedReservation(reservation)) return false;
-    if (reservation.isHomeownerDay) return false;
-
     const resDate = new Date(reservation.date);
     resDate.setHours(reservation.timeSlot, 0, 0, 0);
     if (resDate <= new Date()) return false;
@@ -2453,83 +2443,5 @@ click "Try Again" below to reconnect.
     return reservation.status === 'blocked';
   }
 
-
-  /**
-   * Add Homeowner's Day entries for the next 2 upcoming Wednesdays
-   */
-  addHomeownerDayEntries(): void {
-    const homeownerEntries = this.generateHomeownerDayEntries();
-    
-    // Add entries to the beginning of the list
-    this.allReservations = [...homeownerEntries, ...this.allReservations];
-
-    // Sort by date AND timeSlot to maintain chronological order
-    this.allReservations.sort((a, b) => {
-      const dateCompare = new Date(a.date).getTime() - new Date(b.date).getTime();
-      if (dateCompare !== 0) return dateCompare;
-      return a.timeSlot - b.timeSlot;
-    });
-
-    console.log(`✅ Added ${homeownerEntries.length} Homeowner's Day entries`);
-  }
-
-  /**
-   * Generate Homeowner's Day entries for the next 2 upcoming Wednesdays
-   * Note: Uses mock weather since these are UI-only placeholder events
-   */
-  generateHomeownerDayEntries(): Reservation[] {
-    const entries: Reservation[] = [];
-    const now = new Date();
-    let foundWednesdays = 0;
-
-    // Look for next 2 Wednesdays within the next 30 days
-    for (let i = 0; i < 30 && foundWednesdays < 2; i++) {
-      const checkDate = new Date(now);
-      checkDate.setDate(now.getDate() + i);
-
-      // Check if this date is a Wednesday (day 3) and is in the future
-      if (checkDate.getDay() === 3 && checkDate >= now) {
-        // Generate realistic weather forecast for the Wednesday evening
-        // Using mock data since Homeowner's Day is a UI placeholder, not a real reservation
-        const weatherTypes = [
-          { desc: 'sunny', icon: '01d', temp: 28, rain: 10, humidity: 65 },
-          { desc: 'partly cloudy', icon: '02d', temp: 26, rain: 20, humidity: 70 },
-          { desc: 'cloudy', icon: '03d', temp: 25, rain: 30, humidity: 75 },
-          { desc: 'clear sky', icon: '01d', temp: 29, rain: 5, humidity: 60 }
-        ];
-
-        const weather = weatherTypes[foundWednesdays % weatherTypes.length];
-
-        const entry: Reservation = {
-          _id: `homeowner-${checkDate.toISOString().split('T')[0]}`, // Unique ID
-          date: checkDate,
-          timeSlot: 18, // 6 PM
-          timeSlotDisplay: '6PM - 8PM',
-          players: ["Homeowner's Day"],
-          status: 'confirmed',
-          paymentStatus: 'paid',
-          totalFee: 0,
-          feePerPlayer: 0,
-          createdAt: now,
-          updatedAt: now,
-          isHomeownerDay: true, // Special flag
-          weatherForecast: {
-            temperature: weather.temp + Math.floor(Math.random() * 4) - 2, // ±2 degrees variation
-            description: weather.desc,
-            icon: weather.icon,
-            rainChance: weather.rain + Math.floor(Math.random() * 10) - 5, // ±5% variation
-            humidity: weather.humidity + Math.floor(Math.random() * 10) - 5 // ±5% variation
-          }
-        };
-
-        entries.push(entry);
-        foundWednesdays++;
-
-        console.log(`📅 Generated Homeowner's Day entry for: ${checkDate.toDateString()} with weather: ${entry.weatherForecast?.temperature}°C`);
-      }
-    }
-
-    return entries;
-  }
 
 }

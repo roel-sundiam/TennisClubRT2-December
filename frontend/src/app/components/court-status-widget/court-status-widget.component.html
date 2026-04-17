@@ -52,7 +52,7 @@
 
           <!-- Blocked State -->
           <div class="blocked-info" *ngIf="courtStatus.current.isBlocked">
-            <mat-icon class="block-icon">{{ courtStatus.current.isHomeownerDay ? 'home' : 'block' }}</mat-icon>
+            <mat-icon class="block-icon">block</mat-icon>
             <p class="block-reason">{{ courtStatus.current.blockInfo?.reason || 'Blocked' }}</p>
             <p class="block-notes" *ngIf="courtStatus.current.blockInfo?.notes">
               {{ courtStatus.current.blockInfo.notes }}
@@ -92,7 +92,7 @@
 
           <!-- Blocked State -->
           <div class="blocked-info" *ngIf="courtStatus.next.isBlocked">
-            <mat-icon class="block-icon">{{ courtStatus.next.isHomeownerDay ? 'home' : 'block' }}</mat-icon>
+            <mat-icon class="block-icon">block</mat-icon>
             <p class="block-reason">{{ courtStatus.next.blockInfo?.reason || 'Blocked' }}</p>
             <p class="block-notes" *ngIf="courtStatus.next.blockInfo?.notes">
               {{ courtStatus.next.blockInfo.notes }}
@@ -132,7 +132,7 @@
 
           <!-- Blocked State -->
           <div class="blocked-info" *ngIf="courtStatus.current.isBlocked">
-            <mat-icon class="block-icon">{{ courtStatus.current.isHomeownerDay ? 'home' : 'block' }}</mat-icon>
+            <mat-icon class="block-icon">block</mat-icon>
             <p class="block-reason">{{ courtStatus.current.blockInfo?.reason || 'Blocked' }}</p>
           </div>
 
@@ -166,7 +166,7 @@
 
           <!-- Blocked State -->
           <div class="blocked-info" *ngIf="courtStatus.next.isBlocked">
-            <mat-icon class="block-icon">{{ courtStatus.next.isHomeownerDay ? 'home' : 'block' }}</mat-icon>
+            <mat-icon class="block-icon">block</mat-icon>
             <p class="block-reason">{{ courtStatus.next.blockInfo?.reason || 'Blocked' }}</p>
           </div>
 

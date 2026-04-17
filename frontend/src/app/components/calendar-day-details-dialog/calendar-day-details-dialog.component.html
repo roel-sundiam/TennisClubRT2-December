@@ -10,10 +10,6 @@
         <h2 class="dialog-title">{{ data.date | date: 'EEEE' }}</h2>
         <p class="dialog-subtitle">{{ data.date | date: 'MMMM d, yyyy' }}</p>
         <div class="header-tags">
-          <span *ngIf="data.dayInfo.isWednesday" class="tag homeowner-tag">
-            <mat-icon>home</mat-icon>
-            Homeowner's Day
-          </span>
           <span *ngIf="data.dayInfo.totalHours > 0" class="tag hours-tag">
             <mat-icon>schedule</mat-icon>
             {{ data.dayInfo.totalHours }}h booked
@@ -28,35 +24,8 @@
 
   <!-- Content -->
   <mat-dialog-content class="dialog-content">
-    <!-- Homeowner's Day Card (shown first if Wednesday) -->
-    <div *ngIf="data.dayInfo.isWednesday" class="reservations-list">
-      <div class="reservation-card homeowner-special">
-        <div class="reservation-header">
-          <div class="time-info">
-            <mat-icon>home</mat-icon>
-            <span class="time-text">6:00 PM - 8:00 PM</span>
-            <span class="duration-badge">2h</span>
-          </div>
-          <span class="status-badge homeowner">homeowner</span>
-        </div>
-
-        <div class="reservation-details">
-          <div class="detail-row">
-            <mat-icon>info</mat-icon>
-            <span class="detail-label">Reserved for:</span>
-            <span class="detail-value">Homeowner's Day</span>
-          </div>
-          <div class="detail-row">
-            <mat-icon>groups</mat-icon>
-            <span class="detail-label">Priority:</span>
-            <span class="detail-value">Homeowners only during this time</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- No Other Reservations -->
-    <div *ngIf="data.dayInfo.reservations.length === 0 && !data.dayInfo.isWednesday" class="no-reservations">
+    <div *ngIf="data.dayInfo.reservations.length === 0" class="no-reservations">
       <mat-icon class="large-icon">event_available</mat-icon>
       <p class="no-reservations-text">No reservations for this day</p>
       <p class="availability-text">All time slots are available!</p>

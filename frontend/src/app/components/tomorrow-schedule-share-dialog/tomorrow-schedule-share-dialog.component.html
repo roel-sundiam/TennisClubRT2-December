@@ -96,22 +96,6 @@
         </div>
       </div>
 
-      <!-- Homeowner's Time Section (Wednesdays only) -->
-      <div *ngIf="isTomorrowWednesday" class="preview-section">
-        <div class="section-header homeowner-header">
-          <mat-icon>home</mat-icon>
-          <span class="section-title">HOMEOWNER'S TIME</span>
-        </div>
-        <div class="reservations-grid">
-          <div class="mini-reservation-card homeowner">
-            <div class="mini-time homeowner">{{ homeownerTimeRange }}</div>
-            <div class="mini-details">
-              <div class="mini-reserver">Reserved for Homeowners</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Blocked Slots Section (if any) -->
       <div *ngIf="blockedReservations.length > 0" class="preview-section">
         <div class="section-header blocked-header">

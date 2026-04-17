@@ -2243,51 +2243,6 @@ $container-padding-mobile: 1rem;
           transform: rotate(180deg);
         }
 
-        // Homeowner's Day Special Styling
-        &.homeowner-day {
-          background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-          color: white;
-          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-
-          .event-time,
-          .participant-name,
-          .temp,
-          .detail-value {
-            color: white;
-          }
-
-          .weather-row .weather-icon {
-            color: white;
-          }
-
-          .weather-row .humidity,
-          .weather-row .rain-chance-mobile {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-          }
-
-          .avatar {
-            background: rgba(255, 255, 255, 0.3) !important;
-            color: white;
-          }
-
-          .fee-badge {
-            display: none; // Hide fee for Homeowner's Day
-          }
-
-          .expand-icon,
-          .detail-icon {
-            color: rgba(255, 255, 255, 0.8);
-          }
-
-          .detail-label {
-            color: rgba(255, 255, 255, 0.9);
-          }
-
-          mat-divider {
-            border-color: rgba(255, 255, 255, 0.3);
-          }
-        }
       }
     }
   }
@@ -2730,63 +2685,6 @@ button:focus {
     button {
       width: 100%;
       min-width: auto;
-    }
-  }
-}
-
-// Homeowner's Day Styling
-.reservation-card-compact.homeowner-day {
-  background: $homeowner-light;
-  border-left: 4px solid $homeowner !important;
-  
-  .date-badge {
-    background: $homeowner;
-    color: $text-white;
-    
-    .date-day {
-      color: $text-white;
-    }
-    
-    .date-info {
-      color: $text-white-secondary;
-    }
-  }
-  
-  .time-slot {
-    color: $homeowner;
-    font-weight: 600;
-  }
-  
-  .players-text {
-    color: $homeowner;
-    font-weight: 500;
-  }
-  
-  .inline-icon {
-    color: $homeowner;
-  }
-  
-  // Hide fee for Homeowner's Day (it's ₱0)
-  .fee {
-    display: none;
-  }
-  
-  // Hide status chip for cleaner look
-  .status-chips {
-    display: none;
-  }
-  
-  // Show weather info with purple styling
-  .weather {
-    color: $homeowner;
-
-    .weather-icon {
-      color: $homeowner;
-    }
-
-    .rain-chance {
-      color: $homeowner;
-      font-weight: 500;
     }
   }
 }
