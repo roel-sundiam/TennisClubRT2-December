@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +16,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 
@@ -27,6 +29,8 @@ interface BlockedReservation {
   timeSlotDisplay: string;
   blockReason: string;
   blockNotes: string;
+  recurringGroupId?: string | null;
+  recurrenceType?: string | null;
   userId?: {
     fullName: string;
     username: string;
@@ -52,20 +56,28 @@ interface BlockedReservation {
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatTableModule,
-    MatChipsModule
+    MatChipsModule,
+    MatTabsModule,
+    MatCheckboxModule
   ],
   templateUrl: './admin-block-court.component.html',
   styleUrls: ['./admin-block-court.component.scss']
 })
 export class AdminBlockCourtComponent implements OnInit {
   blockForm: FormGroup;
+  recurringForm: FormGroup;
   blockedReservations: BlockedReservation[] = [];
   loading = false;
   submitting = false;
   editingBlock: BlockedReservation | null = null;
   showDeleteModal = false;
   blockToDelete: BlockedReservation | null = null;
-  displayedColumns = ['date', 'time', 'duration', 'reason', 'notes', 'createdBy', 'actions'];
+  activeTabIndex = 0;
+  recurringPreviewCount = 0;
+  showDeleteSeriesModal = false;
+  groupToDelete: string | null = null;
+  groupDeleteCount = 0;
+  displayedColumns = ['date', 'time', 'duration', 'recurring', 'reason', 'notes', 'createdBy', 'actions'];
 
   timeSlots: Array<{ value: number; label: string }> = [];
   durations = [
@@ -90,6 +102,16 @@ export class AdminBlockCourtComponent implements OnInit {
     { value: 'other', label: '📝 Other', icon: 'info' }
   ];
 
+  daysOfWeek = [
+    { value: 0, label: 'Sun' },
+    { value: 1, label: 'Mon' },
+    { value: 2, label: 'Tue' },
+    { value: 3, label: 'Wed' },
+    { value: 4, label: 'Thu' },
+    { value: 5, label: 'Fri' },
+    { value: 6, label: 'Sat' }
+  ];
+
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
@@ -103,6 +125,17 @@ export class AdminBlockCourtComponent implements OnInit {
       duration: [1, Validators.required],
       blockReason: ['maintenance', Validators.required],
       blockNotes: ['', Validators.maxLength(200)]
+    });
+
+    this.recurringForm = this.fb.group({
+      startDate: ['', Validators.required],
+      endDate: ['', Validators.required],
+      timeSlot: ['', Validators.required],
+      duration: [1, Validators.required],
+      blockReason: ['maintenance', Validators.required],
+      blockNotes: ['', Validators.maxLength(200)],
+      recurrenceType: ['weekly', Validators.required],
+      recurrenceDays: this.fb.array(this.daysOfWeek.map(() => this.fb.control(false)))
     });
 
     // Initialize time slots (5 AM to 10 PM)
@@ -126,6 +159,60 @@ export class AdminBlockCourtComponent implements OnInit {
     });
 
     this.loadBlockedReservations();
+
+    // Update preview count whenever recurring form values change
+    this.recurringForm.valueChanges.subscribe(() => {
+      this.recurringPreviewCount = this.computePreviewCount();
+    });
+  }
+
+  get recurrenceDaysArray(): FormArray {
+    return this.recurringForm.get('recurrenceDays') as FormArray;
+  }
+
+  computePreviewCount(): number {
+    const v = this.recurringForm.value;
+    if (!v.startDate || !v.endDate || !v.recurrenceType) return 0;
+
+    const start = new Date(v.startDate);
+    const end = new Date(v.endDate);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+    if (end < start) return 0;
+
+    const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 365) return 0;
+
+    const selectedDays: number[] = this.daysOfWeek
+      .filter((_, i) => this.recurrenceDaysArray.at(i).value)
+      .map(d => d.value);
+
+    let count = 0;
+
+    if (v.recurrenceType === 'daily') {
+      count = daysDiff + 1;
+    } else if (v.recurrenceType === 'weekly') {
+      if (selectedDays.length === 0) return 0;
+      const current = new Date(start);
+      while (current <= end) {
+        if (selectedDays.includes(current.getDay())) count++;
+        current.setDate(current.getDate() + 1);
+      }
+    } else if (v.recurrenceType === 'monthly') {
+      const originalDay = start.getDate();
+      const current = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (current <= end) {
+        const candidate = new Date(current.getFullYear(), current.getMonth(), originalDay);
+        if (candidate.getDate() === originalDay && candidate >= start && candidate <= end) {
+          count++;
+        }
+        current.setMonth(current.getMonth() + 1);
+      }
+    }
+
+    return count;
   }
 
   formatTimeSlot(hour: number): string {
@@ -216,8 +303,94 @@ export class AdminBlockCourtComponent implements OnInit {
     });
   }
 
+  submitRecurring(): void {
+    if (!this.recurringForm.valid) {
+      this.snackBar.open('Please fill all required fields', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const v = this.recurringForm.value;
+
+    const selectedDays: number[] = this.daysOfWeek
+      .filter((_, i) => this.recurrenceDaysArray.at(i).value)
+      .map(d => d.value);
+
+    if (v.recurrenceType === 'weekly' && selectedDays.length === 0) {
+      this.snackBar.open('Please select at least one day of the week', 'Close', { duration: 3000 });
+      return;
+    }
+
+    if (this.recurringPreviewCount === 0) {
+      this.snackBar.open('No dates match the selected pattern', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.submitting = true;
+
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const payload = {
+      startDate: formatDate(v.startDate),
+      endDate: formatDate(v.endDate),
+      timeSlot: v.timeSlot,
+      duration: v.duration,
+      blockReason: v.blockReason,
+      blockNotes: v.blockNotes || '',
+      recurrenceType: v.recurrenceType,
+      recurrenceDays: selectedDays
+    };
+
+    this.http.post<any>(`${environment.apiUrl}/reservations/admin/block/recurring`, payload).subscribe({
+      next: (response) => {
+        const count = response.data?.count || this.recurringPreviewCount;
+        this.snackBar.open(
+          response.message || `${count} recurring blocks created successfully`,
+          'Close',
+          { duration: 5000 }
+        );
+        this.resetRecurringForm();
+        this.loadBlockedReservations();
+        this.submitting = false;
+      },
+      error: (error) => {
+        console.error('Failed to create recurring blocks:', error);
+        if (error.status === 409 && error.error?.conflicts) {
+          const conflicts: string[] = error.error.conflicts;
+          const shown = conflicts.slice(0, 3).join(', ');
+          const more = conflicts.length > 3 ? ` (+${conflicts.length - 3} more)` : '';
+          this.snackBar.open(
+            `Conflicts on: ${shown}${more}`,
+            'Close',
+            { duration: 8000 }
+          );
+        } else {
+          const errorMsg = error.error?.error || 'Failed to create recurring blocks';
+          this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
+        }
+        this.submitting = false;
+      }
+    });
+  }
+
+  resetRecurringForm(): void {
+    this.recurringForm.reset({
+      duration: 1,
+      blockReason: 'maintenance',
+      recurrenceType: 'weekly'
+    });
+    // Reset all day checkboxes
+    this.recurrenceDaysArray.controls.forEach(ctrl => ctrl.setValue(false));
+    this.recurringPreviewCount = 0;
+  }
+
   editBlock(block: BlockedReservation): void {
     this.editingBlock = block;
+    this.activeTabIndex = 0;
     this.blockForm.patchValue({
       date: new Date(block.date),
       timeSlot: block.timeSlot,
@@ -264,6 +437,41 @@ export class AdminBlockCourtComponent implements OnInit {
         this.closeDeleteModal();
       }
     });
+  }
+
+  deleteBlockSeries(groupId: string | null | undefined): void {
+    if (!groupId) return;
+    this.groupToDelete = groupId;
+    this.groupDeleteCount = this.blockedReservations.filter(b => b.recurringGroupId === groupId).length;
+    this.showDeleteSeriesModal = true;
+  }
+
+  confirmDeleteSeries(): void {
+    if (!this.groupToDelete) return;
+
+    this.http.delete<any>(`${environment.apiUrl}/reservations/admin/block/recurring/${this.groupToDelete}`).subscribe({
+      next: (response) => {
+        this.snackBar.open(
+          response.message || 'Recurring block series removed',
+          'Close',
+          { duration: 4000 }
+        );
+        this.closeDeleteSeriesModal();
+        this.loadBlockedReservations();
+      },
+      error: (error) => {
+        console.error('Failed to delete recurring series:', error);
+        const errorMsg = error.error?.error || 'Failed to remove recurring series';
+        this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
+        this.closeDeleteSeriesModal();
+      }
+    });
+  }
+
+  closeDeleteSeriesModal(): void {
+    this.showDeleteSeriesModal = false;
+    this.groupToDelete = null;
+    this.groupDeleteCount = 0;
   }
 
   resetForm(): void {

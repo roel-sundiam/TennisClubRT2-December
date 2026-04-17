@@ -18,7 +18,10 @@ import {
   getBlockedReservations,
   updateBlockedReservation,
   deleteBlockedReservation,
-  blockCourtValidation
+  blockCourtValidation,
+  blockCourtRecurring,
+  deleteRecurringBlockGroup,
+  blockCourtRecurringValidation
 } from '../controllers/reservationController';
 import { requireAdmin, requireApprovedUser, requireMembershipFees, authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
@@ -84,7 +87,14 @@ router.post('/admin/block',
   validateRequest,
   blockCourt
 );
+router.post('/admin/block/recurring',
+  requireAdmin,
+  blockCourtRecurringValidation,
+  validateRequest,
+  blockCourtRecurring
+);
 router.put('/admin/block/:id', requireAdmin, updateBlockedReservation);
 router.delete('/admin/block/:id', requireAdmin, deleteBlockedReservation);
+router.delete('/admin/block/recurring/:groupId', requireAdmin, deleteRecurringBlockGroup);
 
 export default router;

@@ -159,6 +159,20 @@ const reservationSchema = new Schema<IReservationDocument>({
     type: Boolean,
     default: false,
     index: true
+  },
+  // Recurring block support: links all occurrences in a series
+  recurringGroupId: {
+    type: String,
+    index: true,
+    default: null
+  },
+  recurrenceType: {
+    type: String,
+    enum: {
+      values: ['daily', 'weekly', 'monthly'],
+      message: 'Recurrence type must be daily, weekly, or monthly'
+    },
+    default: null
   }
 }, {
   timestamps: true,
@@ -174,6 +188,7 @@ reservationSchema.index({ date: 1, status: 1 });
 reservationSchema.index({ tournamentTier: 1, status: 1 });
 reservationSchema.index({ pointsProcessed: 1, status: 1 });
 reservationSchema.index({ isMultiHour: 1, status: 1 }); // Multi-hour queries
+reservationSchema.index({ recurringGroupId: 1, date: 1 }); // Recurring block series lookup
 
 // Unique compound index to prevent double booking
 reservationSchema.index(

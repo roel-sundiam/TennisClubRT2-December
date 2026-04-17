@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
+import { randomUUID } from 'crypto';
 import Reservation from '../models/Reservation';
 import User from '../models/User';
 import Poll from '../models/Poll';
@@ -316,14 +317,6 @@ export const getReservationsForDate = asyncHandler(async (req: AuthenticatedRequ
     const openPlayEvent = isBlockedByOpenPlay ?
       openPlayEvents.find(event => event.openPlayEvent?.blockedTimeSlots && Array.isArray(event.openPlayEvent.blockedTimeSlots) && event.openPlayEvent.blockedTimeSlots.includes(hour)) : null;
 
-    // Block Wednesday 6:00-8:00 PM (hours 18 and 19) for Homeowner's Day
-    // START times: Block hours 18 and 19 (can't start at 6 PM or 7 PM)
-    // END times: Block hours 18 and 19 (can end at 8 PM, allowing 8-10 PM bookings)
-    const isWednesday = queryDate.getDay() === 3;
-    const isBlockedWednesdayStartTime = isWednesday && (hour === 18 || hour === 19);
-    const isBlockedWednesdayEndTime = isWednesday && (hour === 18 || hour === 19);
-
-
     // Enhanced debugging for specific hours that might be problematic
     if (hour === 17 || hour === 21 || hour === 22) {
       console.log(`🔍 DETAILED DEBUG for hour ${hour} (NEW LOGIC):`);
@@ -349,10 +342,8 @@ export const getReservationsForDate = asyncHandler(async (req: AuthenticatedRequ
     const slotData = {
       hour,
       timeDisplay: `${hour}:00 - ${hour + 1}:00`,
-      // START time: Block if occupied, Open Play, or Wednesday Homeowner's Day start time
-      available: !occupyingReservation && !isBlockedByOpenPlay && !isBlockedWednesdayStartTime,
-      // END time: Allow hour 18 as end time on Wednesdays (for 5-6 PM bookings)
-      availableAsEndTime: canBeEndTime && !isBlockedByOpenPlay && !isBlockedWednesdayEndTime,
+      available: !occupyingReservation && !isBlockedByOpenPlay,
+      availableAsEndTime: canBeEndTime && !isBlockedByOpenPlay,
       reservation: occupyingReservation || null,
       blockedByOpenPlay: isBlockedByOpenPlay,
       openPlayEvent: openPlayEvent ? {
@@ -1933,6 +1924,195 @@ export const deleteBlockedReservation = asyncHandler(async (req: AuthenticatedRe
   });
 });
 
+// Helper: Generate all dates matching a recurrence pattern between startDate and endDate (inclusive)
+function generateRecurringDates(
+  startDate: Date,
+  endDate: Date,
+  recurrenceType: 'daily' | 'weekly' | 'monthly',
+  recurrenceDays: number[] = []
+): Date[] {
+  const dates: Date[] = [];
+
+  if (recurrenceType === 'daily') {
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      dates.push(new Date(current));
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+  } else if (recurrenceType === 'weekly') {
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      if (recurrenceDays.includes(current.getUTCDay())) {
+        dates.push(new Date(current));
+      }
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+  } else if (recurrenceType === 'monthly') {
+    const originalDay = startDate.getUTCDate();
+    const current = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1));
+    while (current <= endDate) {
+      const candidate = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), originalDay));
+      // Skip months where the day doesn't exist (e.g. Feb 30)
+      if (candidate.getUTCDate() === originalDay && candidate >= startDate && candidate <= endDate) {
+        dates.push(candidate);
+      }
+      current.setUTCMonth(current.getUTCMonth() + 1);
+    }
+  }
+
+  return dates;
+}
+
+// Admin: Create recurring court blocks
+export const blockCourtRecurring = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const {
+    startDate,
+    endDate,
+    timeSlot,
+    duration = 1,
+    blockReason = 'maintenance',
+    blockNotes = '',
+    recurrenceType,
+    recurrenceDays = []
+  } = req.body;
+
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Authentication required' });
+    return;
+  }
+
+  // Parse and normalize dates to midnight UTC
+  const start = new Date(startDate);
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setUTCHours(0, 0, 0, 0);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    res.status(400).json({ success: false, error: 'Invalid date format' });
+    return;
+  }
+
+  if (end < start) {
+    res.status(400).json({ success: false, error: 'End date must be on or after start date' });
+    return;
+  }
+
+  const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysDiff > 365) {
+    res.status(400).json({ success: false, error: 'Date range cannot exceed 365 days' });
+    return;
+  }
+
+  const slot = parseInt(timeSlot, 10);
+  const dur = parseInt(duration, 10);
+
+  if (slot < 5 || slot > 22) {
+    res.status(400).json({ success: false, error: 'Court operates from 5:00 AM to 10:00 PM' });
+    return;
+  }
+
+  if (dur < 1 || dur > 12) {
+    res.status(400).json({ success: false, error: 'Duration must be between 1 and 12 hours' });
+    return;
+  }
+
+  const endSlot = slot + dur;
+  if (endSlot > 23) {
+    res.status(400).json({ success: false, error: `Booking extends beyond court hours. ${slot}:00 + ${dur}h ends at ${endSlot}:00` });
+    return;
+  }
+
+  if (!['daily', 'weekly', 'monthly'].includes(recurrenceType)) {
+    res.status(400).json({ success: false, error: 'Recurrence type must be daily, weekly, or monthly' });
+    return;
+  }
+
+  if (recurrenceType === 'weekly' && (!Array.isArray(recurrenceDays) || recurrenceDays.length === 0)) {
+    res.status(400).json({ success: false, error: 'Weekly recurrence requires at least one day of the week' });
+    return;
+  }
+
+  // Generate dates
+  const dates = generateRecurringDates(start, end, recurrenceType, recurrenceDays);
+
+  if (dates.length === 0) {
+    res.status(400).json({ success: false, error: 'No dates match the selected recurrence pattern' });
+    return;
+  }
+
+  // All-or-nothing conflict check
+  const conflicts: string[] = [];
+  for (const date of dates) {
+    const available = await (Reservation as any).isSlotRangeAvailable(date, slot, endSlot);
+    if (!available) {
+      conflicts.push(date.toISOString().substring(0, 10));
+    }
+  }
+
+  if (conflicts.length > 0) {
+    res.status(409).json({
+      success: false,
+      error: `Conflicts found on ${conflicts.length} date(s)`,
+      conflicts
+    });
+    return;
+  }
+
+  // Build documents — set computed fields explicitly since insertMany skips pre-save hooks
+  const groupId = randomUUID();
+  const userId = req.user._id;
+  const docs = dates.map(date => ({
+    userId,
+    date,
+    timeSlot: slot,
+    duration: dur,
+    endTimeSlot: endSlot,
+    isMultiHour: dur > 1,
+    status: 'blocked',
+    paymentStatus: 'not_applicable',
+    blockReason,
+    blockNotes,
+    recurringGroupId: groupId,
+    recurrenceType,
+    totalFee: 0
+  }));
+
+  await Reservation.insertMany(docs);
+
+  console.log(`🔄 Recurring court blocks created: ${docs.length} blocks (${recurrenceType}) by ${req.user.username}`);
+
+  res.status(201).json({
+    success: true,
+    message: `${docs.length} recurring block${docs.length !== 1 ? 's' : ''} created successfully`,
+    data: { recurringGroupId: groupId, count: docs.length }
+  });
+});
+
+// Admin: Delete an entire recurring block series
+export const deleteRecurringBlockGroup = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { groupId } = req.params;
+
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Authentication required' });
+    return;
+  }
+
+  const result = await Reservation.deleteMany({ recurringGroupId: groupId, status: 'blocked' });
+
+  if (result.deletedCount === 0) {
+    res.status(404).json({ success: false, error: 'No recurring blocks found with that group ID' });
+    return;
+  }
+
+  console.log(`🗑️ Recurring block series removed: ${result.deletedCount} blocks (group: ${groupId}) by ${req.user.username}`);
+
+  res.status(200).json({
+    success: true,
+    message: `${result.deletedCount} recurring block${result.deletedCount !== 1 ? 's' : ''} removed successfully`,
+    count: result.deletedCount
+  });
+});
+
 // Join an existing reservation (member adds themselves to someone else's reservation)
 export const joinReservation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
@@ -2243,4 +2423,42 @@ export const blockCourtValidation = [
     .trim()
     .isLength({ max: 200 })
     .withMessage('Block notes must not exceed 200 characters')
+];
+
+// Validation rules for recurring court blocking
+export const blockCourtRecurringValidation = [
+  body('startDate')
+    .isISO8601()
+    .withMessage('Invalid start date format'),
+  body('endDate')
+    .isISO8601()
+    .withMessage('Invalid end date format'),
+  body('timeSlot')
+    .isInt({ min: 5, max: 22 })
+    .withMessage('Time slot must be between 5 and 22'),
+  body('duration')
+    .optional()
+    .isInt({ min: 1, max: 12 })
+    .withMessage('Duration must be between 1 and 12 hours'),
+  body('blockReason')
+    .optional()
+    .isIn(['maintenance', 'private_event', 'weather', 'other'])
+    .withMessage('Invalid block reason'),
+  body('blockNotes')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('Block notes must not exceed 200 characters'),
+  body('recurrenceType')
+    .isIn(['daily', 'weekly', 'monthly'])
+    .withMessage('Recurrence type must be daily, weekly, or monthly'),
+  body('recurrenceDays')
+    .optional()
+    .isArray()
+    .withMessage('Recurrence days must be an array'),
+  body('recurrenceDays.*')
+    .optional()
+    .isInt({ min: 0, max: 6 })
+    .withMessage('Each recurrence day must be an integer 0 (Sun) through 6 (Sat)')
 ];

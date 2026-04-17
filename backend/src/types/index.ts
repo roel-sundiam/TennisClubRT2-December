@@ -169,6 +169,8 @@ export interface CourtReservation {
   // Court blocking fields
   blockReason?: 'maintenance' | 'private_event' | 'weather' | 'other';
   blockNotes?: string;
+  recurringGroupId?: string | null;
+  recurrenceType?: 'daily' | 'weekly' | 'monthly' | null;
   createdAt: Date;
   updatedAt: Date;
 }

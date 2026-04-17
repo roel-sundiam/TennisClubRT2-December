@@ -32,75 +32,214 @@
           </button>
         </mat-card-header>
         <mat-card-content>
-          <form [formGroup]="blockForm" (ngSubmit)="submitBlock()" class="block-form">
-            <div class="form-row">
-              <!-- Date Picker -->
-              <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Date</mat-label>
-                <input matInput [matDatepicker]="picker" formControlName="date" required>
-                <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-                <mat-datepicker #picker></mat-datepicker>
-                <mat-error>Date is required</mat-error>
-              </mat-form-field>
+          <mat-tab-group [(selectedIndex)]="activeTabIndex" class="block-tabs">
 
-              <!-- Time Slot -->
-              <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Start Time</mat-label>
-                <mat-select formControlName="timeSlot" required>
-                  <mat-option *ngFor="let slot of timeSlots" [value]="slot.value">
-                    {{ slot.label }}
-                  </mat-option>
-                </mat-select>
-                <mat-error>Start time is required</mat-error>
-              </mat-form-field>
+            <!-- TAB 1: One-Time Block -->
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon>event</mat-icon>&nbsp;One-Time
+              </ng-template>
+              <div class="tab-content">
+                <form [formGroup]="blockForm" (ngSubmit)="submitBlock()" class="block-form">
+                  <div class="form-row">
+                    <!-- Date Picker -->
+                    <mat-form-field appearance="outline" class="form-field">
+                      <mat-label>Date</mat-label>
+                      <input matInput [matDatepicker]="picker" formControlName="date" required>
+                      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                      <mat-datepicker #picker></mat-datepicker>
+                      <mat-error>Date is required</mat-error>
+                    </mat-form-field>
 
-              <!-- Duration -->
-              <mat-form-field appearance="outline" class="form-field">
-                <mat-label>Duration</mat-label>
-                <mat-select formControlName="duration" required>
-                  <mat-option *ngFor="let d of durations" [value]="d.value">
-                    {{ d.label }}
-                  </mat-option>
-                </mat-select>
-                <mat-error>Duration is required</mat-error>
-              </mat-form-field>
-            </div>
+                    <!-- Time Slot -->
+                    <mat-form-field appearance="outline" class="form-field">
+                      <mat-label>Start Time</mat-label>
+                      <mat-select formControlName="timeSlot" required>
+                        <mat-option *ngFor="let slot of timeSlots" [value]="slot.value">
+                          {{ slot.label }}
+                        </mat-option>
+                      </mat-select>
+                      <mat-error>Start time is required</mat-error>
+                    </mat-form-field>
 
-            <div class="form-row">
-              <!-- Block Reason -->
-              <mat-form-field appearance="outline" class="form-field full-width">
-                <mat-label>Reason</mat-label>
-                <mat-select formControlName="blockReason" required>
-                  <mat-option *ngFor="let reason of blockReasons" [value]="reason.value">
-                    <mat-icon>{{ reason.icon }}</mat-icon>
-                    {{ reason.label }}
-                  </mat-option>
-                </mat-select>
-                <mat-error>Reason is required</mat-error>
-              </mat-form-field>
-            </div>
+                    <!-- Duration -->
+                    <mat-form-field appearance="outline" class="form-field">
+                      <mat-label>Duration</mat-label>
+                      <mat-select formControlName="duration" required>
+                        <mat-option *ngFor="let d of durations" [value]="d.value">
+                          {{ d.label }}
+                        </mat-option>
+                      </mat-select>
+                      <mat-error>Duration is required</mat-error>
+                    </mat-form-field>
+                  </div>
 
-            <div class="form-row">
-              <!-- Optional Notes -->
-              <mat-form-field appearance="outline" class="form-field full-width">
-                <mat-label>Notes (Optional)</mat-label>
-                <textarea matInput formControlName="blockNotes" rows="3" maxlength="200"></textarea>
-                <mat-hint align="end">{{ blockForm.get('blockNotes')?.value?.length || 0 }}/200</mat-hint>
-              </mat-form-field>
-            </div>
+                  <div class="form-row">
+                    <!-- Block Reason -->
+                    <mat-form-field appearance="outline" class="form-field full-width">
+                      <mat-label>Reason</mat-label>
+                      <mat-select formControlName="blockReason" required>
+                        <mat-option *ngFor="let reason of blockReasons" [value]="reason.value">
+                          <mat-icon>{{ reason.icon }}</mat-icon>
+                          {{ reason.label }}
+                        </mat-option>
+                      </mat-select>
+                      <mat-error>Reason is required</mat-error>
+                    </mat-form-field>
+                  </div>
 
-            <!-- Submit Button -->
-            <div class="form-actions">
-              <button mat-raised-button color="warn" type="submit" [disabled]="!blockForm.valid || submitting">
-                <mat-spinner *ngIf="submitting" diameter="20" class="button-spinner"></mat-spinner>
-                <mat-icon *ngIf="!submitting">{{ editingBlock ? 'save' : 'block' }}</mat-icon>
-                {{ submitting ? (editingBlock ? 'Updating...' : 'Blocking...') : (editingBlock ? 'Update Block' : 'Block Court') }}
-              </button>
-              <button mat-button type="button" (click)="resetForm()" [disabled]="submitting">
-                {{ editingBlock ? 'Cancel' : 'Reset' }}
-              </button>
-            </div>
-          </form>
+                  <div class="form-row">
+                    <!-- Optional Notes -->
+                    <mat-form-field appearance="outline" class="form-field full-width">
+                      <mat-label>Notes (Optional)</mat-label>
+                      <textarea matInput formControlName="blockNotes" rows="3" maxlength="200"></textarea>
+                      <mat-hint align="end">{{ blockForm.get('blockNotes')?.value?.length || 0 }}/200</mat-hint>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Submit Button -->
+                  <div class="form-actions">
+                    <button mat-raised-button color="warn" type="submit" [disabled]="!blockForm.valid || submitting">
+                      <mat-spinner *ngIf="submitting" diameter="20" class="button-spinner"></mat-spinner>
+                      <mat-icon *ngIf="!submitting">{{ editingBlock ? 'save' : 'block' }}</mat-icon>
+                      {{ submitting ? (editingBlock ? 'Updating...' : 'Blocking...') : (editingBlock ? 'Update Block' : 'Block Court') }}
+                    </button>
+                    <button mat-button type="button" (click)="resetForm()" [disabled]="submitting">
+                      {{ editingBlock ? 'Cancel' : 'Reset' }}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </mat-tab>
+
+            <!-- TAB 2: Recurring Block -->
+            <mat-tab>
+              <ng-template mat-tab-label>
+                <mat-icon>repeat</mat-icon>&nbsp;Recurring
+              </ng-template>
+              <div class="tab-content">
+                <form [formGroup]="recurringForm" (ngSubmit)="submitRecurring()" class="block-form">
+
+                  <!-- Row 1: Start Date + End Date -->
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field">
+                      <mat-label>Start Date</mat-label>
+                      <input matInput [matDatepicker]="startPicker" formControlName="startDate" required>
+                      <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+                      <mat-datepicker #startPicker></mat-datepicker>
+                      <mat-error>Start date is required</mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="form-field">
+                      <mat-label>End Date</mat-label>
+                      <input matInput [matDatepicker]="endPicker" formControlName="endDate" required>
+                      <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+                      <mat-datepicker #endPicker></mat-datepicker>
+                      <mat-error>End date is required</mat-error>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Row 2: Start Time + Duration -->
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field">
+                      <mat-label>Start Time</mat-label>
+                      <mat-select formControlName="timeSlot" required>
+                        <mat-option *ngFor="let slot of timeSlots" [value]="slot.value">
+                          {{ slot.label }}
+                        </mat-option>
+                      </mat-select>
+                      <mat-error>Start time is required</mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="form-field">
+                      <mat-label>Duration</mat-label>
+                      <mat-select formControlName="duration" required>
+                        <mat-option *ngFor="let d of durations" [value]="d.value">
+                          {{ d.label }}
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Row 3: Recurrence Type -->
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field">
+                      <mat-label>Repeat</mat-label>
+                      <mat-select formControlName="recurrenceType" required>
+                        <mat-option value="daily">Daily — every day</mat-option>
+                        <mat-option value="weekly">Weekly — selected days</mat-option>
+                        <mat-option value="monthly">Monthly — same date each month</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Row 4: Days of Week (Weekly only) -->
+                  <div class="form-row days-of-week-row"
+                       *ngIf="recurringForm.get('recurrenceType')?.value === 'weekly'">
+                    <span class="days-label">Repeat on:</span>
+                    <div class="days-checkboxes" formArrayName="recurrenceDays">
+                      <mat-checkbox
+                        *ngFor="let day of daysOfWeek; let i = index"
+                        [formControlName]="i"
+                        class="day-checkbox">
+                        {{ day.label }}
+                      </mat-checkbox>
+                    </div>
+                  </div>
+
+                  <!-- Row 5: Reason -->
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field full-width">
+                      <mat-label>Reason</mat-label>
+                      <mat-select formControlName="blockReason" required>
+                        <mat-option *ngFor="let reason of blockReasons" [value]="reason.value">
+                          <mat-icon>{{ reason.icon }}</mat-icon>
+                          {{ reason.label }}
+                        </mat-option>
+                      </mat-select>
+                      <mat-error>Reason is required</mat-error>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Row 6: Notes -->
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="form-field full-width">
+                      <mat-label>Notes (Optional)</mat-label>
+                      <textarea matInput formControlName="blockNotes" rows="3" maxlength="200"></textarea>
+                      <mat-hint align="end">{{ recurringForm.get('blockNotes')?.value?.length || 0 }}/200</mat-hint>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Preview Banner -->
+                  <div class="preview-banner"
+                       *ngIf="recurringPreviewCount > 0">
+                    <mat-icon>info</mat-icon>
+                    <span>This will create <strong>{{ recurringPreviewCount }}</strong> block{{ recurringPreviewCount !== 1 ? 's' : '' }}.</span>
+                  </div>
+                  <div class="preview-banner preview-warn"
+                       *ngIf="recurringForm.get('startDate')?.value && recurringForm.get('endDate')?.value && recurringPreviewCount === 0">
+                    <mat-icon>warning</mat-icon>
+                    <span>No matching dates for the selected pattern.</span>
+                  </div>
+
+                  <!-- Submit -->
+                  <div class="form-actions">
+                    <button mat-raised-button color="warn" type="submit"
+                            [disabled]="!recurringForm.valid || submitting || recurringPreviewCount === 0">
+                      <mat-spinner *ngIf="submitting" diameter="20" class="button-spinner"></mat-spinner>
+                      <mat-icon *ngIf="!submitting">repeat</mat-icon>
+                      {{ submitting ? 'Creating...' : 'Create ' + recurringPreviewCount + ' Recurring Block' + (recurringPreviewCount !== 1 ? 's' : '') }}
+                    </button>
+                    <button mat-button type="button" (click)="resetRecurringForm()" [disabled]="submitting">
+                      Reset
+                    </button>
+                  </div>
+
+                </form>
+              </div>
+            </mat-tab>
+
+          </mat-tab-group>
         </mat-card-content>
       </mat-card>
 
@@ -158,6 +297,19 @@
                 </td>
               </ng-container>
 
+              <!-- Recurring Column -->
+              <ng-container matColumnDef="recurring">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let block">
+                  <span *ngIf="block.recurringGroupId" class="recurring-badge"
+                        [matTooltip]="'Part of a ' + block.recurrenceType + ' recurring series'">
+                    <mat-icon>repeat</mat-icon>
+                    {{ block.recurrenceType | titlecase }}
+                  </span>
+                  <span *ngIf="!block.recurringGroupId" class="one-time-label">One-time</span>
+                </td>
+              </ng-container>
+
               <!-- Reason Column -->
               <ng-container matColumnDef="reason">
                 <th mat-header-cell *matHeaderCellDef>Reason</th>
@@ -196,11 +348,22 @@
                 <th mat-header-cell *matHeaderCellDef>Actions</th>
                 <td mat-cell *matCellDef="let block">
                   <div class="action-buttons">
-                    <button mat-icon-button color="primary" (click)="editBlock(block)" matTooltip="Edit Block">
+                    <button mat-icon-button color="primary"
+                            *ngIf="!block.recurringGroupId"
+                            (click)="editBlock(block)"
+                            matTooltip="Edit Block">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="deleteBlock(block)" matTooltip="Remove Block">
+                    <button mat-icon-button color="warn"
+                            (click)="deleteBlock(block)"
+                            matTooltip="Remove This Block">
                       <mat-icon>delete</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn"
+                            *ngIf="block.recurringGroupId"
+                            (click)="deleteBlockSeries(block.recurringGroupId)"
+                            matTooltip="Delete Entire Series">
+                      <mat-icon>delete_sweep</mat-icon>
                     </button>
                   </div>
                 </td>
@@ -216,7 +379,7 @@
   </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Delete Single Block Confirmation Modal -->
 <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -258,6 +421,37 @@
       <button mat-raised-button color="warn" class="btn-danger" (click)="confirmDeleteBlock()">
         <mat-icon>delete</mat-icon>
         Remove Block
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Recurring Series Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showDeleteSeriesModal" (click)="closeDeleteSeriesModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Remove Entire Block Series</h2>
+      <button class="modal-close" (click)="closeDeleteSeriesModal()" aria-label="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="warning-icon">
+        <mat-icon>warning</mat-icon>
+      </div>
+      <p class="modal-message">
+        Delete all <strong>{{ groupDeleteCount }}</strong> remaining block{{ groupDeleteCount !== 1 ? 's' : '' }} in this recurring series?
+      </p>
+      <p class="warning-text">This action cannot be undone. All occurrences will become available for reservations.</p>
+    </div>
+    <div class="modal-actions">
+      <button mat-button class="btn-secondary" (click)="closeDeleteSeriesModal()">
+        <mat-icon>close</mat-icon>
+        Cancel
+      </button>
+      <button mat-raised-button color="warn" class="btn-danger" (click)="confirmDeleteSeries()">
+        <mat-icon>delete_sweep</mat-icon>
+        Delete All ({{ groupDeleteCount }})
       </button>
     </div>
   </div>

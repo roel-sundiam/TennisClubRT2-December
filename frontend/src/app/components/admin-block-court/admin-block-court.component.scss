@@ -883,6 +883,153 @@ $admin-gradient: linear-gradient(135deg, #dc2626, #b91c1c);
   }
 }
 
+// Tab group styling
+.block-tabs {
+  ::ng-deep .mat-mdc-tab-header {
+    border-bottom: 2px solid rgba(220, 38, 38, 0.1);
+    margin-bottom: 0.5rem;
+  }
+
+  ::ng-deep .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+    color: $admin-color;
+    font-weight: 700;
+  }
+
+  ::ng-deep .mat-mdc-tab-indicator .mdc-tab-indicator__content--underline {
+    border-color: $admin-color;
+  }
+
+  ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+.tab-content {
+  padding-top: 1.25rem;
+}
+
+// Days of week checkboxes (Weekly recurrence)
+.days-of-week-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.03), rgba(185, 28, 28, 0.03));
+  border: 1px solid rgba(220, 38, 38, 0.1);
+  border-radius: 12px;
+
+  .days-label {
+    font-weight: 700;
+    color: $text-secondary;
+    font-size: 0.9375rem;
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+
+  .days-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+
+    .day-checkbox {
+      font-size: 0.9375rem;
+      font-weight: 600;
+
+      ::ng-deep .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+        background-color: $admin-color;
+        border-color: $admin-color;
+      }
+
+      ::ng-deep .mdc-form-field > label {
+        font-weight: 600;
+        color: $text-primary;
+      }
+    }
+  }
+}
+
+// Preview banner (shown below the recurring form)
+.preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(147, 197, 253, 0.08));
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 10px;
+  color: #1d4ed8;
+  font-size: 0.9375rem;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  &.preview-warn {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(251, 191, 36, 0.08));
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #92400e;
+  }
+}
+
+// Recurring badge in the table
+.recurring-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  color: #4f46e5;
+  font-weight: 700;
+  font-size: 0.75rem;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 20px;
+  padding: 0.25rem 0.625rem;
+  cursor: default;
+
+  mat-icon {
+    font-size: 0.875rem;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+
+.one-time-label {
+  font-size: 0.8125rem;
+  color: $text-muted;
+  font-style: italic;
+  font-weight: 500;
+}
+
+// Responsive additions for recurring feature
+@media (max-width: 768px) {
+  .days-of-week-row {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .days-label {
+      min-width: unset;
+    }
+  }
+
+  .mat-column-recurring {
+    display: none;
+  }
+
+  .block-tabs {
+    ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
+      font-size: 0.875rem;
+    }
+  }
+}
+
 // Dark mode support (if needed in the future)
 @media (prefers-color-scheme: dark) {
   .page-container {
