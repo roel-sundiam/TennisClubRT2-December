@@ -69,14 +69,27 @@ import { Subscription } from 'rxjs';
               <mat-icon>how_to_vote</mat-icon>
               <span>Open Play</span>
             </button>
-            <button mat-button class="nav-item" (click)="navigateTo('/rankings')">
+            <button mat-button class="nav-item" (click)="openRankings()">
               <mat-icon>leaderboard</mat-icon>
               <span>Rankings</span>
             </button>
+            <button mat-button class="nav-item" (click)="navigateTo('/court-trends')">
+              <mat-icon>trending_up</mat-icon>
+              <span>Court Trends</span>
+            </button>
           </div>
-          
+
+          <div class="nav-separator" *ngIf="isAdmin"></div>
+
+          <div class="nav-group" *ngIf="isAdmin">
+            <button mat-button class="nav-item admin-nav" (click)="navigateTo('/admin/club-insights')">
+              <mat-icon>insights</mat-icon>
+              <span>Club Insights</span>
+            </button>
+          </div>
+
           <div class="nav-separator"></div>
-          
+
           <div class="nav-group user-section">
             <div class="user-info">
               <mat-icon class="user-icon">account_circle</mat-icon>
@@ -145,9 +158,14 @@ import { Subscription } from 'rxjs';
             <span>Payments</span>
           </button>
 
-          <button mat-button class="mobile-nav-item" (click)="navigateAndClose('/rankings')">
+          <button mat-button class="mobile-nav-item" (click)="openRankings(); closeMobileMenu()">
             <mat-icon>leaderboard</mat-icon>
             <span>Rankings</span>
+          </button>
+
+          <button mat-button class="mobile-nav-item" (click)="navigateAndClose('/court-trends')">
+            <mat-icon>trending_up</mat-icon>
+            <span>Court Trends</span>
           </button>
 
           <button mat-button class="mobile-nav-item" (click)="navigateAndClose('/gallery')">
@@ -175,6 +193,11 @@ import { Subscription } from 'rxjs';
             <button mat-button class="mobile-nav-item admin-item" (click)="navigateAndClose('/admin/reports')">
               <mat-icon>analytics</mat-icon>
               <span>Reports & Analytics</span>
+            </button>
+
+            <button mat-button class="mobile-nav-item admin-item" (click)="navigateAndClose('/admin/club-insights')">
+              <mat-icon>insights</mat-icon>
+              <span>Club Insights</span>
             </button>
 
             <button mat-button class="mobile-nav-item admin-item" (click)="navigateAndClose('/admin/polls')">
@@ -319,6 +342,10 @@ export class ToolbarComponent implements OnInit, OnDestroy {
     this.analyticsService.trackLogout();
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  openRankings(): void {
+    window.open('https://brackify-orcin.vercel.app/?rankings=b5a15d8d-aec4-435b-8044-423113094a8c', '_blank');
   }
 
   openPlayClick(): void {

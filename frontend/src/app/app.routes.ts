@@ -40,6 +40,8 @@ import { AdminSystemSettingsComponent } from './components/admin-system-settings
 import { SuperadminDashboard } from './components/superadmin-dashboard/superadmin-dashboard';
 import { AdminReservationManagementComponent } from './components/admin-reservation-management/admin-reservation-management.component';
 import { AdminAssignExpenseComponent } from './components/admin-assign-expense/admin-assign-expense.component';
+import { ClubInsightsDashboardComponent } from './components/club-insights/club-insights.component';
+import { CourtTrendsComponent } from './components/court-trends/court-trends.component';
 import { authGuard, loginGuard, adminGuard, superadminGuard, treasurerGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -206,6 +208,8 @@ export const routes: Routes = [
   { path: 'admin/announcements', component: AnnouncementManagementComponent, canActivate: [authGuard, superadminGuard] },
   { path: 'admin/settings', component: AdminSystemSettingsComponent, canActivate: [authGuard, superadminGuard] },
   { path: 'admin/superadmin-dashboard', component: SuperadminDashboard, canActivate: [authGuard, superadminGuard] },
+  { path: 'admin/club-insights', component: ClubInsightsDashboardComponent, canActivate: [authGuard, adminGuard] },
   { path: 'resurfacing-contributions', component: ResurfacingContributionsComponent, canActivate: [authGuard] },
+  { path: 'court-trends', component: CourtTrendsComponent, canActivate: [authGuard] },
   { path: '**', redirectTo: '/calendar' }
 ];

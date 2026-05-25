@@ -187,16 +187,16 @@ import { environment } from '../../../environments/environment';
           </mat-card>
 
           <!-- Rankings -->
-          <mat-card class="action-card" data-icon="leaderboard" data-title="Player Rankings" 
-                   (click)="navigateTo('/rankings')" 
+          <mat-card class="action-card" data-icon="leaderboard" data-title="Player Rankings"
+                   (click)="openRankings()"
                    (touchstart)="handleTouchStart($event)"
-                   (touchend)="handleTouchEnd($event, '/rankings')">
+                   (touchend)="handleTouchEnd($event, 'rankings-external')">
             <!-- Mobile Icon -->
             <div class="mobile-card-icon">
               <mat-icon>leaderboard</mat-icon>
             </div>
             <div class="mobile-card-title">Player Rankings</div>
-            
+
             <!-- Desktop Content -->
             <mat-card-header>
               <mat-icon mat-card-avatar class="action-icon">leaderboard</mat-icon>
@@ -207,9 +207,37 @@ import { environment } from '../../../environments/environment';
               <p>View player rankings and tournament standings.</p>
             </mat-card-content>
             <mat-card-actions>
-              <button mat-raised-button class="success-btn" (click)="navigateTo('/rankings')">
+              <button mat-raised-button class="success-btn" (click)="openRankings(); $event.stopPropagation()">
                 <mat-icon>leaderboard</mat-icon>
                 View Rankings
+              </button>
+            </mat-card-actions>
+          </mat-card>
+
+          <!-- Court Trends -->
+          <mat-card class="action-card" data-icon="trending_up" data-title="Court Trends"
+                   (click)="navigateTo('/court-trends')"
+                   (touchstart)="handleTouchStart($event)"
+                   (touchend)="handleTouchEnd($event, '/court-trends')">
+            <!-- Mobile Icon -->
+            <div class="mobile-card-icon">
+              <mat-icon>trending_up</mat-icon>
+            </div>
+            <div class="mobile-card-title">Court Trends</div>
+
+            <!-- Desktop Content -->
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="action-icon">trending_up</mat-icon>
+              <mat-card-title>Court Trends</mat-card-title>
+              <mat-card-subtitle>Plan smarter bookings</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <p>See peak hours, busiest days, and your personal booking stats.</p>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-raised-button class="info-btn" (click)="navigateTo('/court-trends'); $event.stopPropagation()">
+                <mat-icon>trending_up</mat-icon>
+                View Trends
               </button>
             </mat-card-actions>
           </mat-card>
@@ -1186,6 +1214,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate([route]);
   }
 
+  openRankings(): void {
+    window.open('https://brackify-orcin.vercel.app/?rankings=b5a15d8d-aec4-435b-8044-423113094a8c', '_blank');
+  }
+
   // Touch event handlers for mobile devices
   private touchStartTime = 0;
   
@@ -1214,6 +1246,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.openPlaySquadAutoLogin();
       } else if (action === 'developer-contact') {
         this.openDeveloperContactDialog();
+      } else if (action === 'rankings-external') {
+        this.openRankings();
       } else {
         this.navigateTo(action);
       }

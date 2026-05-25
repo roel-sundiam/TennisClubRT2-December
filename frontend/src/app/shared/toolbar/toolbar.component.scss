@@ -220,6 +220,18 @@
     }
   }
 
+  &.admin-nav {
+    background: rgba(255, 193, 7, 0.15) !important;
+    border-color: rgba(255, 193, 7, 0.3) !important;
+    color: rgba(255, 236, 153, 0.95) !important;
+
+    &:hover {
+      background: rgba(255, 193, 7, 0.28) !important;
+      border-color: rgba(255, 193, 7, 0.5) !important;
+      color: #fff !important;
+    }
+  }
+
   mat-icon {
     font-size: 1.25rem;
     width: 1.25rem;

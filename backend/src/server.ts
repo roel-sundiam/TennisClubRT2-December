@@ -43,6 +43,8 @@ import galleryRoutes from './routes/galleryRoutes';
 import announcementRoutes from './routes/announcementRoutes';
 import systemSettingsRoutes from './routes/systemSettingsRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
+import clubInsightsRoutes from './routes/clubInsightsRoutes';
+import memberTrendsRoutes from './routes/memberTrendsRoutes';
 import fs from 'fs';
 import path from 'path';
 
@@ -262,6 +264,8 @@ app.use('/api/credits', creditRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/reports', reportRoutes); // Temporarily removing auth for testing fix endpoint
 app.use('/api/reports', specialRouter); // Special router without auth for fix endpoint
+app.use('/api/club-insights', clubInsightsRoutes);
+app.use('/api/member-trends', memberTrendsRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/expense-categories', expenseCategoryRoutes);
 app.use('/api/seeding', authenticateToken, seedingRoutes);
