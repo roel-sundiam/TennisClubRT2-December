@@ -1,10 +1,34 @@
+import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+
+// Load environment variables — this must run before any local module is imported below,
+// since several modules (e.g. config/supabase.ts) read process.env at import time and
+// TypeScript's commonjs output executes imports in source order (no ESM-style hoisting).
+// Check for .env.local first (for local development), then fall back to .env
+const envLocalPath = path.resolve(__dirname, '../.env.local');
+const envPath = path.resolve(__dirname, '../.env');
+
+console.log('🔍 Checking for environment files:');
+console.log('   .env.local path:', envLocalPath);
+console.log('   .env.local exists:', fs.existsSync(envLocalPath));
+console.log('   .env path:', envPath);
+console.log('   .env exists:', fs.existsSync(envPath));
+
+if (fs.existsSync(envLocalPath)) {
+  console.log('📋 Loading environment from .env.local (local development)');
+  dotenv.config({ path: envLocalPath });
+} else {
+  console.log('📋 Loading environment from .env (production)');
+  dotenv.config({ path: envPath });
+}
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { connectDatabase } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
@@ -45,27 +69,6 @@ import systemSettingsRoutes from './routes/systemSettingsRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import clubInsightsRoutes from './routes/clubInsightsRoutes';
 import memberTrendsRoutes from './routes/memberTrendsRoutes';
-import fs from 'fs';
-import path from 'path';
-
-// Load environment variables
-// Check for .env.local first (for local development), then fall back to .env
-const envLocalPath = path.resolve(__dirname, '../.env.local');
-const envPath = path.resolve(__dirname, '../.env');
-
-console.log('🔍 Checking for environment files:');
-console.log('   .env.local path:', envLocalPath);
-console.log('   .env.local exists:', fs.existsSync(envLocalPath));
-console.log('   .env path:', envPath);
-console.log('   .env exists:', fs.existsSync(envPath));
-
-if (fs.existsSync(envLocalPath)) {
-  console.log('📋 Loading environment from .env.local (local development)');
-  dotenv.config({ path: envLocalPath });
-} else {
-  console.log('📋 Loading environment from .env (production)');
-  dotenv.config({ path: envPath });
-}
 
 // Log the MongoDB URI (masked for security)
 const mongoUri = process.env.MONGODB_URI || '';

@@ -69,159 +69,163 @@ interface Suggestion {
   template: `
     <div class="suggestions-container">
       <div class="suggestions-header">
-        <button mat-icon-button (click)="goBack()" class="back-button">
+        <button mat-icon-button (click)="goBack()" class="back-button" aria-label="Back to dashboard">
           <mat-icon>arrow_back</mat-icon>
         </button>
-        <h1>
-          <mat-icon>feedback</mat-icon>
-          Suggestions & Complaints
-        </h1>
+        <div class="header-copy">
+          <div class="eyebrow">Member Feedback</div>
+          <h1>
+            <mat-icon>forum</mat-icon>
+            Suggestions & Complaints
+          </h1>
+          <p>Share court, booking, payment, and club experience feedback with the RT2 team.</p>
+        </div>
       </div>
 
       <mat-card class="main-card">
         <mat-tab-group [(selectedIndex)]="selectedTab">
           
           <!-- Submit New Suggestion/Complaint -->
-          <mat-tab label="Submit Feedback">
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>edit_note</mat-icon>
+              Submit Feedback
+            </ng-template>
             <div class="tab-content">
               <div class="section-header">
                 <h2>Share Your Feedback</h2>
-                <p>Help us improve our services by sharing your suggestions or reporting issues</p>
+                <p>Send a suggestion or report an issue for club review.</p>
               </div>
 
-              <mat-card class="form-card">
-                <mat-card-content>
+              <div class="submit-layout">
+                <aside class="feedback-summary-panel">
+                  <div class="summary-panel-icon">
+                    <mat-icon>support_agent</mat-icon>
+                  </div>
+                  <h3>Feedback Review</h3>
+                  <div class="summary-steps">
+                    <div class="summary-step">
+                      <span>1</span>
+                      <p>Submit your feedback</p>
+                    </div>
+                    <div class="summary-step">
+                      <span>2</span>
+                      <p>Management reviews it</p>
+                    </div>
+                    <div class="summary-step">
+                      <span>3</span>
+                      <p>Track the response here</p>
+                    </div>
+                  </div>
+                </aside>
+
+                <mat-card class="form-card">
+                  <mat-card-content>
                   <form [formGroup]="suggestionForm" (ngSubmit)="submitSuggestion()">
                     
                     <!-- Type Selection -->
                     <div class="form-row">
-                      <mat-form-field appearance="outline" class="full-width">
-                        <mat-label>Feedback Type</mat-label>
-                        <mat-select formControlName="type">
-                          <mat-option value="suggestion">
-                            <mat-icon>lightbulb</mat-icon>
-                            Suggestion - Ideas for improvement
-                          </mat-option>
-                          <mat-option value="complaint">
-                            <mat-icon>report_problem</mat-icon>
-                            Complaint - Report an issue
-                          </mat-option>
-                        </mat-select>
-                        <mat-error *ngIf="suggestionForm.get('type')?.hasError('required')">
+                      <label class="native-field">
+                        <span class="native-label">Feedback Type</span>
+                        <select class="native-control" formControlName="type">
+                          <option value="" disabled>Select feedback type</option>
+                          <option value="suggestion">Suggestion - Ideas for improvement</option>
+                          <option value="complaint">Complaint - Report an issue</option>
+                        </select>
+                        <span class="native-error" *ngIf="suggestionForm.get('type')?.touched && suggestionForm.get('type')?.hasError('required')">
                           Please select feedback type
-                        </mat-error>
-                      </mat-form-field>
+                        </span>
+                      </label>
                     </div>
 
                     <!-- Category Selection -->
                     <div class="form-row">
-                      <mat-form-field appearance="outline" class="full-width">
-                        <mat-label>Category</mat-label>
-                        <mat-select formControlName="category">
-                          <mat-option value="facility">
-                            <mat-icon>business</mat-icon>
-                            Facility & Courts
-                          </mat-option>
-                          <mat-option value="service">
-                            <mat-icon>room_service</mat-icon>
-                            Customer Service
-                          </mat-option>
-                          <mat-option value="booking">
-                            <mat-icon>event</mat-icon>
-                            Booking System
-                          </mat-option>
-                          <mat-option value="payments">
-                            <mat-icon>payment</mat-icon>
-                            Payments & Fees
-                          </mat-option>
-                          <mat-option value="staff">
-                            <mat-icon>people</mat-icon>
-                            Staff & Personnel
-                          </mat-option>
-                          <mat-option value="maintenance">
-                            <mat-icon>build</mat-icon>
-                            Maintenance & Repairs
-                          </mat-option>
-                          <mat-option value="general">
-                            <mat-icon>comment</mat-icon>
-                            General Feedback
-                          </mat-option>
-                        </mat-select>
-                        <mat-error *ngIf="suggestionForm.get('category')?.hasError('required')">
+                      <label class="native-field">
+                        <span class="native-label">Category</span>
+                        <select class="native-control" formControlName="category">
+                          <option value="" disabled>Select a category</option>
+                          <option value="facility">Facility & Courts</option>
+                          <option value="service">Customer Service</option>
+                          <option value="booking">Booking System</option>
+                          <option value="payments">Payments & Fees</option>
+                          <option value="staff">Staff & Personnel</option>
+                          <option value="maintenance">Maintenance & Repairs</option>
+                          <option value="general">General Feedback</option>
+                        </select>
+                        <span class="native-error" *ngIf="suggestionForm.get('category')?.touched && suggestionForm.get('category')?.hasError('required')">
                           Please select a category
-                        </mat-error>
-                      </mat-form-field>
+                        </span>
+                      </label>
                     </div>
 
                     <!-- Priority (for complaints, auto-escalated) -->
                     <div class="form-row" *ngIf="suggestionForm.get('type')?.value === 'suggestion'">
-                      <mat-form-field appearance="outline" class="full-width">
-                        <mat-label>Priority</mat-label>
-                        <mat-select formControlName="priority">
-                          <mat-option value="low">
-                            <mat-icon class="priority-icon low">flag</mat-icon>
-                            Low - Minor suggestion
-                          </mat-option>
-                          <mat-option value="medium">
-                            <mat-icon class="priority-icon medium">flag</mat-icon>
-                            Medium - Moderate importance
-                          </mat-option>
-                          <mat-option value="high">
-                            <mat-icon class="priority-icon high">flag</mat-icon>
-                            High - Important improvement
-                          </mat-option>
-                        </mat-select>
-                        <mat-hint>Complaints are automatically prioritized based on category</mat-hint>
-                      </mat-form-field>
+                      <label class="native-field">
+                        <span class="native-label">Priority</span>
+                        <select class="native-control" formControlName="priority">
+                          <option value="low">Low - Minor suggestion</option>
+                          <option value="medium">Medium - Moderate importance</option>
+                          <option value="high">High - Important improvement</option>
+                        </select>
+                        <span class="native-hint">Complaints are automatically prioritized based on category.</span>
+                      </label>
                     </div>
 
                     <!-- Title -->
                     <div class="form-row">
-                      <mat-form-field appearance="outline" class="full-width">
-                        <mat-label>Title</mat-label>
-                        <input matInput formControlName="title" 
-                               placeholder="Brief description of your feedback">
-                        <mat-hint>{{suggestionForm.get('title')?.value?.length || 0}}/200 characters</mat-hint>
-                        <mat-error *ngIf="suggestionForm.get('title')?.hasError('required')">
+                      <label class="native-field">
+                        <span class="native-label">Title</span>
+                        <input
+                          class="native-control"
+                          type="text"
+                          formControlName="title"
+                          placeholder="Brief description of your feedback">
+                        <span class="native-hint">{{suggestionForm.get('title')?.value?.length || 0}}/200 characters</span>
+                        <span class="native-error" *ngIf="suggestionForm.get('title')?.touched && suggestionForm.get('title')?.hasError('required')">
                           Title is required
-                        </mat-error>
-                        <mat-error *ngIf="suggestionForm.get('title')?.hasError('minlength')">
+                        </span>
+                        <span class="native-error" *ngIf="suggestionForm.get('title')?.touched && suggestionForm.get('title')?.hasError('minlength')">
                           Title must be at least 5 characters long
-                        </mat-error>
-                        <mat-error *ngIf="suggestionForm.get('title')?.hasError('maxlength')">
+                        </span>
+                        <span class="native-error" *ngIf="suggestionForm.get('title')?.touched && suggestionForm.get('title')?.hasError('maxlength')">
                           Title cannot exceed 200 characters
-                        </mat-error>
-                      </mat-form-field>
+                        </span>
+                      </label>
                     </div>
 
                     <!-- Description -->
                     <div class="form-row">
-                      <mat-form-field appearance="outline" class="full-width">
-                        <mat-label>Description</mat-label>
-                        <textarea matInput formControlName="description" 
-                                  rows="6"
-                                  placeholder="Provide detailed information about your feedback..."></textarea>
-                        <mat-hint>{{suggestionForm.get('description')?.value?.length || 0}}/1000 characters</mat-hint>
-                        <mat-error *ngIf="suggestionForm.get('description')?.hasError('required')">
+                      <label class="native-field">
+                        <span class="native-label">Description</span>
+                        <textarea
+                          class="native-control native-textarea"
+                          formControlName="description"
+                          rows="6"
+                          placeholder="Provide detailed information about your feedback..."></textarea>
+                        <span class="native-hint">{{suggestionForm.get('description')?.value?.length || 0}}/1000 characters</span>
+                        <span class="native-error" *ngIf="suggestionForm.get('description')?.touched && suggestionForm.get('description')?.hasError('required')">
                           Description is required
-                        </mat-error>
-                        <mat-error *ngIf="suggestionForm.get('description')?.hasError('minlength')">
+                        </span>
+                        <span class="native-error" *ngIf="suggestionForm.get('description')?.touched && suggestionForm.get('description')?.hasError('minlength')">
                           Description must be at least 10 characters long
-                        </mat-error>
-                        <mat-error *ngIf="suggestionForm.get('description')?.hasError('maxlength')">
+                        </span>
+                        <span class="native-error" *ngIf="suggestionForm.get('description')?.touched && suggestionForm.get('description')?.hasError('maxlength')">
                           Description cannot exceed 1000 characters
-                        </mat-error>
-                      </mat-form-field>
+                        </span>
+                      </label>
                     </div>
 
                     <!-- Anonymous Option -->
                     <div class="form-row">
-                      <mat-checkbox formControlName="isAnonymous">
-                        Submit anonymously
+                      <label class="native-checkbox">
+                        <input type="checkbox" formControlName="isAnonymous">
+                        <span class="checkbox-copy">
+                          <strong>Submit anonymously</strong>
                         <span class="anonymous-hint">
                           (Your identity will not be shown to other members, but admins can see it)
                         </span>
-                      </mat-checkbox>
+                        </span>
+                      </label>
                     </div>
 
                     <!-- Form Actions -->
@@ -238,17 +242,22 @@ interface Suggestion {
                       </button>
                     </div>
                   </form>
-                </mat-card-content>
-              </mat-card>
+                  </mat-card-content>
+                </mat-card>
+              </div>
             </div>
           </mat-tab>
 
           <!-- My Feedback History -->
-          <mat-tab label="My Feedback">
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon>history</mat-icon>
+              My Feedback
+            </ng-template>
             <div class="tab-content">
               <div class="section-header">
                 <h2>My Feedback History</h2>
-                <p>Track your submitted suggestions and complaints</p>
+                <p>Review your submissions, status updates, and admin responses.</p>
               </div>
 
               <!-- Loading State -->
@@ -272,7 +281,7 @@ interface Suggestion {
               <div *ngIf="!loading && suggestions.length > 0" class="suggestions-list">
                 <mat-card *ngFor="let suggestion of suggestions" class="suggestion-card"
                          [class]="getSuggestionClass(suggestion)">
-                  <mat-card-header>
+                  <mat-card-content>
                     <div class="suggestion-header">
                       <div class="suggestion-info">
                         <div class="suggestion-title">
@@ -299,9 +308,7 @@ interface Suggestion {
                         <span>{{ formatDate(suggestion.createdAt) }}</span>
                       </div>
                     </div>
-                  </mat-card-header>
 
-                  <mat-card-content>
                     <p class="suggestion-description">{{ suggestion.description }}</p>
                     
                     <!-- Admin Response -->

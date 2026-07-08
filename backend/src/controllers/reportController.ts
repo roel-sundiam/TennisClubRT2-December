@@ -1368,6 +1368,155 @@ export const getFinancialReport = asyncHandler(async (req: AuthenticatedRequest,
   }
 });
 
+// Get rolling monthly Fund Balance (previous month balance + current month collections/disbursements)
+export const getFundBalanceRollup = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const dataPath = path.join(__dirname, '../../data/financial-report.json');
+
+    if (!fs.existsSync(dataPath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Financial report data file not found'
+      });
+    }
+
+    const fileContent = fs.readFileSync(dataPath, 'utf8');
+    const financialData = JSON.parse(fileContent);
+
+    const beginningYear = parseInt(
+      financialData.beginningBalance.date.match(/\d{4}/)?.[0] || String(new Date().getFullYear())
+    );
+    const beginningAmount = financialData.beginningBalance.amount;
+
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonthIdx = now.getMonth();
+
+    const monthRange = (year: number, monthIdx: number) => ({
+      start: new Date(Date.UTC(year, monthIdx, 1, 0, 0, 0, 0)),
+      end: new Date(Date.UTC(year, monthIdx + 1, 0, 23, 59, 59, 999))
+    });
+
+    // Collections for a single calendar month, split by source (same filters as getFinancialReport)
+    const monthCollections = async (year: number, monthIdx: number) => {
+      const { start, end } = monthRange(year, monthIdx);
+
+      const courtUsagePayments = await Payment.find({
+        status: 'record',
+        paymentMethod: { $ne: 'coins' },
+        paymentType: { $ne: 'membership_fee' },
+        'metadata.isAssignedExpense': { $ne: true },
+        paymentDate: { $gte: start, $lte: end }
+      });
+      const courtCollection = courtUsagePayments.reduce((sum: number, p: any) => sum + p.amount, 0);
+
+      const membershipPayments = await Payment.find({
+        paymentType: 'membership_fee',
+        paymentDate: { $gte: start, $lte: end }
+      });
+      const membershipCollection = membershipPayments.reduce((sum: number, p: any) => sum + p.amount, 0);
+
+      const assignedExpensePayments = await Payment.find({
+        status: 'record',
+        paymentMethod: { $ne: 'coins' },
+        'metadata.isAssignedExpense': true,
+        paymentDate: { $gte: start, $lte: end }
+      });
+      const assignedCollection = assignedExpensePayments.reduce((sum: number, p: any) => sum + p.amount, 0);
+
+      return {
+        courtCollection,
+        membershipCollection,
+        assignedCollection,
+        total: courtCollection + membershipCollection + assignedCollection
+      };
+    };
+
+    // Disbursements for a single calendar month (all expense categories)
+    const monthDisbursements = async (year: number, monthIdx: number) => {
+      const { start, end } = monthRange(year, monthIdx);
+
+      const expenses = await Expense.find({ date: { $gte: start, $lte: end } });
+
+      return {
+        total: expenses.reduce((sum: number, e: any) => sum + e.amount, 0)
+      };
+    };
+
+    // Roll forward from the beginning-balance month up to (but excluding) the current month
+    let previousMonthBalance = beginningAmount;
+    let cursorYear = beginningYear;
+    let cursorMonth = 0;
+
+    while (cursorYear < currentYear || (cursorYear === currentYear && cursorMonth < currentMonthIdx)) {
+      const collections = await monthCollections(cursorYear, cursorMonth);
+      const disbursements = await monthDisbursements(cursorYear, cursorMonth);
+      previousMonthBalance += collections.total - disbursements.total;
+
+      cursorMonth++;
+      if (cursorMonth > 11) {
+        cursorMonth = 0;
+        cursorYear++;
+      }
+    }
+
+    const previousMonthLabel = monthNames[(currentMonthIdx + 11) % 12];
+    const currentMonthLabel = monthNames[currentMonthIdx];
+
+    const currentCollections = await monthCollections(currentYear, currentMonthIdx);
+    const currentDisbursements = await monthDisbursements(currentYear, currentMonthIdx);
+
+    // Live credit balance snapshot (all users) is folded into the current month's collections,
+    // matching how the annual Financial Statement (getFinancialReport) includes it in totalReceipts
+    const creditBalanceResult = await User.aggregate([
+      { $group: { _id: null, totalCredits: { $sum: '$creditBalance' } } }
+    ]);
+    const totalCreditBalances = creditBalanceResult.length > 0 ? creditBalanceResult[0].totalCredits : 0;
+
+    const totalCollections = currentCollections.total + totalCreditBalances;
+    const totalDisbursements = currentDisbursements.total;
+
+    const total = previousMonthBalance + totalCollections - totalDisbursements;
+
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        previousMonth: { label: previousMonthLabel, balance: previousMonthBalance },
+        currentMonth: {
+          label: currentMonthLabel,
+          collections: {
+            amount: totalCollections,
+            description: 'Court usage receipts, membership fees, and other credits'
+          },
+          disbursements: {
+            amount: totalDisbursements,
+            description: 'Court maintenance, app convenience fee, and other expenses'
+          }
+        },
+        total
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error computing fund balance rollup:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to compute fund balance rollup',
+      error: error.message
+    });
+  }
+});
+
 // Export 2025 Financial Report as Static HTML
 export const export2025FinancialReportHTML = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   try {

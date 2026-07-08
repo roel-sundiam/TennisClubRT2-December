@@ -3,6 +3,7 @@ import {
   createPayment,
   getPayments,
   getPayment,
+  getPaymentProofUrl,
   processPayment,
   updatePayment,
   cancelPayment,
@@ -15,10 +16,8 @@ import {
   approvePayment,
   recordPayment,
   unrecordPayment,
-  payOnBehalf,
   createPaymentValidation,
   processPaymentValidation,
-  payOnBehalfValidation,
   recordMembershipFeePayment,
   getMembershipPayments,
   getMembershipPaymentSummary,
@@ -35,6 +34,7 @@ import {
 } from '../controllers/paymentController';
 import { authenticateToken, requireRole, requireFinancialAccess, AuthenticatedRequest } from '../middleware/auth';
 import { autoFixPaymentsMiddleware } from '../middleware/autoFixPayments';
+import { upload, handleMulterError } from '../middleware/upload';
 import { validationResult } from 'express-validator';
 
 const router = Router();
@@ -67,23 +67,12 @@ const handleValidationErrors = (req: Request, res: Response, next: NextFunction)
 router.post(
   '/',
   authenticateToken,
+  upload.single('proofOfPayment'),
+  handleMulterError,
   createPaymentValidation,
   handleValidationErrors,
   autoFixPaymentsMiddleware,
   createPayment
-);
-
-/**
- * @route POST /api/payments/pay-on-behalf
- * @desc Create payment on behalf of another member (reserver only)
- * @access Private
- */
-router.post(
-  '/pay-on-behalf',
-  authenticateToken,
-  payOnBehalfValidation,
-  handleValidationErrors,
-  payOnBehalf
 );
 
 /**
@@ -310,6 +299,13 @@ router.delete(
 router.get('/:id', authenticateToken, getPayment);
 
 /**
+ * @route GET /api/payments/:id/proof
+ * @desc Get a short-lived signed URL for viewing an uploaded proof of payment
+ * @access Private (payment owner or treasurer/admin/superadmin)
+ */
+router.get('/:id/proof', authenticateToken, getPaymentProofUrl);
+
+/**
  * @route PUT /api/payments/:id
  * @desc Update payment details (payment method, transaction ID, etc.)
  * @access Private (payment owner or admin)
@@ -324,6 +320,8 @@ router.put('/:id', authenticateToken, updatePayment);
 router.put(
   '/:id/process',
   authenticateToken,
+  upload.single('proofOfPayment'),
+  handleMulterError,
   processPaymentValidation,
   handleValidationErrors,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {

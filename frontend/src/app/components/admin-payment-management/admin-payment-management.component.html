@@ -549,13 +549,20 @@
                 <td class="col-reservation">
                   <div class="date-cell-enhanced">
                     <span class="material-icons">calendar_today</span>
-                    <span>{{
-                      payment.reservationId?.date ? formatDate(payment.reservationId.date) : 'N/A'
-                    }}</span>
+                    <span *ngIf="payment.reservationId?.date">{{ formatDate(payment.reservationId.date) }}</span>
+                    <span *ngIf="!payment.reservationId?.date && payment.metadata?.isManualPayment">
+                      {{ payment.metadata?.courtUsageDate ? formatDate(payment.metadata.courtUsageDate) : 'N/A' }}
+                      <span class="manual-badge">Manual</span>
+                    </span>
+                    <span *ngIf="!payment.reservationId?.date && !payment.metadata?.isManualPayment">N/A</span>
                   </div>
                   <div *ngIf="payment.reservationId?.timeSlot != null" class="date-cell-enhanced" style="margin-top:2px; font-size:0.8em; color: var(--text-secondary, #666);">
                     <span class="material-icons" style="font-size:14px;">schedule</span>
                     <span>{{ formatTimeSlot(payment.reservationId?.timeSlot) }}</span>
+                  </div>
+                  <div *ngIf="!payment.reservationId && payment.metadata?.isManualPayment && (payment.metadata?.startTime != null || payment.metadata?.timeSlot != null)" class="date-cell-enhanced" style="margin-top:2px; font-size:0.8em; color: var(--text-secondary, #666);">
+                    <span class="material-icons" style="font-size:14px;">schedule</span>
+                    <span>{{ formatTimeSlot(payment.metadata?.startTime ?? payment.metadata?.timeSlot) }}</span>
                   </div>
                 </td>
                 <td class="col-payment-date">
@@ -573,6 +580,14 @@
                     <span class="material-icons">more_vert</span>
                   </button>
                   <mat-menu #actionsMenu="matMenu" class="enhanced-action-menu">
+                    <button
+                      mat-menu-item
+                      (click)="viewProofOfPayment(payment)"
+                      [disabled]="!payment.hasProofOfPayment"
+                    >
+                      <mat-icon>receipt_long</mat-icon>
+                      <span>View Proof of Payment</span>
+                    </button>
                     <button
                       mat-menu-item
                       (click)="openEditDialog(payment)"

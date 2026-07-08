@@ -43,6 +43,7 @@ interface Member {
   isApproved: boolean;
   isActive: boolean;
   isHomeowner?: boolean;
+  isCoach?: boolean;
 }
 
 interface Reservation {
@@ -360,6 +361,7 @@ interface Reservation {
 
             <button
               type="button"
+              *ngIf="!isCoachUser"
               (click)="addPlayer()"
               [disabled]="loadingMembers"
               class="add-btn"
@@ -493,28 +495,11 @@ interface Reservation {
                   <span>Guest Fee ({{ getNonMemberCount() }} {{ getNonMemberCount() === 1 ? 'guest' : 'guests' }} × ₱70):</span>
                   <span>₱{{ getGuestFeeTotal() }}</span>
                 </div>
-                <!-- Payment Distribution per Player -->
+                <!-- Payable by reserver -->
                 <div class="player-payments" *ngIf="getMemberCount() > 0">
-                  <div class="fee-row player-payment-header">
-                    <span><strong>Payment per Player:</strong></span>
-                  </div>
-                  <div class="player-payment-item" *ngFor="let player of getPlayerPaymentBreakdown()">
-                    <div class="fee-row player-detail">
-                      <span>
-                        {{ player.name }}
-                        <span class="player-badge" *ngIf="player.isReserver">(Reserver)</span>
-                        <span class="player-badge" *ngIf="player.isGuest">(Guest)</span>
-                      </span>
-                      <span class="player-amount">
-                        <span *ngIf="!player.isGuest">₱{{ player.amount.toFixed(2) }}</span>
-                        <span *ngIf="player.isGuest" style="color: #666;">No payment</span>
-                      </span>
-                    </div>
-                    <div class="fee-breakdown-detail" *ngIf="!player.isGuest && player.breakdown">
-                      <small style="color: #666; padding-left: 20px;">
-                        {{ player.breakdown }}
-                      </small>
-                    </div>
+                  <div class="fee-row">
+                    <span><strong>Payable by:</strong></span>
+                    <span>{{ getReserverDisplayName() }} (you) — full amount</span>
                   </div>
                 </div>
               </div>
@@ -698,6 +683,10 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     // Initialize custom names array as empty
     this.customPlayerNames = [];
     console.log('🔍 Constructor - initialized customPlayerNames as:', this.customPlayerNames);
+  }
+
+  get isCoachUser(): boolean {
+    return this.authService.currentUser?.isCoach === true;
   }
 
   ngOnInit(): void {
@@ -1698,80 +1687,10 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     return guestCount * GUEST_FEE * hours;
   }
 
-  // December 2025: Get payment breakdown per player
-  getPlayerPaymentBreakdown(): Array<{
-    name: string;
-    amount: number;
-    isReserver: boolean;
-    isGuest: boolean;
-    breakdown?: string;
-  }> {
-    const result: Array<{
-      name: string;
-      amount: number;
-      isReserver: boolean;
-      isGuest: boolean;
-      breakdown?: string;
-    }> = [];
-
-    const memberCount = this.getMemberCount();
-    const guestCount = this.getNonMemberCount();
-
-    if (memberCount === 0) return result;
-
-    const baseFeeTotal = this.getBaseFeeTotal();
-    const guestFeeTotal = this.getGuestFeeTotal();
-
-    // Round total fee to nearest 10, then divide among members
-    const totalFee = Math.ceil((baseFeeTotal + guestFeeTotal) / 10) * 10;
-    const baseFeePerMember = (totalFee - guestFeeTotal) / memberCount;
-
-    // Add member players
-    let memberIndex = 0;
-    this.playersArray.controls.forEach((control) => {
-      const playerName = control.value?.trim();
-      if (playerName) {
-        const isReserver = memberIndex === 0;
-        let amount = isReserver
-          ? baseFeePerMember + guestFeeTotal
-          : baseFeePerMember;
-
-        let breakdown = `Base share: ₱${baseFeePerMember.toFixed(2)}`;
-        if (isReserver && guestFeeTotal > 0) {
-          breakdown += ` + Guest fees: ₱${guestFeeTotal.toFixed(2)}`;
-        }
-
-        // Add tennis balls cost to reserver ONLY
-        if (isReserver && this.tennisBallQuantity > 0) {
-          const ballsCost = this.tennisBallQuantity * this.tennisBallCostPerCan;
-          amount += ballsCost;
-          breakdown += ` + Tennis balls (${this.tennisBallQuantity} cans): ₱${ballsCost.toFixed(2)}`;
-        }
-
-        result.push({
-          name: playerName,
-          amount: amount,
-          isReserver: isReserver,
-          isGuest: false,
-          breakdown: breakdown,
-        });
-        memberIndex++;
-      }
-    });
-
-    // Add guest players
-    this.customPlayerNames.forEach((guestName) => {
-      if (guestName && guestName.trim()) {
-        result.push({
-          name: guestName.trim(),
-          amount: 0,
-          isReserver: false,
-          isGuest: true,
-        });
-      }
-    });
-
-    return result;
+  // The reserver is always the first player entry and is solely responsible for the full fee.
+  getReserverDisplayName(): string {
+    const reserverName = this.playersArray.at(0)?.value?.trim();
+    return reserverName || this.authService.currentUser?.fullName || 'You';
   }
 
   // December 2025: Format player names from either old (string[]) or new (object[]) format

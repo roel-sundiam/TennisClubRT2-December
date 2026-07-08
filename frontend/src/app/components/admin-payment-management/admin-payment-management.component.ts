@@ -51,6 +51,14 @@ interface Payment {
     date: Date;
     timeSlot: number;
   };
+  metadata?: {
+    isManualPayment?: boolean;
+    courtUsageDate?: Date;
+    startTime?: number;
+    endTime?: number;
+    timeSlot?: number;
+    playerNames?: string[];
+  };
   description?: string;
   notes?: string;
   recordedBy?: {
@@ -61,6 +69,7 @@ interface Payment {
   recordedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  hasProofOfPayment?: boolean;
 }
 
 interface PaymentSummary {
@@ -407,6 +416,26 @@ export class AdminPaymentManagementComponent implements OnInit {
     this.overdueSummaries = Array.from(memberMap.values()).sort(
       (a, b) => b.totalOverdueAmount - a.totalOverdueAmount,
     );
+  }
+
+  viewProofOfPayment(payment: Payment): void {
+    if (!payment.hasProofOfPayment) {
+      this.snackBar.open('No proof of payment uploaded for this payment', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.http
+      .get<any>(`${this.apiUrl}/payments/${payment._id}/proof`, { headers: this.getAuthHeaders() })
+      .subscribe({
+        next: (response) => {
+          window.open(response.url, '_blank');
+        },
+        error: (error) => {
+          this.snackBar.open(error.error?.error || 'Failed to load proof of payment', 'Close', {
+            duration: 3000,
+          });
+        },
+      });
   }
 
   openEditDialog(payment: Payment): void {

@@ -4,9 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
 
 export interface RecordPaymentDialogData {
   referenceNumber: string;
@@ -24,64 +21,71 @@ export interface RecordPaymentDialogData {
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
-    MatDividerModule,
-    MatInputModule,
-    MatFormFieldModule,
   ],
   template: `
     <div class="record-dialog">
-      <div mat-dialog-title class="dialog-header">
-        <mat-icon class="dialog-icon">account_balance_wallet</mat-icon>
-        <h2>Record Payment</h2>
+      <div class="dialog-hero">
+        <div class="hero-icon">
+          <mat-icon>verified</mat-icon>
+        </div>
+        <div class="hero-copy">
+          <p class="eyebrow">Financial Reports</p>
+          <h2>Record Payment</h2>
+          <p>Confirm this payment and optionally apply available member credit.</p>
+        </div>
       </div>
 
       <mat-dialog-content class="dialog-content">
-        <div class="payment-info">
-          <div class="info-row">
+        <section class="summary-panel">
+          <div class="summary-item">
             <span class="label">Reference</span>
-            <span class="value">{{ data.referenceNumber }}</span>
+            <strong class="value reference">{{ data.referenceNumber }}</strong>
           </div>
-          <div class="info-row">
-            <span class="label">Amount Due</span>
-            <span class="value amount">₱{{ data.amount | number:'1.2-2' }}</span>
-          </div>
-          <div class="info-row">
+          <div class="summary-item">
             <span class="label">Member</span>
-            <span class="value">{{ data.memberName }}</span>
+            <strong class="value">{{ data.memberName }}</strong>
           </div>
-        </div>
-
-        <mat-divider></mat-divider>
-
-        <div class="credit-info">
-          <mat-icon class="credit-icon">stars</mat-icon>
-          <div class="credit-text">
-            <span class="credit-label">Available Credit Balance</span>
-            <span class="credit-amount">₱{{ data.creditBalance | number:'1.2-2' }}</span>
+          <div class="summary-item amount-due">
+            <span class="label">Amount Due</span>
+            <strong class="value amount">&#8369;{{ data.amount | number:'1.2-2' }}</strong>
           </div>
-        </div>
+        </section>
 
-        <div class="credit-input-section">
-          <mat-form-field appearance="outline" class="credit-input-field">
-            <mat-label>Credit Amount to Apply</mat-label>
-            <span matTextPrefix>₱&nbsp;</span>
-            <input
-              matInput
-              type="number"
-              [(ngModel)]="creditToApply"
-              [min]="0.01"
-              [max]="maxCredit"
-              step="0.01"
-              (input)="onCreditInput()"
-            />
-            <mat-hint>Max: ₱{{ maxCredit | number:'1.2-2' }}</mat-hint>
-          </mat-form-field>
+        <section class="credit-panel">
+          <div class="credit-card">
+            <div class="credit-icon">
+              <mat-icon>account_balance_wallet</mat-icon>
+            </div>
+            <div class="credit-text">
+              <span>Available Credit Balance</span>
+              <strong>&#8369;{{ data.creditBalance | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <label class="credit-field">
+            <span class="field-label">Credit Amount to Apply</span>
+            <div class="amount-input-wrap">
+              <span class="currency-prefix">&#8369;</span>
+              <input
+                type="number"
+                [(ngModel)]="creditToApply"
+                [min]="0.01"
+                [max]="maxCredit"
+                step="0.01"
+                inputmode="decimal"
+                (input)="onCreditInput()"
+              />
+            </div>
+            <span class="field-hint">Maximum credit allowed: &#8369;{{ maxCredit | number:'1.2-2' }}</span>
+          </label>
           <p class="credit-error" *ngIf="creditError">{{ creditError }}</p>
-        </div>
+        </section>
       </mat-dialog-content>
 
-      <mat-dialog-actions class="dialog-actions" align="end">
-        <button mat-button (click)="onCancel()" class="cancel-button">Cancel</button>
+      <mat-dialog-actions class="dialog-actions">
+        <button mat-button (click)="onCancel()" class="cancel-button">
+          Cancel
+        </button>
         <button mat-stroked-button (click)="onRecordNoCredit()" class="no-credit-button">
           Record (No Credit)
         </button>
@@ -92,150 +96,296 @@ export interface RecordPaymentDialogData {
           [disabled]="!isValid()"
           class="with-credit-button"
         >
-          <mat-icon>stars</mat-icon>
-          Apply ₱{{ creditToApply | number:'1.2-2' }} Credit
+          <mat-icon>check_circle</mat-icon>
+          Apply &#8369;{{ creditToApply | number:'1.2-2' }} Credit
         </button>
       </mat-dialog-actions>
     </div>
   `,
   styles: [`
     .record-dialog {
-      min-width: 420px;
+      width: min(520px, 92vw);
+      overflow: hidden;
+      background: #ffffff;
+      color: #172033;
     }
 
-    .dialog-header {
+    .dialog-hero {
       display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 22px 24px 18px;
+      color: #ffffff;
+      background:
+        linear-gradient(135deg, rgba(15, 76, 92, 0.97), rgba(26, 117, 103, 0.94)),
+        #0f4c5c;
+    }
+
+    .hero-icon {
+      width: 46px;
+      height: 46px;
+      display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 20px 20px 12px 20px;
-      margin: 0;
+      justify-content: center;
+      flex: 0 0 auto;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 8px;
+
+      mat-icon {
+        width: 26px;
+        height: 26px;
+        font-size: 26px;
+      }
+    }
+
+    .hero-copy {
+      min-width: 0;
+
+      .eyebrow {
+        margin: 0 0 4px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
 
       h2 {
         margin: 0;
-        font-size: 1.2rem;
-        font-weight: 500;
-        color: #333;
+        color: #ffffff;
+        font-size: 1.35rem;
+        font-weight: 850;
+        line-height: 1.15;
       }
 
-      .dialog-icon {
-        font-size: 1.6rem;
-        width: 1.6rem;
-        height: 1.6rem;
-        color: #2196f3;
+      p:last-child {
+        margin: 7px 0 0;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 0.87rem;
+        line-height: 1.4;
       }
     }
 
     .dialog-content {
-      padding: 0 20px 16px 20px;
+      padding: 18px 24px 6px;
     }
 
-    .payment-info {
+    .summary-panel {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
       margin-bottom: 16px;
     }
 
-    .info-row {
+    .summary-item {
+      min-width: 0;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 5px 0;
+      flex-direction: column;
+      gap: 5px;
+      padding: 13px;
+      background: #fbfdff;
+      border: 1px solid #dce5ef;
+      border-radius: 8px;
+
+      &.amount-due {
+        grid-column: 1 / -1;
+        background: #f4fbf9;
+        border-color: #cce8e2;
+      }
 
       .label {
-        font-size: 0.85rem;
-        color: #888;
+        color: #64748b;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
 
       .value {
-        font-size: 0.9rem;
-        color: #333;
-        font-weight: 500;
+        color: #172033;
+        font-size: 0.94rem;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+
+        &.reference {
+          font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+          font-size: 0.86rem;
+        }
       }
 
       .amount {
-        font-size: 1rem;
-        color: #2196f3;
+        color: #0f4c5c;
+        font-size: 1.45rem;
+        line-height: 1;
       }
     }
 
-    .credit-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 16px;
-      padding: 12px;
-      background: #fff8e1;
+    .credit-panel {
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px solid #dce5ef;
       border-radius: 8px;
-      border: 1px solid #ffe082;
+    }
+
+    .credit-card {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 11px;
+      align-items: center;
+      margin-bottom: 14px;
 
       .credit-icon {
-        color: #f9a825;
-        font-size: 2rem;
-        width: 2rem;
-        height: 2rem;
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #0f4c5c;
+        background: #eef7f5;
+        border: 1px solid #cce8e2;
+        border-radius: 8px;
+
+        mat-icon {
+          width: 23px;
+          height: 23px;
+          font-size: 23px;
+        }
       }
 
       .credit-text {
+        min-width: 0;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 3px;
 
-        .credit-label {
-          font-size: 0.8rem;
-          color: #888;
+        span {
+          color: #64748b;
+          font-size: 0.78rem;
+          font-weight: 750;
         }
 
-        .credit-amount {
-          font-size: 1.2rem;
-          font-weight: 600;
-          color: #f57f17;
+        strong {
+          color: #145e53;
+          font-size: 1.25rem;
+          font-weight: 850;
+          line-height: 1.1;
         }
       }
     }
 
-    .credit-input-section {
-      margin-top: 16px;
+    .credit-field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
 
-      .credit-input-field {
+    .field-label {
+      color: #253349;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .amount-input-wrap {
+      min-height: 46px;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid #cfd9e6;
+      border-radius: 7px;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+
+      &:focus-within {
+        border-color: #1a7567;
+        box-shadow: 0 0 0 3px rgba(26, 117, 103, 0.13);
+      }
+
+      .currency-prefix {
+        color: #64748b;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      input {
         width: 100%;
-      }
+        min-width: 0;
+        height: 44px;
+        padding: 0 12px 0 0;
+        color: #172033;
+        background: transparent;
+        border: 0;
+        font: inherit;
+        font-size: 1rem;
+        font-weight: 750;
 
-      .credit-error {
-        margin: 4px 0 0 0;
-        font-size: 0.8rem;
-        color: #f44336;
+        &:focus {
+          outline: none;
+        }
       }
+    }
+
+    .field-hint {
+      color: #64748b;
+      font-size: 0.76rem;
+    }
+
+    .credit-error {
+      margin: 6px 0 0;
+      color: #b42318;
+      font-size: 0.78rem;
+      font-weight: 750;
     }
 
     .dialog-actions {
-      padding: 12px 20px 16px 20px;
+      display: flex;
+      justify-content: flex-end;
       gap: 8px;
+      padding: 16px 24px 22px;
+      border-top: 1px solid #e7edf4;
 
       button {
-        height: 38px;
+        min-height: 38px;
+        border-radius: 7px;
         font-size: 0.85rem;
+        font-weight: 750;
       }
 
       .cancel-button {
-        color: #666;
+        color: #516073;
       }
 
       .no-credit-button {
-        color: #555;
+        color: #0f4c5c;
+        border-color: #cfd9e6;
       }
 
       .with-credit-button {
+        background: #0f4c5c;
+
         mat-icon {
-          font-size: 1rem;
-          width: 1rem;
-          height: 1rem;
+          width: 18px;
+          height: 18px;
           margin-right: 4px;
-          color: #fff8e1;
+          font-size: 18px;
         }
       }
     }
 
     @media (max-width: 600px) {
       .record-dialog {
-        min-width: 90vw;
+        width: 92vw;
+      }
+
+      .dialog-hero,
+      .dialog-content,
+      .dialog-actions {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .summary-panel {
+        grid-template-columns: 1fr;
       }
 
       .dialog-actions {
@@ -245,7 +395,7 @@ export interface RecordPaymentDialogData {
         button {
           width: 100%;
           margin: 0;
-          height: 40px;
+          min-height: 40px;
         }
       }
     }

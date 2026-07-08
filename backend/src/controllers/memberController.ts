@@ -65,7 +65,7 @@ export const getMembers = asyncHandler(async (req: AuthenticatedRequest, res: Re
   const total = await User.countDocuments(filter);
 
   // Select only public fields for members directory
-  const publicFields = 'fullName username email gender profilePicture registrationDate lastLogin role coinBalance membershipFeesPaid isActive isApproved isHomeowner membershipYearsPaid';
+  const publicFields = 'fullName username email gender profilePicture registrationDate lastLogin role coinBalance membershipFeesPaid isActive isApproved isHomeowner isCoach membershipYearsPaid';
 
   const members = await User.find(filter, publicFields)
     .sort(sortOption)
@@ -357,7 +357,7 @@ export const searchMembers = asyncHandler(async (req: AuthenticatedRequest, res:
 // Update member approval status (Admin only)
 export const updateMemberApproval = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { isApproved, membershipFeesPaid, notes } = req.body;
+  const { isApproved, membershipFeesPaid, notes, isCoach } = req.body;
 
   if (!id) {
     return res.status(400).json({
@@ -390,6 +390,9 @@ export const updateMemberApproval = asyncHandler(async (req: AuthenticatedReques
     }
     if (typeof membershipFeesPaid === 'boolean') {
       updateFields.membershipFeesPaid = membershipFeesPaid;
+    }
+    if (typeof isCoach === 'boolean') {
+      updateFields.isCoach = isCoach;
     }
 
     const updatedMember = await User.findByIdAndUpdate(

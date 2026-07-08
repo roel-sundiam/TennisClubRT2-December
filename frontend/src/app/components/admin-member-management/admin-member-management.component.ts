@@ -35,6 +35,7 @@ interface Member {
   isApproved: boolean;
   isActive: boolean;
   isHomeowner?: boolean;
+  isCoach?: boolean;
   membershipFeesPaid: boolean;
   membershipYearsPaid?: number[];
   membership2026Amount?: number;
@@ -199,6 +200,10 @@ interface GroupedMemberData {
                           <mat-icon>{{hasPaidFor2026(member) ? 'paid' : 'payment'}}</mat-icon>
                           {{hasPaidFor2026(member) ? (member.membership2026Amount ? 'Paid - ₱' + member.membership2026Amount : 'Paid') : 'Unpaid'}}
                         </mat-chip>
+                        <mat-chip *ngIf="member.isCoach" class="status-chip coach" matTooltip="Coach">
+                          <mat-icon>sports_tennis</mat-icon>
+                          Coach
+                        </mat-chip>
                       </div>
                     </td>
                   </ng-container>
@@ -228,6 +233,13 @@ interface GroupedMemberData {
                           (click)="toggleApproval(member)"
                           [matTooltip]="member.isApproved ? 'Revoke Approval' : 'Approve Member'">
                           <mat-icon>{{member.isApproved ? 'block' : 'check'}}</mat-icon>
+                        </button>
+                        <button
+                          mat-icon-button
+                          color="primary"
+                          (click)="toggleCoach(member)"
+                          [matTooltip]="member.isCoach ? 'Revoke Coach Status' : 'Grant Coach Status'">
+                          <mat-icon>{{member.isCoach ? 'cancel' : 'sports_tennis'}}</mat-icon>
                         </button>
                         <button
                           mat-icon-button
@@ -348,6 +360,10 @@ interface GroupedMemberData {
                               <mat-icon>{{hasPaidFor2026(member) ? 'paid' : 'payment'}}</mat-icon>
                               {{hasPaidFor2026(member) ? (member.membership2026Amount ? 'Paid - ₱' + member.membership2026Amount : 'Paid') : 'Unpaid'}}
                             </mat-chip>
+                            <mat-chip *ngIf="member.isCoach" class="status-chip coach" matTooltip="Coach">
+                              <mat-icon>sports_tennis</mat-icon>
+                              Coach
+                            </mat-chip>
                           </div>
                         </td>
                       </ng-container>
@@ -377,6 +393,13 @@ interface GroupedMemberData {
                               (click)="toggleApproval(member)"
                               [matTooltip]="member.isApproved ? 'Revoke Approval' : 'Approve Member'">
                               <mat-icon>{{member.isApproved ? 'block' : 'check'}}</mat-icon>
+                            </button>
+                            <button
+                              mat-icon-button
+                              color="primary"
+                              (click)="toggleCoach(member)"
+                              [matTooltip]="member.isCoach ? 'Revoke Coach Status' : 'Grant Coach Status'">
+                              <mat-icon>{{member.isCoach ? 'cancel' : 'sports_tennis'}}</mat-icon>
                             </button>
                             <button
                               mat-icon-button
@@ -909,6 +932,25 @@ export class AdminMemberManagementComponent implements OnInit {
         error: (error) => {
           console.error('Error updating member approval:', error);
           this.snackBar.open('Failed to update member status', 'Close', { duration: 3000 });
+        }
+      });
+  }
+
+  toggleCoach(member: Member): void {
+    const headers = { 'Authorization': `Bearer ${this.authService.token}` };
+    const newStatus = !member.isCoach;
+
+    this.http.put<any>(`${this.apiUrl}/members/${member._id}/approval`,
+      { isCoach: newStatus }, { headers })
+      .subscribe({
+        next: (response) => {
+          const action = newStatus ? 'granted coach status to' : 'revoked coach status for';
+          this.snackBar.open(`Successfully ${action} ${member.fullName}`, 'Close', { duration: 3000 });
+          this.loadAllMembers();
+        },
+        error: (error) => {
+          console.error('Error updating coach status:', error);
+          this.snackBar.open('Failed to update coach status', 'Close', { duration: 3000 });
         }
       });
   }

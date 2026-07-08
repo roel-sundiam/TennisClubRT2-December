@@ -11,6 +11,7 @@ export interface User {
   isApproved: boolean;
   isActive: boolean;
   isHomeowner?: boolean;
+  isCoach?: boolean;
   deletedAt?: Date | null;
   deletedBy?: string | null;
   role: 'member' | 'admin' | 'superadmin' | 'treasurer';
@@ -213,6 +214,9 @@ export interface Payment {
   paymentDate?: Date;
   dueDate: Date;
   description: string;
+  proofOfPaymentPath?: string;
+  proofOfPaymentUploadedAt?: Date;
+  hasProofOfPayment?: boolean;
   metadata?: {
     timeSlot?: number;
     date?: Date;

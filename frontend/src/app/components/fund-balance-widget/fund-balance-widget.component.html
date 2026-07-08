@@ -1,0 +1,93 @@
+<div class="fund-balance-widget">
+  <mat-card class="fund-balance-card">
+    <div class="widget-header" (click)="toggleExpanded()">
+      <div class="title-section">
+        <div class="title-icon-shell">
+          <mat-icon class="title-icon">account_balance_wallet</mat-icon>
+        </div>
+        <div class="title-copy">
+          <h2 class="widget-title">Fund Balance</h2>
+          <p class="widget-subtitle">Club treasury snapshot</p>
+        </div>
+      </div>
+      <button
+        mat-icon-button
+        class="toggle-btn"
+        (click)="toggleExpanded(); $event.stopPropagation()"
+        [attr.aria-label]="expanded ? 'Collapse fund balance' : 'Expand fund balance'">
+        <mat-icon>{{ expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+      </button>
+    </div>
+
+    <div class="widget-body" *ngIf="expanded">
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner diameter="28"></mat-spinner>
+        <p class="loading-text">Loading fund balance...</p>
+      </div>
+
+      <div class="error-container" *ngIf="error && !loading">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <p class="error-text">Unable to load fund balance.</p>
+      </div>
+
+      <div class="balance-content" *ngIf="data && !loading && !error">
+        <div class="total-summary">
+          <span class="summary-label">Available Fund Balance</span>
+          <strong class="summary-amount">&#8369;{{ formatCurrency(data.total) }}</strong>
+          <span class="summary-period">As of {{ data.currentMonth.label }}</span>
+        </div>
+
+        <div class="balance-rows">
+          <div class="balance-row previous-row">
+            <span class="row-icon">
+              <mat-icon>history</mat-icon>
+            </span>
+            <span class="row-label">
+              Previous balance
+              <span class="row-hint">{{ data.previousMonth.label }}</span>
+            </span>
+            <span class="row-amount">&#8369;{{ formatCurrency(data.previousMonth.balance) }}</span>
+          </div>
+
+          <div class="balance-row">
+            <span class="row-icon positive">
+              <mat-icon>trending_up</mat-icon>
+            </span>
+            <span class="row-label">
+              Collections
+              <span class="row-hint">{{ data.currentMonth.collections.description }}</span>
+            </span>
+            <span class="row-amount positive">+&#8369;{{ formatCurrency(data.currentMonth.collections.amount) }}</span>
+          </div>
+
+          <div class="balance-row">
+            <span class="row-icon negative">
+              <mat-icon>trending_down</mat-icon>
+            </span>
+            <span class="row-label">
+              Disbursements
+              <span class="row-hint">{{ data.currentMonth.disbursements.description }}</span>
+            </span>
+            <span class="row-amount negative">-&#8369;{{ formatCurrency(data.currentMonth.disbursements.amount) }}</span>
+          </div>
+
+          <div class="balance-row total-row">
+            <span class="row-icon total">
+              <mat-icon>account_balance</mat-icon>
+            </span>
+            <span class="row-label">
+              Net fund position
+              <span class="row-hint">Previous balance plus current activity</span>
+            </span>
+            <span class="row-amount">&#8369;{{ formatCurrency(data.total) }}</span>
+          </div>
+        </div>
+
+        <div class="balance-note">
+          <mat-icon>verified</mat-icon>
+          <span>Updated from recorded financial reports</span>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+</div>

@@ -8,6 +8,7 @@ import {
   getCourtReceiptsReport,
   getCourtUsageFromSheet,
   getFinancialReport,
+  getFundBalanceRollup,
   export2025FinancialReportHTML,
   forceRefreshFinancialReport,
   forceRefreshCourtUsageReport,
@@ -16,7 +17,7 @@ import {
   getHomeownerDistributionReport
 } from '../controllers/reportController';
 import { getStaticCourtUsageReport } from '../controllers/staticReportController';
-import { authenticateToken, requireRole, requireFinancialAccess } from '../middleware/auth';
+import { authenticateToken, requireRole, requireFinancialAccess, requireApprovedUser } from '../middleware/auth';
 
 const router = Router();
 
@@ -136,6 +137,18 @@ router.get(
   authenticateToken,
   requireFinancialAccess,
   getFinancialReport
+);
+
+/**
+ * @route GET /api/reports/fund-balance-rollup
+ * @desc Get rolling monthly fund balance (previous month balance + current month collections/disbursements)
+ * @access Private (All approved members)
+ */
+router.get(
+  '/fund-balance-rollup',
+  authenticateToken,
+  requireApprovedUser,
+  getFundBalanceRollup
 );
 
 /**

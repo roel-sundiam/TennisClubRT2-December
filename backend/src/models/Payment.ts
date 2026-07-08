@@ -19,6 +19,9 @@ export interface IPaymentDocument extends Document {
   approvedAt?: Date; // When payment was approved
   recordedBy?: string; // Admin who recorded the payment
   recordedAt?: Date; // When payment was recorded
+  proofOfPaymentPath?: string; // Supabase Storage path (private bucket), not a public URL
+  proofOfPaymentUploadedAt?: Date;
+  proofOfPaymentUploadedBy?: string; // User who uploaded the proof
   paymentType?: 'court_usage' | 'membership_fee' | 'tournament_entry' | 'cancellation_fee'; // Type of payment
   membershipYear?: number; // Year for membership fee (e.g., 2026)
   metadata?: {
@@ -178,6 +181,16 @@ const paymentSchema = new Schema<IPaymentDocument>({
   recordedAt: {
     type: Date,
     index: true
+  },
+  proofOfPaymentPath: {
+    type: String
+  },
+  proofOfPaymentUploadedAt: {
+    type: Date
+  },
+  proofOfPaymentUploadedBy: {
+    type: String,
+    ref: 'User'
   },
   metadata: {
     timeSlot: { type: Number },
@@ -341,6 +354,11 @@ paymentSchema.virtual('daysUntilDue').get(function(this: IPaymentDocument) {
   const diffTime = this.dueDate.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
+});
+
+// Virtual for whether proof of payment has been uploaded
+paymentSchema.virtual('hasProofOfPayment').get(function(this: IPaymentDocument) {
+  return !!this.proofOfPaymentPath;
 });
 
 // Static method to calculate payment amount based on reservation details

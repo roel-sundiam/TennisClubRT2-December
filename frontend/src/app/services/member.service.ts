@@ -21,6 +21,7 @@ export interface Member {
   isActive: boolean;
   membershipFeesPaid: boolean;
   isHomeowner?: boolean;
+  isCoach?: boolean;
   membershipYearsPaid?: number[];
 }
 

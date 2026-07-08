@@ -16,6 +16,7 @@ export interface User {
   matchesPlayed?: number;
   phone?: string;
   dateOfBirth?: string;
+  isCoach?: boolean;
 }
 
 export interface AuthResponse {

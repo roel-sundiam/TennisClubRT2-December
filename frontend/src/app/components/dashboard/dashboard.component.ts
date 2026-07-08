@@ -19,6 +19,7 @@ import { TennisBallMachineDialogComponent } from '../tennis-ball-machine-dialog/
 import { DeveloperContactDialogComponent } from '../developer-contact-dialog/developer-contact-dialog.component';
 import { ModalManagerService } from '../../services/modal-manager.service';
 import { CourtStatusWidgetComponent } from '../court-status-widget/court-status-widget.component';
+import { FundBalanceWidgetComponent } from '../fund-balance-widget/fund-balance-widget.component';
 import { Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -33,12 +34,16 @@ import { environment } from '../../../environments/environment';
     MatGridListModule,
     MatBadgeModule,
     MatDialogModule,
-    CourtStatusWidgetComponent
+    CourtStatusWidgetComponent,
+    FundBalanceWidgetComponent
   ],
   template: `
     <div class="dashboard-container">
       <!-- Action Cards Grid -->
       <div class="dashboard-content">
+
+        <!-- Fund Balance Widget -->
+        <app-fund-balance-widget></app-fund-balance-widget>
 
         <!-- Court Status Widget -->
         <app-court-status-widget></app-court-status-widget>

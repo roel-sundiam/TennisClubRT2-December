@@ -31,7 +31,6 @@ interface Reservation {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no-show' | 'blocked';
   paymentStatus: 'pending' | 'paid' | 'overdue';
   totalFee: number;
-  feePerPlayer: number;
   userId?: {
     _id: string;
     username: string;
@@ -271,8 +270,17 @@ interface AvatarInfo {
 
                         <div class="detail-row">
                           <mat-icon class="detail-icon">payments</mat-icon>
-                          <span class="detail-label">Fee per player:</span>
-                          <span class="detail-value">₱{{(reservation.totalFee / getAllPlayers(reservation).length) | number:'1.0-0'}}</span>
+                          <span class="detail-label">Total court fee:</span>
+                          <span class="detail-value">₱{{reservation.totalFee | number:'1.0-0'}}</span>
+                        </div>
+
+                        <div class="detail-row" *ngIf="isReserverOfReservation(reservation)">
+                          <mat-icon class="detail-icon">info</mat-icon>
+                          <span class="detail-value">You're responsible for this fee</span>
+                        </div>
+                        <div class="detail-row" *ngIf="!isReserverOfReservation(reservation) && reservation.userId">
+                          <mat-icon class="detail-icon">info</mat-icon>
+                          <span class="detail-value">Reserved by {{reservation.userId.fullName}} — no payment required for you</span>
                         </div>
 
                         <div class="detail-row" *ngIf="reservation.tennisBalls && reservation.tennisBalls.quantity > 0">
@@ -482,8 +490,17 @@ interface AvatarInfo {
 
                           <div class="detail-row">
                             <mat-icon class="detail-icon">payments</mat-icon>
-                            <span class="detail-label">Fee per player:</span>
-                            <span class="detail-value">₱{{(reservation.totalFee / getAllPlayers(reservation).length) | number:'1.0-0'}}</span>
+                            <span class="detail-label">Total court fee:</span>
+                            <span class="detail-value">₱{{reservation.totalFee | number:'1.0-0'}}</span>
+                          </div>
+
+                          <div class="detail-row" *ngIf="isReserverOfReservation(reservation)">
+                            <mat-icon class="detail-icon">info</mat-icon>
+                            <span class="detail-value">You're responsible for this fee</span>
+                          </div>
+                          <div class="detail-row" *ngIf="!isReserverOfReservation(reservation) && reservation.userId">
+                            <mat-icon class="detail-icon">info</mat-icon>
+                            <span class="detail-value">Reserved by {{reservation.userId.fullName}} — no payment required for you</span>
                           </div>
 
                           <div class="detail-row" *ngIf="reservation.tennisBalls && reservation.tennisBalls.quantity > 0">
@@ -645,8 +662,17 @@ interface AvatarInfo {
 
                         <div class="detail-row">
                           <mat-icon class="detail-icon">payments</mat-icon>
-                          <span class="detail-label">Fee per player:</span>
-                          <span class="detail-value">₱{{(reservation.totalFee / getAllPlayers(reservation).length) | number:'1.0-0'}}</span>
+                          <span class="detail-label">Total court fee:</span>
+                          <span class="detail-value">₱{{reservation.totalFee | number:'1.0-0'}}</span>
+                        </div>
+
+                        <div class="detail-row" *ngIf="isReserverOfReservation(reservation)">
+                          <mat-icon class="detail-icon">info</mat-icon>
+                          <span class="detail-value">You're responsible for this fee</span>
+                        </div>
+                        <div class="detail-row" *ngIf="!isReserverOfReservation(reservation) && reservation.userId">
+                          <mat-icon class="detail-icon">info</mat-icon>
+                          <span class="detail-value">Reserved by {{reservation.userId.fullName}} — no payment required for you</span>
                         </div>
 
                         <div class="detail-row" *ngIf="reservation.tennisBalls && reservation.tennisBalls.quantity > 0">
@@ -941,13 +967,9 @@ interface AvatarInfo {
               <span class="join-fee-label">Total court fee</span>
               <span class="join-fee-value">₱{{reservationToJoin.totalFee}}</span>
             </div>
-            <div class="join-fee-row join-fee-split">
-              <span class="join-fee-label">Split among members</span>
-              <span class="join-fee-value">{{getJoinMemberCount(reservationToJoin)}} → {{getJoinMemberCount(reservationToJoin) + 1}}</span>
-            </div>
             <div class="join-fee-note">
               <mat-icon>info</mat-icon>
-              The court fee will be recalculated and split equally among all members. Your share will be assigned as a pending payment after the session.
+              Joining is free — {{reservationToJoin.userId?.fullName || 'the reserver'}} is responsible for the full court fee.
             </div>
           </div>
         </div>
@@ -977,11 +999,6 @@ interface AvatarInfo {
             <strong>Time:</strong> {{reservationToLeave.timeSlotDisplay}}<br>
             <strong>Reserved by:</strong> {{reservationToLeave.userId?.fullName}}<br>
             <strong>Players:</strong> {{formatPlayerNames(getAllPlayers(reservationToLeave))}}
-          </div>
-
-          <div class="fee-warning" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;margin:12px 0;color:#991b1b;text-align:left;">
-            <strong>⚠️ Note</strong><br>
-            Your pending payment for this reservation will be cancelled. The remaining members' fees will be recalculated.
           </div>
 
           <p class="warning-text">This action cannot be undone.</p>
@@ -1817,8 +1834,7 @@ click "Try Again" below to reconnect.
         const mergedReservation: Reservation = {
           ...firstSlot,
           timeSlotDisplay: this.formatTimeRange(lastSlot.timeSlot, firstSlot.timeSlot + 1),
-          totalFee: totalFee,
-          feePerPlayer: totalFee / firstSlot.players.length
+          totalFee: totalFee
         };
 
         grouped.push(mergedReservation);
@@ -1873,8 +1889,7 @@ click "Try Again" below to reconnect.
         const mergedReservation: Reservation = {
           ...firstSlot,
           timeSlotDisplay: this.formatTimeRange(firstSlot.timeSlot, lastSlot.timeSlot + 1),
-          totalFee: totalFee,
-          feePerPlayer: totalFee / firstSlot.players.length
+          totalFee: totalFee
         };
         
         grouped.push(mergedReservation);
@@ -2137,15 +2152,12 @@ click "Try Again" below to reconnect.
     this.joinReservation(id);
   }
 
-  // Count current members (reserver + member players) for fee display
-  getJoinMemberCount(reservation: any): number {
-    if (!reservation) return 1;
-    let count = 1; // reserver is always a member
-    (reservation.players as any[] || []).forEach((p: any) => {
-      const isMember = typeof p === 'object' ? p.isMember : true;
-      if (isMember) count++;
-    });
-    return count;
+  // The reserver is solely responsible for the court fee; other players owe nothing.
+  isReserverOfReservation(reservation: any): boolean {
+    const currentUserId = this.authService.currentUser?._id;
+    if (!currentUserId) return false;
+    const reserverId = reservation.userId?._id || reservation.userId;
+    return reserverId === currentUserId;
   }
 
   canJoinReservation(reservation: any): boolean {

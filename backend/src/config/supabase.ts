@@ -56,3 +56,48 @@ export const deleteFromStorage = async (path: string): Promise<{ success: boolea
     return { success: false, error: error.message };
   }
 };
+
+// Bucket name for payment proof-of-payment images (private bucket - no public URLs)
+export const PAYMENT_PROOFS_BUCKET = process.env.SUPABASE_PAYMENT_PROOFS_BUCKET || 'payment-proofs';
+
+/**
+ * Helper function to get a time-limited signed URL for a private proof-of-payment image
+ * @param path - The storage path of the image
+ * @param expiresInSeconds - How long the signed URL remains valid
+ * @returns The signed URL
+ */
+export const getSignedProofUrl = async (path: string, expiresInSeconds = 300): Promise<string> => {
+  if (!supabase) {
+    throw new Error('Supabase is not configured');
+  }
+  const { data, error } = await supabase.storage.from(PAYMENT_PROOFS_BUCKET).createSignedUrl(path, expiresInSeconds);
+  if (error || !data?.signedUrl) {
+    throw new Error(error?.message || 'Failed to create signed URL');
+  }
+  return data.signedUrl;
+};
+
+/**
+ * Helper function to delete a proof-of-payment image from Supabase Storage
+ * @param path - The storage path of the image
+ * @returns Promise with success/error
+ */
+export const deleteProofFromStorage = async (path: string): Promise<{ success: boolean; error?: string }> => {
+  if (!supabase) {
+    return { success: false, error: 'Supabase is not configured' };
+  }
+
+  try {
+    const { error } = await supabase.storage.from(PAYMENT_PROOFS_BUCKET).remove([path]);
+
+    if (error) {
+      console.error('Error deleting proof of payment from Supabase Storage:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Exception deleting proof of payment from Supabase Storage:', error);
+    return { success: false, error: error.message };
+  }
+};

@@ -59,6 +59,7 @@ interface PaymentRecord {
   isAssignedExpense: boolean;
   description?: string;
   openPlayParticipants: string[];
+  hasProofOfPayment?: boolean;
 }
 
 interface PaymentsReportData {
@@ -116,6 +117,7 @@ export class CourtReceiptsReportComponent implements OnInit {
 
   // Tab management for native HTML tabs
   activeTab: 'active' | 'credits' | 'archived' = 'active';
+  activePaymentNameFilter = '';
 
   private apiUrl = environment.apiUrl;
   
@@ -159,9 +161,23 @@ export class CourtReceiptsReportComponent implements OnInit {
   // Tab filtering methods
   getActivePayments(): PaymentRecord[] {
     if (!this.reportData) return [];
-    return this.reportData.payments.filter(p => 
+    const activePayments = this.reportData.payments.filter(p =>
       p.status === 'completed'
     );
+
+    const nameFilter = this.activePaymentNameFilter.trim().toLowerCase();
+    if (!nameFilter) {
+      return activePayments;
+    }
+
+    return activePayments.filter(payment =>
+      payment.memberName.toLowerCase().includes(nameFilter) ||
+      payment.memberUsername.toLowerCase().includes(nameFilter)
+    );
+  }
+
+  clearActivePaymentNameFilter(): void {
+    this.activePaymentNameFilter = '';
   }
 
   getCreditDeposits(): CreditTransaction[] {
@@ -370,6 +386,22 @@ export class CourtReceiptsReportComponent implements OnInit {
       paymentMethod,
       ...data
     }));
+  }
+
+  viewProofOfPayment(payment: PaymentRecord): void {
+    if (!payment.hasProofOfPayment) {
+      this.showMessage('No proof of payment uploaded for this payment', 'error');
+      return;
+    }
+
+    this.http.get<any>(`${this.apiUrl}/payments/${payment._id}/proof`).subscribe({
+      next: (response) => {
+        window.open(response.url, '_blank');
+      },
+      error: (error) => {
+        this.showMessage(error.error?.error || 'Failed to load proof of payment', 'error');
+      }
+    });
   }
 
   approvePayment(payment: PaymentRecord): void {

@@ -8,6 +8,8 @@ import CourtUsageReport from '../models/CourtUsageReport';
 import CreditTransaction from '../models/CreditTransaction';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
+import { attachProofOfPayment } from '../services/paymentProofService';
+import { getSignedProofUrl } from '../config/supabase';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -356,7 +358,19 @@ async function updateCourtUsageReport(payment: any): Promise<void> {
 
 // Create payment for a reservation
 export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { reservationId, paymentMethod, amount, customAmount, isManualPayment, playerNames, courtUsageDate, notes, payForUserIds } = req.body;
+  let { reservationId, paymentMethod, amount, customAmount, isManualPayment, playerNames, courtUsageDate, notes } = req.body;
+
+  // Normalize fields that arrive as strings when the request is multipart/form-data (proof-of-payment upload)
+  if (typeof isManualPayment === 'string') {
+    isManualPayment = isManualPayment === 'true';
+  }
+  if (typeof playerNames === 'string') {
+    try {
+      playerNames = JSON.parse(playerNames);
+    } catch {
+      playerNames = [playerNames];
+    }
+  }
 
   console.log('💰 CREATE PAYMENT REQUEST:', {
     reservationId,
@@ -367,7 +381,6 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
     playerNames,
     courtUsageDate,
     notes,
-    payForUserIds,
     userRole: req.user?.role,
     username: req.user?.username,
     fullRequestBody: req.body
@@ -424,9 +437,9 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
     });
   }
 
-  // Check if payment already exists for this reservation (skip for manual payments AND multi-member payments)
+  // Check if payment already exists for this reservation (skip for manual payments)
   let existingPayment = null;
-  if (!isManualPayment && reservationId && !payForUserIds) {
+  if (!isManualPayment && reservationId) {
     existingPayment = await Payment.findOne({
       reservationId,
       status: { $in: ['pending', 'completed'] }
@@ -435,8 +448,6 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
 
   console.log('💰 EXISTING PAYMENT CHECK:', {
     reservationId,
-    payForUserIds: payForUserIds || null,
-    skipCheck: !!payForUserIds,
     existingPayment: existingPayment ? {
       id: existingPayment._id,
       status: existingPayment.status,
@@ -515,15 +526,27 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
     if (customAmount) {
       paymentAmount = parseFloat(customAmount);
       isAdminOverride = req.user.role === 'admin' || req.user.role === 'superadmin';
+    } else if (!paymentAmount && reservation && reservation.players.length > 0 &&
+               typeof reservation.players[0] === 'object' && 'isMember' in (reservation.players[0] as any) &&
+               reservation.totalFee > 0) {
+      // New-format (Dec 2025+) reservations already have the correct total fee computed
+      // by the model's pre-save hook — the reserver owes the full amount.
+      paymentAmount = reservation.totalFee;
+      calculationBreakdown = {
+        amount: paymentAmount,
+        breakdown: {
+          calculation: `Reservation total fee: ₱${paymentAmount}`
+        }
+      };
     } else if (!paymentAmount && reservation) {
-      // Calculate payment amount with proper member/non-member pricing
+      // Legacy (pre-December 2025) pricing for old string-array player format
       const peakHours = (process.env.PEAK_HOURS || '5,18,19,20,21').split(',').map(h => parseInt(h));
       const peakHourFee = parseInt(process.env.PEAK_HOUR_FEE || '100');
       const offPeakFeePerMember = parseInt(process.env.OFF_PEAK_FEE_PER_MEMBER || '20');
       const offPeakFeePerNonMember = parseInt(process.env.OFF_PEAK_FEE_PER_NON_MEMBER || '50');
-      
+
       const isPeakHour = peakHours.includes(reservation.timeSlot);
-    
+
     // Get all active members for player categorization
     const members = await User.find({
       role: { $in: ['member', 'admin'] },
@@ -665,273 +688,7 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
     }
   }
 
-  // Handle multi-member payment (pay for others)
-  if (payForUserIds && Array.isArray(payForUserIds) && payForUserIds.length > 0) {
-    console.log(`💰 Multi-member payment requested for ${payForUserIds.length} members`);
-
-    // Validate that user is the reserver (only reserver can pay for others)
-    if (!isManualPayment && reservation && reservation.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        error: 'Only the reserver can pay for other members'
-      });
-    }
-
-    // Validate all users exist and are in the reservation
-    const targetUsers = await User.find({ _id: { $in: payForUserIds } });
-    if (targetUsers.length !== payForUserIds.length) {
-      return res.status(400).json({
-        success: false,
-        error: 'One or more users not found'
-      });
-    }
-
-    // Verify all users are in the reservation
-    if (!isManualPayment && reservation) {
-      for (const userId of payForUserIds) {
-        const isInReservation = reservation.players.some(player => {
-          if (typeof player === 'object' && 'userId' in player) {
-            return player.userId?.toString() === userId;
-          }
-          return false;
-        });
-
-        if (!isInReservation) {
-          const user = targetUsers.find(u => u._id.toString() === userId);
-          return res.status(400).json({
-            success: false,
-            error: `User ${user?.fullName} is not in this reservation`
-          });
-        }
-      }
-    }
-
-    // Check for already completed payments (don't allow duplicate completed payments)
-    const completedPayments = await Payment.find({
-      reservationId: reservationId,
-      userId: { $in: payForUserIds },
-      status: { $in: ['completed', 'record'] }
-    });
-
-    if (completedPayments.length > 0) {
-      const duplicateUser = targetUsers.find(u =>
-        completedPayments.some(p => p.userId.toString() === u._id.toString())
-      );
-      return res.status(400).json({
-        success: false,
-        error: `Payment already completed for ${duplicateUser?.fullName}`
-      });
-    }
-
-    // Find existing pending payments that can be updated
-    const existingPendingPayments = await Payment.find({
-      reservationId: reservationId,
-      userId: { $in: payForUserIds },
-      status: 'pending'
-    });
-
-    const createdPayments = [];
-
-    console.log(`💰 Processing payments for ${payForUserIds.length} users:`, payForUserIds);
-
-    for (const userId of payForUserIds) {
-      const targetUser = targetUsers.find(u => u._id.toString() === userId);
-      console.log(`💰 Processing payment for user: ${targetUser?.fullName} (${userId})`);
-
-      // Check if this user already has a pending payment
-      const existingPayment = existingPendingPayments.find(p => p.userId.toString() === userId);
-      console.log(`💰 Existing pending payment found for ${targetUser?.fullName}:`, existingPayment ? 'YES' : 'NO');
-
-      // Calculate individual amount for this member
-      let memberAmount = paymentAmount;
-      if (!isManualPayment && reservation) {
-        // Use the reservation's totalFee which correctly calculates multi-hour peak/off-peak pricing
-        const members = reservation.players.filter((p: any) => typeof p === 'object' && p.isMember);
-        const guests = reservation.players.filter((p: any) => typeof p === 'object' && p.isGuest);
-
-        // Calculate total guest fee (guests pay 70 per hour)
-        const duration = reservation.duration || 1;
-        const totalGuestFee = guests.length * 70 * duration;
-
-        // Base fee is total fee minus guest fees
-        const baseFee = reservation.totalFee - totalGuestFee;
-        const baseFeePerMember = baseFee / members.length;
-
-        // Only reserver pays guest fees
-        if (userId === reservation.userId.toString()) {
-          memberAmount = baseFeePerMember + totalGuestFee;
-        } else {
-          memberAmount = baseFeePerMember;
-        }
-
-        console.log(`💰 Payment calculation for ${targetUser?.fullName}:`, {
-          totalFee: reservation.totalFee,
-          memberCount: members.length,
-          guestCount: guests.length,
-          baseFee,
-          baseFeePerMember,
-          totalGuestFee,
-          isReserver: userId === reservation.userId.toString(),
-          finalAmount: memberAmount
-        });
-      }
-
-      let payment;
-
-      if (existingPayment) {
-        // Update existing pending payment
-        console.log(`💰 Updating existing pending payment for ${targetUser?.fullName}`);
-
-        // Only set paidBy if paying for someone else
-        const isPayingForSelf = userId === req.user._id.toString();
-
-        if (!isPayingForSelf) {
-          existingPayment.paidBy = req.user._id.toString();
-          existingPayment.notes = notes || `Paid by ${req.user.fullName} on behalf of ${targetUser?.fullName}`;
-          if (existingPayment.metadata) {
-            existingPayment.metadata.paidOnBehalf = true;
-            existingPayment.metadata.originalDebtor = targetUser?.fullName;
-          }
-        } else {
-          existingPayment.notes = notes || `Paid by ${req.user.fullName}`;
-        }
-
-        existingPayment.amount = memberAmount;
-        existingPayment.paymentMethod = paymentMethod;
-        existingPayment.status = 'completed';
-        existingPayment.paymentDate = existingPayment.paymentDate || new Date();
-
-        await existingPayment.save();
-        await existingPayment.populate('userId', 'username fullName email');
-        await existingPayment.populate('paidBy', 'username fullName email');
-
-        if (!isManualPayment) {
-          await existingPayment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
-        }
-
-        payment = existingPayment;
-      } else {
-        // Create new payment
-        console.log(`💰 Creating new payment for ${targetUser?.fullName}`);
-
-        // Only set paidBy if paying for someone else
-        const isPayingForSelf = userId === req.user._id.toString();
-
-        const paymentData: any = {
-          userId: userId,
-          amount: memberAmount,
-          paymentMethod,
-          status: 'completed',
-          dueDate
-        };
-
-        if (!isPayingForSelf) {
-          paymentData.paidBy = req.user._id.toString();
-          paymentData.notes = notes || `Paid by ${req.user.fullName} on behalf of ${targetUser?.fullName}`;
-        } else {
-          paymentData.notes = notes || `Paid by ${req.user.fullName}`;
-        }
-
-        if (isManualPayment) {
-          paymentData.description = `Manual payment for court usage on ${new Date(courtUsageDate).toDateString()}`;
-          paymentData.metadata = {
-            isManualPayment: true,
-            playerNames: [targetUser?.fullName],
-            courtUsageDate: new Date(courtUsageDate),
-            playerCount: 1,
-            originalFee: memberAmount,
-            discounts: [],
-            paidOnBehalf: !isPayingForSelf,
-            originalDebtor: isPayingForSelf ? undefined : targetUser?.fullName
-          };
-        } else {
-          paymentData.reservationId = reservationId;
-          paymentData.description = `Court reservation payment for ${reservation!.date.toDateString()} ${reservation!.timeSlot}:00-${reservation!.timeSlot + 1}:00`;
-          paymentData.metadata = {
-            timeSlot: reservation!.timeSlot,
-            date: reservation!.date,
-            playerCount: reservation!.players.length,
-            isPeakHour: calculationBreakdown?.isPeakHour,
-            originalFee: memberAmount,
-            discounts: [],
-            paidOnBehalf: !isPayingForSelf,
-            originalDebtor: isPayingForSelf ? undefined : targetUser?.fullName
-          };
-        }
-
-        payment = new Payment(paymentData);
-        await payment.save();
-        await payment.populate('userId', 'username fullName email');
-        await payment.populate('paidBy', 'username fullName email');
-
-        if (!isManualPayment) {
-          await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
-
-          // Add payment ID to reservation
-          if (!reservation!.paymentIds) {
-            reservation!.paymentIds = [];
-          }
-          reservation!.paymentIds.push((payment._id as any).toString());
-        }
-      }
-
-      createdPayments.push(payment);
-      console.log(`💰 Added to createdPayments. Total so far: ${createdPayments.length}`);
-    }
-
-    console.log(`💰 FINAL: Processed ${createdPayments.length} payments`);
-    console.log(`💰 Payment details:`, createdPayments.map(p => ({
-      id: p._id,
-      userId: p.userId,
-      amount: p.amount,
-      status: p.status,
-      paidBy: p.paidBy
-    })));
-
-    // Update reservation payment status
-    if (!isManualPayment && reservation) {
-      // Check if all members have paid
-      const allPayments = await Payment.find({
-        reservationId: reservationId,
-        status: { $in: ['completed', 'record'] }
-      });
-
-      const members = reservation.players.filter((p: any) => typeof p === 'object' && p.isMember);
-      if (allPayments.length >= members.length) {
-        reservation.paymentStatus = 'paid';
-      }
-      // Note: We keep it as 'pending' if not all members have paid
-      // The 'partial' status would require schema update
-
-      await reservation.save({ validateBeforeSave: false });
-    }
-
-    // Add debug info to response
-    const debugInfo = {
-      requestedUserIds: payForUserIds,
-      processedCount: createdPayments.length,
-      paymentDetails: createdPayments.map((p: any) => ({
-        paymentId: p._id.toString(),
-        userId: p.userId._id?.toString() || p.userId.toString(),
-        userName: p.userId.fullName || 'Unknown',
-        amount: p.amount,
-        status: p.status,
-        paidBy: p.paidBy?.fullName || 'Self'
-      }))
-    };
-
-    console.log(`💰 Sending response with debug info:`, debugInfo);
-
-    return res.status(201).json({
-      success: true,
-      data: createdPayments,
-      message: `Successfully created ${createdPayments.length} payment(s)`,
-      totalAmount: createdPayments.reduce((sum, p) => sum + p.amount, 0),
-      debug: debugInfo
-    });
-  }
-
-  // Create single payment record (original logic)
+  // Create single payment record
   let paymentData: any = {
     userId: isManualPayment ? req.user._id : reservation!.userId,
     amount: paymentAmount,
@@ -966,7 +723,18 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
     };
   }
 
+  if (paymentMethod !== 'cash' && !req.file) {
+    return res.status(400).json({
+      success: false,
+      error: 'Proof of payment image is required to complete this payment'
+    });
+  }
+
   const payment = new Payment(paymentData);
+
+  if (req.file) {
+    await attachProofOfPayment(payment, req.file, req.user._id.toString());
+  }
 
   await payment.save();
   await payment.populate('userId', 'username fullName email');
@@ -1103,6 +871,7 @@ export const getPayments = asyncHandler(async (req: AuthenticatedRequest, res: R
       const reservation = payment.reservationId || null;
       return {
         ...payment,
+        hasProofOfPayment: !!payment.proofOfPaymentPath,
         reservationId: reservation ? {
           _id: reservation._id,
           date: reservation.date,
@@ -1169,6 +938,45 @@ export const getPayment = asyncHandler(async (req: AuthenticatedRequest, res: Re
   });
 });
 
+// Get a short-lived signed URL for viewing a payment's uploaded proof of payment
+export const getPaymentProofUrl = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  const payment = await Payment.findById(id);
+
+  if (!payment) {
+    return res.status(404).json({
+      success: false,
+      error: 'Payment not found'
+    });
+  }
+
+  const isOwner = payment.userId.toString() === req.user!._id.toString()
+    || (payment.paidBy && payment.paidBy.toString() === req.user!._id.toString());
+  const isPrivileged = ['treasurer', 'admin', 'superadmin'].includes(req.user!.role);
+
+  if (!isOwner && !isPrivileged) {
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied'
+    });
+  }
+
+  if (!payment.proofOfPaymentPath) {
+    return res.status(404).json({
+      success: false,
+      error: 'No proof of payment uploaded for this payment'
+    });
+  }
+
+  const url = await getSignedProofUrl(payment.proofOfPaymentPath, 300);
+
+  return res.status(200).json({
+    success: true,
+    url
+  });
+});
+
 // Process payment (mark as completed)
 export const processPayment = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
@@ -1203,10 +1011,21 @@ export const processPayment = asyncHandler(async (req: AuthenticatedRequest, res
     });
   }
 
+  if (payment.paymentMethod !== 'cash' && !req.file && !payment.proofOfPaymentPath) {
+    return res.status(400).json({
+      success: false,
+      error: 'Proof of payment image is required to complete this payment'
+    });
+  }
+
   try {
     // Start a transaction-like operation by updating payment first
     const originalStatus = payment.status;
-    
+
+    if (req.file) {
+      await attachProofOfPayment(payment, req.file, req.user!._id.toString());
+    }
+
     // Update payment status and set payment date
     payment.status = 'completed';
     payment.paymentDate = new Date();
@@ -1708,6 +1527,7 @@ export const getMyPayments = asyncHandler(async (req: AuthenticatedRequest, res:
 
     const payments = paymentsRaw.map((p: any) => ({
       ...p,
+      hasProofOfPayment: !!p.proofOfPaymentPath,
       userId: isValidObjectId(p.userId) ? (userMap.get(p.userId) || { _id: p.userId }) : { _id: null }
     }));
 
@@ -2394,255 +2214,6 @@ export const processPaymentValidation = [
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('Reference number must be 1-50 characters')
-];
-
-// Pay on behalf of another member
-export const payOnBehalf = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { reservationId, payForUserId, amount, paymentMethod, transactionId, notes } = req.body;
-
-  console.log('💰 PAY ON BEHALF REQUEST:', {
-    reservationId,
-    payForUserId,
-    amount,
-    paymentMethod,
-    transactionId,
-    notes,
-    payerUsername: req.user?.username,
-    payerId: req.user?._id.toString()
-  });
-
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      error: 'Authentication required'
-    });
-  }
-
-  // Validate required fields
-  if (!reservationId) {
-    return res.status(400).json({
-      success: false,
-      error: 'Reservation ID is required'
-    });
-  }
-
-  if (!payForUserId) {
-    return res.status(400).json({
-      success: false,
-      error: 'User ID to pay for is required'
-    });
-  }
-
-  if (!amount || amount <= 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'Valid payment amount is required'
-    });
-  }
-
-  if (!paymentMethod) {
-    return res.status(400).json({
-      success: false,
-      error: 'Payment method is required'
-    });
-  }
-
-  // Validate payment method
-  const validPaymentMethods = ['cash', 'bank_transfer', 'gcash'];
-  if (!validPaymentMethods.includes(paymentMethod)) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid payment method'
-    });
-  }
-
-  // Validate reservation exists
-  const reservation = await Reservation.findById(reservationId);
-  if (!reservation) {
-    return res.status(404).json({
-      success: false,
-      error: 'Reservation not found'
-    });
-  }
-
-  // Verify the requester is the reserver
-  if (reservation.userId.toString() !== req.user._id.toString()) {
-    return res.status(403).json({
-      success: false,
-      error: 'Only the reserver can pay for other members'
-    });
-  }
-
-  // Verify the target member exists
-  const targetMember = await User.findById(payForUserId);
-  if (!targetMember) {
-    return res.status(404).json({
-      success: false,
-      error: 'Target member not found'
-    });
-  }
-
-  // Verify target member is in the reservation's player list
-  const isInReservation = reservation.players.some(player => {
-    if (typeof player === 'object' && 'userId' in player) {
-      return player.userId?.toString() === payForUserId;
-    }
-    return false;
-  });
-
-  if (!isInReservation) {
-    return res.status(400).json({
-      success: false,
-      error: 'Target member is not in this reservation'
-    });
-  }
-
-  // Check if payment already exists for this member in this reservation
-  const existingPayment = await Payment.findOne({
-    reservationId,
-    userId: payForUserId,
-    status: { $in: ['pending', 'completed', 'record'] }
-  });
-
-  if (existingPayment) {
-    return res.status(400).json({
-      success: false,
-      error: 'Payment already exists for this member'
-    });
-  }
-
-  // Calculate due date (same as regular payment creation)
-  const reservationDate = new Date(reservation.date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  reservationDate.setHours(0, 0, 0, 0);
-
-  let dueDate = new Date();
-  if (reservationDate.getTime() === today.getTime()) {
-    // Same day booking - due immediately
-    dueDate.setHours(23, 59, 59, 999);
-  } else {
-    // Advance booking - due 7 days from now or 1 day before reservation, whichever is earlier
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-
-    const oneDayBeforeReservation = new Date(reservationDate);
-    oneDayBeforeReservation.setDate(oneDayBeforeReservation.getDate() - 1);
-
-    dueDate.setTime(Math.min(sevenDaysFromNow.getTime(), oneDayBeforeReservation.getTime()));
-  }
-
-  // Get time slot info for description
-  const timeSlot = reservation.timeSlot;
-  const formattedDate = new Date(reservation.date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC'
-  });
-
-  // Calculate if peak hour
-  const peakHours = (process.env.PEAK_HOURS || '5,18,19,20,21').split(',').map(h => parseInt(h));
-  const isPeakHour = peakHours.includes(reservation.timeSlot);
-
-  // Create payment record
-  const payment = new Payment({
-    reservationId,
-    userId: payForUserId,
-    paidBy: req.user._id.toString(),
-    amount: parseFloat(amount),
-    currency: 'PHP',
-    paymentMethod,
-    status: 'completed',
-    transactionId: transactionId || undefined,
-    paymentDate: new Date(),
-    dueDate,
-    description: `Court fee for ${formattedDate} at ${timeSlot}:00 (Paid by ${req.user.fullName})`,
-    notes: notes || `Paid on behalf by ${req.user.fullName}`,
-    metadata: {
-      timeSlot: reservation.timeSlot,
-      date: reservation.date,
-      playerCount: reservation.players.length,
-      isPeakHour: isPeakHour,
-      originalFee: parseFloat(amount),
-      paidOnBehalf: true,
-      originalDebtor: targetMember.fullName
-    }
-  });
-
-  await payment.save();
-
-  console.log('✅ Payment created on behalf:', {
-    paymentId: payment._id,
-    paidBy: req.user.fullName,
-    paidFor: targetMember.fullName,
-    amount: payment.amount
-  });
-
-  // Add payment ID to reservation's paymentIds array
-  if (!reservation.paymentIds) {
-    reservation.paymentIds = [];
-  }
-  reservation.paymentIds.push((payment._id as any).toString());
-
-  // Check if all members have paid
-  const membersInReservation = reservation.players.filter(p => {
-    if (typeof p === 'object' && 'isMember' in p) {
-      return p.isMember;
-    }
-    return false;
-  });
-
-  const paidCount = reservation.paymentIds.length;
-  if (paidCount >= membersInReservation.length) {
-    reservation.paymentStatus = 'paid';
-    console.log('✅ All members have paid, updating reservation status to "paid"');
-  }
-
-  await reservation.save();
-
-  // Populate related data for response
-  await payment.populate('userId', 'username fullName email');
-  await payment.populate('paidBy', 'username fullName email');
-  await payment.populate('reservationId', 'userId date timeSlot endTimeSlot duration players status totalFee timeSlotDisplay tennisBalls');
-
-  return res.status(201).json({
-    success: true,
-    data: payment,
-    message: `Payment created successfully on behalf of ${targetMember.fullName}`
-  });
-});
-
-export const payOnBehalfValidation = [
-  body('reservationId')
-    .notEmpty()
-    .withMessage('Reservation ID is required')
-    .isMongoId()
-    .withMessage('Invalid reservation ID'),
-  body('payForUserId')
-    .notEmpty()
-    .withMessage('User ID to pay for is required')
-    .isMongoId()
-    .withMessage('Invalid user ID'),
-  body('amount')
-    .notEmpty()
-    .withMessage('Amount is required')
-    .isFloat({ min: 0 })
-    .withMessage('Amount cannot be negative'),
-  body('paymentMethod')
-    .notEmpty()
-    .withMessage('Payment method is required')
-    .isIn(['cash', 'bank_transfer', 'gcash'])
-    .withMessage('Invalid payment method'),
-  body('transactionId')
-    .optional()
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage('Transaction ID cannot exceed 100 characters'),
-  body('notes')
-    .optional()
-    .isLength({ max: 500 })
-    .withMessage('Notes cannot exceed 500 characters')
 ];
 
 // ======================

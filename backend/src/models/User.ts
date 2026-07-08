@@ -81,6 +81,11 @@ const userSchema = new Schema<IUserDocument>({
     default: false,
     index: true
   },
+  isCoach: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
   deletedAt: {
     type: Date,
     default: null

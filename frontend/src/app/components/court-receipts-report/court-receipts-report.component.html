@@ -1,5 +1,5 @@
 <div class="report-container">
-  <!-- Modern Header -->
+  <!-- Page Header -->
   <div class="modern-header">
     <div class="header-content">
       <button (click)="goBack()" class="back-btn" aria-label="Go back">
@@ -12,9 +12,9 @@
           <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
           </svg>
-          Payment Management
+          Reports & Payments
         </h1>
-        <p class="page-subtitle">Streamlined payment approval and recording workflow</p>
+        <p class="page-subtitle">Treasury overview, collections, and payment recording workflow</p>
       </div>
     </div>
   </div>
@@ -26,7 +26,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
           <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
         </svg>
-        <span>Filter Options</span>
+        <span>Report Filters</span>
       </div>
       <form [formGroup]="dateRangeForm" class="filter-form">
         <div class="date-inputs">
@@ -90,7 +90,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
         </svg>
-        Overview & Analytics
+        Collections Overview
       </h2>
 
       <div class="stats-grid">
@@ -103,7 +103,7 @@
           </div>
           <div class="stat-content">
             <div class="stat-label">Total Payments</div>
-            <div class="stat-value">₱{{reportData.summary.totalAmount.toFixed(2)}}</div>
+            <div class="stat-value">&#8369;{{reportData.summary.totalAmount.toFixed(2)}}</div>
             <div class="stat-meta">{{reportData.summary.totalPayments}} transactions</div>
           </div>
         </div>
@@ -178,7 +178,7 @@
             </div>
           </div>
           <div class="revenue-amount service-fee-amount">
-            ₱{{reportData.summary.totalServiceFees?.toFixed(2) || '0.00'}}
+            &#8369;{{reportData.summary.totalServiceFees?.toFixed(2) || '0.00'}}
           </div>
           <div class="revenue-footer">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -201,7 +201,7 @@
             </div>
           </div>
           <div class="revenue-amount court-revenue-amount">
-            ₱{{reportData.summary.totalCourtRevenue?.toFixed(2) || '0.00'}}
+            &#8369;{{reportData.summary.totalCourtRevenue?.toFixed(2) || '0.00'}}
           </div>
           <div class="revenue-footer">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -234,7 +234,7 @@
               <div class="method-name">{{formatPaymentMethod(method.paymentMethod)}}</div>
               <div class="method-count">{{method.count}} payments</div>
             </div>
-            <div class="method-amount">₱{{method.totalAmount.toFixed(2)}}</div>
+            <div class="method-amount">&#8369;{{method.totalAmount.toFixed(2)}}</div>
           </div>
         </div>
       </div>
@@ -274,6 +274,31 @@
         <div class="tab-content">
           <!-- Active Payments Tab -->
           <div *ngIf="activeTab === 'active'" class="payments-table-container">
+            <div class="active-payments-toolbar">
+              <div class="active-name-filter">
+                <label for="activePaymentNameFilter">Filter by member name</label>
+                <div class="filter-input-row">
+                  <input
+                    id="activePaymentNameFilter"
+                    type="search"
+                    class="form-input"
+                    placeholder="Search name or username"
+                    [(ngModel)]="activePaymentNameFilter">
+                  <button
+                    *ngIf="activePaymentNameFilter"
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    (click)="clearActivePaymentNameFilter()">
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div class="active-payments-total">
+                <span>{{getActivePayments().length}} shown</span>
+                <strong>&#8369;{{getActivePaymentsSubtotal().toFixed(2)}}</strong>
+              </div>
+            </div>
+
             <div class="table-wrapper" *ngIf="getActivePayments().length > 0">
               <table class="modern-table">
                 <thead>
@@ -324,15 +349,15 @@
                         [class.editable]="canEditPayment(payment)"
                         (click)="handleAmountClick(payment)"
                         [title]="getAmountTitle(payment)">
-                        <strong>₱{{payment.amount.toFixed(2)}}</strong>
+                        <strong>&#8369;{{payment.amount.toFixed(2)}}</strong>
                       </div>
                     </td>
                     <td>
                       <span *ngIf="payment.userId?.creditBalance && payment.userId.creditBalance > 0" class="credit-balance-cell has-credit">
-                        ₱{{payment.userId.creditBalance.toFixed(2)}}
+                        &#8369;{{payment.userId.creditBalance.toFixed(2)}}
                       </span>
                       <span *ngIf="!payment.userId?.creditBalance || payment.userId.creditBalance === 0" class="credit-balance-cell no-credit">
-                        —
+                        &mdash;
                       </span>
                     </td>
                     <td>
@@ -342,6 +367,12 @@
                     </td>
                     <td>
                       <div class="action-btns">
+                        <button
+                          *ngIf="payment.hasProofOfPayment"
+                          class="btn btn-sm btn-view-proof"
+                          (click)="viewProofOfPayment(payment)">
+                          View Proof
+                        </button>
                         <button
                           *ngIf="payment.status === 'pending'"
                           class="btn btn-sm btn-approve"
@@ -378,7 +409,7 @@
                   <tr class="subtotal-row">
                     <td colspan="7" class="subtotal-label">Subtotal</td>
                     <td colspan="3" class="subtotal-amount">
-                      <strong>₱{{getActivePaymentsSubtotal().toFixed(2)}}</strong>
+                      <strong>&#8369;{{getActivePaymentsSubtotal().toFixed(2)}}</strong>
                     </td>
                   </tr>
                 </tfoot>
@@ -389,7 +420,8 @@
                 <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
               </svg>
               <h3>No active payments found</h3>
-              <p>No payments awaiting approval or recording for the selected date range.</p>
+              <p *ngIf="!activePaymentNameFilter">No payments awaiting approval or recording for the selected date range.</p>
+              <p *ngIf="activePaymentNameFilter">No active payments match this member name filter.</p>
             </div>
           </div>
 
@@ -419,7 +451,7 @@
                         <small>@{{getUserUsername(deposit.userId)}}</small>
                       </div>
                     </td>
-                    <td><strong>₱{{deposit.amount.toFixed(2)}}</strong></td>
+                    <td><strong>&#8369;{{deposit.amount.toFixed(2)}}</strong></td>
                     <td>{{getPaymentMethodLabel(deposit.metadata?.paymentMethod)}}</td>
                     <td>
                       <span class="status-badge" [ngClass]="'status-' + deposit.status">
@@ -489,7 +521,7 @@
                         <div>{{payment.timeSlotDisplay}}</div>
                       </div>
                     </td>
-                    <td><strong>₱{{payment.amount.toFixed(2)}}</strong></td>
+                    <td><strong>&#8369;{{payment.amount.toFixed(2)}}</strong></td>
                     <td>{{formatPaymentMethod(payment.paymentMethod)}}</td>
                     <td>
                       <span class="status-badge" [ngClass]="'status-' + payment.status">
@@ -501,6 +533,12 @@
                       <span *ngIf="!payment.recordedAt" class="no-date">-</span>
                     </td>
                     <td>
+                      <button
+                        *ngIf="payment.hasProofOfPayment"
+                        class="btn btn-sm btn-view-proof"
+                        (click)="viewProofOfPayment(payment)">
+                        View Proof
+                      </button>
                       <button
                         *ngIf="payment.status === 'record'"
                         class="btn btn-sm btn-warn"
@@ -579,7 +617,7 @@
               <td>{{formatTime(payment.timeSlot)}}</td>
               <td>{{formatTime(payment.timeSlot + 1)}}</td>
               <td>{{formatPaymentMethod(payment.paymentMethod)}}</td>
-              <td><strong>₱{{payment.amount.toFixed(2)}}</strong></td>
+              <td><strong>&#8369;{{payment.amount.toFixed(2)}}</strong></td>
             </tr>
           </tbody>
         </table>
