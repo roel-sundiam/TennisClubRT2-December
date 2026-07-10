@@ -455,7 +455,7 @@ async function createReserverPayment(reservation: any): Promise<string[]> {
 
 // Create new reservation
 export const createReservation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-  const { date, timeSlot, players, duration = 1, tournamentTier = '100', totalFee }: CreateReservationRequest = req.body;
+  const { date, timeSlot, players, duration = 1, tournamentTier = '100', totalFee, allowJoin = false }: CreateReservationRequest = req.body;
 
   console.log('🔍 CREATE RESERVATION REQUEST:', {
     date,
@@ -771,6 +771,7 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     tournamentTier,
     totalFee: finalTotalFee,
     feeWaived: allHomeowners,
+    allowJoin,
     weatherForecast,
     tennisBalls: tennisBallsData,
     paymentIds: [] // Will be populated with payment IDs
@@ -801,7 +802,7 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
 // Update reservation (with duration and payment recalculation)
 export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
-  const { date, timeSlot, endTimeSlot, duration, isMultiHour, players, tennisBalls }: UpdateReservationRequest = req.body;
+  const { date, timeSlot, endTimeSlot, duration, isMultiHour, players, tennisBalls, allowJoin }: UpdateReservationRequest = req.body;
 
   const reservation = await Reservation.findById(id);
   
@@ -898,6 +899,9 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
   if (isMultiHour !== undefined) {
     reservation.isMultiHour = isMultiHour;
   }
+  if (allowJoin !== undefined) {
+    reservation.allowJoin = allowJoin;
+  }
 
   // Update players if provided
   if (players) {
@@ -923,6 +927,9 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
     const trimmedPlayers = players.map(p => p.trim());
     const playerObjects = await convertPlayersToObjects(trimmedPlayers);
     reservation.players = playerObjects;
+    // players is a Mixed-typed array — Mongoose can't auto-detect this reassignment as a change,
+    // so the pre-save hook's fee recalculation would otherwise silently be skipped.
+    reservation.markModified('players');
 
     // Check homeowner fee waiver: all homeowners + booked at least 6 hours before slot
     const updateSlotDateTime = new Date(reservation.date);
@@ -1824,6 +1831,12 @@ export const joinReservation = asyncHandler(async (req: AuthenticatedRequest, re
   // Only pending or confirmed reservations can be joined
   if (!['pending', 'confirmed'].includes(reservation.status)) {
     res.status(400).json({ success: false, message: 'Cannot join a reservation that is not active' });
+    return;
+  }
+
+  // Reserver must have allowed other members to join
+  if (!reservation.allowJoin) {
+    res.status(403).json({ success: false, message: 'The reserver has not allowed other members to join this reservation' });
     return;
   }
 

@@ -2107,6 +2107,21 @@
   }
 }
 
+.allow-join-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f5f7fa;
+  border: 2px solid #dbe2ea;
+  border-radius: 16px;
+
+  .hint {
+    color: #55606b;
+    font-size: 0.9rem;
+    margin: 0.5rem 0 0 0;
+    opacity: 0.85;
+  }
+}
+
 /* Mobile responsive for tennis balls */
 @media (max-width: 768px) {
   .tennis-balls-section {

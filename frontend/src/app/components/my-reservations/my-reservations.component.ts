@@ -31,6 +31,7 @@ interface Reservation {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no-show' | 'blocked';
   paymentStatus: 'pending' | 'paid' | 'overdue';
   totalFee: number;
+  allowJoin?: boolean;
   userId?: {
     _id: string;
     username: string;
@@ -2163,6 +2164,7 @@ click "Try Again" below to reconnect.
   canJoinReservation(reservation: any): boolean {
     if (!['pending', 'confirmed'].includes(reservation.status)) return false;
     if (this.isBlockedReservation(reservation)) return false;
+    if (!reservation.allowJoin) return false;
     const resDate = new Date(reservation.date);
     resDate.setHours(reservation.timeSlot, 0, 0, 0);
     if (resDate <= new Date()) return false;

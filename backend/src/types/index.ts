@@ -139,6 +139,7 @@ export interface CourtReservation {
   paymentIds?: string[]; // Track multiple payment IDs (December 2025 changes)
   totalFee: number;
   feeWaived?: boolean;
+  allowJoin?: boolean; // Whether other members are allowed to join this reservation
   weatherForecast?: {
     temperature: number;
     description: string;
@@ -183,6 +184,7 @@ export interface CreateReservationRequest {
   duration?: number; // Default to 1 hour if not specified
   tournamentTier?: '100' | '250' | '500';
   totalFee?: number; // Fee calculated by frontend
+  allowJoin?: boolean; // Whether other members are allowed to join this reservation
   tennisBalls?: {
     quantity: number;
   };
@@ -196,6 +198,7 @@ export interface UpdateReservationRequest {
   isMultiHour?: boolean;
   timeSlotDisplay?: string;
   players?: string[];
+  allowJoin?: boolean; // Whether other members are allowed to join this reservation
   tennisBalls?: {
     quantity: number;
   };

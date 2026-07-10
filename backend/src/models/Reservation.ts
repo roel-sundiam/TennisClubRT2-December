@@ -160,6 +160,11 @@ const reservationSchema = new Schema<IReservationDocument>({
     default: false,
     index: true
   },
+  // Whether other members are allowed to join this reservation via the Join feature
+  allowJoin: {
+    type: Boolean,
+    default: false
+  },
   // Recurring block support: links all occurrences in a series
   recurringGroupId: {
     type: String,

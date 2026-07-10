@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
 import { SystemSettingsService } from '../../services/system-settings.service';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { environment } from '../../../environments/environment';
 
 // Custom notification interface
@@ -59,12 +60,13 @@ interface Reservation {
   duration?: number;
   endTimeSlot?: number;
   isMultiHour?: boolean;
+  allowJoin?: boolean;
 }
 
 @Component({
   selector: 'app-reservations',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MatSlideToggleModule],
   animations: [
     trigger('slideInOut', [
       transition(':enter', [
@@ -452,6 +454,14 @@ interface Reservation {
             </div>
           </div>
 
+          <!-- Allow Join Section -->
+          <div class="allow-join-section" *ngIf="selectedStartTime && selectedEndTime">
+            <mat-slide-toggle [checked]="allowJoin" (change)="allowJoin = $event.checked" color="primary">
+              Allow other members to join this reservation
+            </mat-slide-toggle>
+            <p class="hint">When enabled, other approved members can add themselves as a player on this reservation.</p>
+          </div>
+
           <!-- Fee Information -->
           <div class="fee-info" *ngIf="selectedStartTime && selectedEndTime && (calculatedFee > 0 || isAllHomeownerBooking())">
             <h3>Fee Information</h3>
@@ -664,6 +674,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
   tennisBallQuantity = 0;
   maxTennisBalls = 10;
 
+  // Allow other members to join this reservation (default: off)
+  allowJoin = false;
+
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
@@ -798,6 +811,9 @@ export class ReservationsComponent implements OnInit, OnDestroy {
         } else {
           this.tennisBallQuantity = 0;
         }
+
+        // Load allow-join setting
+        this.allowJoin = reservation.allowJoin ?? false;
 
         this.showSuccess(
           'Edit Mode',
@@ -1779,6 +1795,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       isMultiHour: duration > 1,
       timeSlotDisplay: `${startTime}:00 - ${endTime}:00`,
       players: players,
+      allowJoin: this.allowJoin,
     };
 
     // Add tennis balls (always include, even if 0)
@@ -1858,6 +1875,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       totalFee: this.calculatedFee, // Total fee for entire duration
       paymentStatus: 'pending',
       status: 'pending',
+      allowJoin: this.allowJoin,
     };
 
     // Add tennis balls if quantity > 0
