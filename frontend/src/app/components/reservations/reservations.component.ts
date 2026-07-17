@@ -373,7 +373,14 @@ interface Reservation {
 
             <!-- Custom Players Section -->
             <div class="custom-players-section" *ngIf="!loadingMembers">
-              <h4>Non-Member Players (₱70 per hour each)</h4>
+              <h4>
+                Non-Member Players (₱70 per hour each)
+                <span *ngIf="isCoachUser">— at least one guest required</span>
+              </h4>
+
+              <div class="hint" *ngIf="isCoachUser">
+                Coaches and trainers must include at least one guest in every court reservation.
+              </div>
 
               <div
                 *ngFor="
@@ -384,7 +391,7 @@ interface Reservation {
                 class="custom-player-input"
               >
                 <div class="field">
-                  <label>Custom Player {{ i + 1 }}</label>
+                  <label>{{ isCoachUser ? 'Guest' : 'Custom Player' }} {{ i + 1 }}</label>
                   <div class="player-row">
                     <input
                       type="text"
@@ -411,8 +418,12 @@ interface Reservation {
                 (click)="addCustomPlayer()"
                 class="add-btn"
               >
-                + Add Custom Player
+                + Add {{ isCoachUser ? 'Guest' : 'Custom Player' }}
               </button>
+
+              <small class="error" *ngIf="coachGuestRequired">
+                A guest name is required for coach and trainer reservations.
+              </small>
             </div>
 
             <div class="hint" *ngIf="members.length === 0 && !loadingMembers">
@@ -455,7 +466,7 @@ interface Reservation {
           </div>
 
           <!-- Allow Join Section -->
-          <div class="allow-join-section" *ngIf="selectedStartTime && selectedEndTime">
+          <div class="allow-join-section" *ngIf="selectedStartTime && selectedEndTime && !isCoachUser">
             <mat-slide-toggle [checked]="allowJoin" (change)="allowJoin = $event.checked" color="primary">
               Allow other members to join this reservation
             </mat-slide-toggle>
@@ -532,7 +543,7 @@ interface Reservation {
 
           <!-- Form Actions -->
           <div class="form-actions">
-            <button type="submit" [disabled]="reservationForm.invalid || loading" class="book-btn">
+            <button type="submit" [disabled]="reservationForm.invalid || loading || coachGuestRequired" class="book-btn">
               <ng-container *ngIf="loading">
                 {{ isEditMode ? 'Updating...' : 'Booking...' }}
               </ng-container>
@@ -702,6 +713,10 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     return this.authService.currentUser?.isCoach === true;
   }
 
+  get coachGuestRequired(): boolean {
+    return this.isCoachUser && !this.customPlayerNames.some((name) => name?.trim());
+  }
+
   ngOnInit(): void {
     // Load system settings (tennis ball pricing)
     this.loadSystemSettings();
@@ -723,6 +738,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       } else {
         // Auto-populate Player 1 with logged-in user only if not editing
         this.setLoggedInUserAsPlayer1();
+        this.ensureCoachGuestInput();
       }
 
       // Handle pre-selected date from calendar
@@ -813,7 +829,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
         }
 
         // Load allow-join setting
-        this.allowJoin = reservation.allowJoin ?? false;
+        this.allowJoin = this.isCoachUser ? false : (reservation.allowJoin ?? false);
 
         this.showSuccess(
           'Edit Mode',
@@ -1297,6 +1313,12 @@ export class ReservationsComponent implements OnInit, OnDestroy {
     this.calculateFee();
   }
 
+  private ensureCoachGuestInput(): void {
+    if (this.isCoachUser && this.customPlayerNames.length === 0) {
+      this.customPlayerNames.push('');
+    }
+  }
+
   removeCustomPlayer(index: number): void {
     if (this.customPlayerNames.length > 0) {
       this.customPlayerNames.splice(index, 1);
@@ -1753,6 +1775,14 @@ export class ReservationsComponent implements OnInit, OnDestroy {
   onSubmit(): void {
     if (this.reservationForm.invalid || this.loading) return;
 
+    if (this.coachGuestRequired) {
+      this.showError(
+        'Guest Required',
+        'Coaches and trainers must add at least one guest before reserving a court.'
+      );
+      return;
+    }
+
     this.loading = true;
 
     if (this.isEditMode && this.editingReservationId) {
@@ -1795,7 +1825,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       isMultiHour: duration > 1,
       timeSlotDisplay: `${startTime}:00 - ${endTime}:00`,
       players: players,
-      allowJoin: this.allowJoin,
+      allowJoin: this.isCoachUser ? false : this.allowJoin,
     };
 
     // Add tennis balls (always include, even if 0)
@@ -1875,7 +1905,7 @@ export class ReservationsComponent implements OnInit, OnDestroy {
       totalFee: this.calculatedFee, // Total fee for entire duration
       paymentStatus: 'pending',
       status: 'pending',
-      allowJoin: this.allowJoin,
+      allowJoin: this.isCoachUser ? false : this.allowJoin,
     };
 
     // Add tennis balls if quantity > 0

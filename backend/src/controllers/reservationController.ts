@@ -662,6 +662,17 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     return;
   }
 
+  const trimmedPlayers = players.map(p => p.trim());
+  const playerObjects = await convertPlayersToObjects(trimmedPlayers);
+
+  if (req.user.isCoach && !playerObjects.some((player: any) => player.isGuest)) {
+    res.status(400).json({
+      success: false,
+      error: 'Coaches and trainers must include at least one guest in every court reservation'
+    });
+    return;
+  }
+
   // Check if user has paid membership fees
   if (!req.user.membershipFeesPaid && req.user.role === 'member') {
     res.status(400).json({
@@ -703,7 +714,6 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
   }
 
   // Use totalFee from frontend if provided, otherwise calculate fallback
-  const trimmedPlayers = players.map(p => p.trim());
   let finalTotalFee = totalFee || 0;
   
   if (!finalTotalFee) {
@@ -726,8 +736,6 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
   let paymentStatus = 'pending';
 
   // Convert players to ReservationPlayer objects for December 2025 pricing
-  const playerObjects = await convertPlayersToObjects(trimmedPlayers);
-
   // Check homeowner fee waiver: all members + no guests + booked at least 6 hours before slot = court fee waived
   const slotDateTime = new Date(reservationDate);
   slotDateTime.setHours(timeSlot, 0, 0, 0);
@@ -771,7 +779,7 @@ export const createReservation = asyncHandler(async (req: AuthenticatedRequest, 
     tournamentTier,
     totalFee: finalTotalFee,
     feeWaived: allHomeowners,
-    allowJoin,
+    allowJoin: req.user.isCoach ? false : allowJoin,
     weatherForecast,
     tennisBalls: tennisBallsData,
     paymentIds: [] // Will be populated with payment IDs
@@ -813,6 +821,8 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
     });
     return;
   }
+
+  const reservationOwner = await User.findById(reservation.userId).select('isCoach');
 
   // Check access permissions
   if (req.user?.role === 'member' && reservation.userId.toString() !== req.user._id.toString()) {
@@ -899,7 +909,9 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
   if (isMultiHour !== undefined) {
     reservation.isMultiHour = isMultiHour;
   }
-  if (allowJoin !== undefined) {
+  if (reservationOwner?.isCoach) {
+    reservation.allowJoin = false;
+  } else if (allowJoin !== undefined) {
     reservation.allowJoin = allowJoin;
   }
 
@@ -909,6 +921,17 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
       res.status(400).json({
         success: false,
         error: 'At least one player is required'
+      });
+      return;
+    }
+
+    // Validate the new player list before changing payments or reservation data.
+    const trimmedPlayers = players.map(p => p.trim());
+    const playerObjects = await convertPlayersToObjects(trimmedPlayers);
+    if (reservationOwner?.isCoach && !playerObjects.some((player: any) => player.isGuest)) {
+      res.status(400).json({
+        success: false,
+        error: 'Coaches and trainers must include at least one guest in every court reservation'
       });
       return;
     }
@@ -923,9 +946,6 @@ export const updateReservation = asyncHandler(async (req: AuthenticatedRequest, 
       console.log(`📝 Cancelled ${reservation.paymentIds.length} pending payments for reservation ${id}`);
     }
 
-    // Convert new players to objects
-    const trimmedPlayers = players.map(p => p.trim());
-    const playerObjects = await convertPlayersToObjects(trimmedPlayers);
     reservation.players = playerObjects;
     // players is a Mixed-typed array — Mongoose can't auto-detect this reassignment as a change,
     // so the pre-save hook's fee recalculation would otherwise silently be skipped.
@@ -1825,6 +1845,12 @@ export const joinReservation = asyncHandler(async (req: AuthenticatedRequest, re
   const reservation = await Reservation.findById(id);
   if (!reservation) {
     res.status(404).json({ success: false, message: 'Reservation not found' });
+    return;
+  }
+
+  const reservationOwner = await User.findById(reservation.userId).select('isCoach');
+  if (reservationOwner?.isCoach) {
+    res.status(403).json({ success: false, message: 'Coach and trainer reservations are not open for members to join' });
     return;
   }
 
