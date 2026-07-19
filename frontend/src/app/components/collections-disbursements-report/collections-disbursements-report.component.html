@@ -1,0 +1,457 @@
+<div class="report-page">
+
+  <!-- Controls (hidden when printing) -->
+  <mat-card class="controls-card no-print">
+    <div class="controls-row">
+      <div class="controls-title">
+        <mat-icon>receipt_long</mat-icon>
+        <h1>Collections &amp; Disbursements</h1>
+      </div>
+      <form [formGroup]="dateRangeForm" class="date-form">
+        <label>
+          From
+          <input type="date" formControlName="startDate">
+        </label>
+        <label>
+          To
+          <input type="date" formControlName="endDate">
+        </label>
+        <button mat-raised-button color="primary" type="button" (click)="loadReport()" [disabled]="loading">
+          <mat-icon>refresh</mat-icon>
+          Generate
+        </button>
+        <button mat-raised-button color="accent" type="button" (click)="print()" [disabled]="loading || !reportData">
+          <mat-icon>print</mat-icon>
+          Print
+        </button>
+        <button mat-raised-button type="button" (click)="saveAsPdf()" [disabled]="loading || !reportData || generatingPdf">
+          <mat-spinner *ngIf="generatingPdf" diameter="18"></mat-spinner>
+          <mat-icon *ngIf="!generatingPdf">picture_as_pdf</mat-icon>
+          {{ generatingPdf ? 'Generating…' : 'Save as PDF' }}
+        </button>
+      </form>
+    </div>
+  </mat-card>
+
+  <div class="loading-container no-print" *ngIf="loading">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>Generating report…</p>
+  </div>
+
+  <!-- Printable document: header and summary are shared across both tabs -->
+  <div class="document" #printableDocument *ngIf="reportData && !loading">
+    <header class="doc-header">
+      <h2 class="club-name">{{ reportData.clubName }}</h2>
+      <div class="club-location">{{ reportData.location }}</div>
+      <h3 class="doc-title">Detailed Statement of Collections and Disbursements</h3>
+      <div class="doc-period">For the period {{ periodLabel }}</div>
+      <div class="doc-generated">Generated {{ reportData.generatedAt | date:'MMMM d, y, h:mm a' }}</div>
+    </header>
+
+    <!-- Summary -->
+    <h4 class="section-heading">I. Summary</h4>
+    <table class="summary-table">
+      <tbody>
+        <tr class="balance-row" *ngIf="reportData.balances">
+          <td>Fund Balance, Beginning ({{ reportData.period.startDate | date:'MMMM d, y' }})</td>
+          <td class="amt">{{ reportData.balances.beginning | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+        <tr>
+          <td class="indent">Tennis Court Usage Receipts ({{ reportData.courtUsage.length }} payments)</td>
+          <td class="amt">{{ reportData.totals.courtUsage | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+        <tr>
+          <td class="indent">Membership Fees ({{ reportData.membership.length }} payments)</td>
+          <td class="amt">{{ reportData.totals.membership | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+        <tr *ngIf="reportData.otherCollections.length > 0">
+          <td class="indent">Other Collections ({{ reportData.otherCollections.length }} payments)</td>
+          <td class="amt">{{ reportData.totals.otherCollections | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+        <tr class="grand-row">
+          <td>Total Collections</td>
+          <td class="amt">{{ reportData.totals.collections | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+        <tr class="grand-row">
+          <td>Total Disbursements ({{ reportData.disbursements.length }} items)</td>
+          <td class="amt">({{ reportData.totals.disbursements | currency:'PHP':'₱':'1.2-2' }})</td>
+        </tr>
+        <tr class="grand-row">
+          <td>Net {{ reportData.totals.net >= 0 ? 'Increase' : 'Decrease' }} in Funds</td>
+          <td class="amt">{{ reportData.totals.net | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+        <tr *ngIf="reportData.balances">
+          <td class="indent">Member Credit Balances held on account (as of {{ reportData.generatedAt | date:'MMMM d, y' }})</td>
+          <td class="amt">{{ reportData.creditBalances | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+        <tr class="balance-row" *ngIf="reportData.balances">
+          <td>Fund Balance, Ending ({{ reportData.period.endDate | date:'MMMM d, y' }})</td>
+          <td class="amt">{{ reportData.balances.ending | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">
+      Collections exclude coin/credit-based payments, consistent with the club's Financial Statement.
+      The ending fund balance includes prepaid member credit balances held on account, matching the
+      Financial Statement's "Credit Balances" receipts line.
+    </p>
+
+    <mat-tab-group class="report-tabs" animationDuration="0ms">
+    <mat-tab label="Detailed Statement">
+
+    <!-- Collections -->
+    <h4 class="section-heading">II. Collections (Receipts)</h4>
+
+    <h5 class="subsection-heading">A. Tennis Court Usage Receipts</h5>
+    <p class="empty" *ngIf="courtUsageGroups.length === 0">No transactions in this period.</p>
+    <table class="detail-table" *ngIf="courtUsageGroups.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Member</th>
+          <th>Description</th>
+          <th>Method / Reference</th>
+          <th class="amt">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let group of courtUsageGroups">
+          <tr class="month-row"><td colspan="5">{{ group.label }}</td></tr>
+          <tr *ngFor="let item of group.items">
+            <td class="nowrap">{{ item.date | date:'MMM d, y' }}</td>
+            <td>
+              {{ item.payer }}
+              <span class="muted" *ngIf="item.paidBy">(paid by {{ item.paidBy }})</span>
+            </td>
+            <td>{{ item.description }}</td>
+            <td>
+              {{ methodLabel(item.paymentMethod) }}
+              <div class="muted" *ngIf="item.referenceNumber">Ref: {{ item.referenceNumber }}</div>
+            </td>
+            <td class="amt">{{ item.amount | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+          <tr class="subtotal-row">
+            <td colspan="4">Subtotal — {{ group.label }} ({{ group.items.length }} payments)</td>
+            <td class="amt">{{ group.subtotal | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="4">TOTAL — COURT USAGE RECEIPTS ({{ reportData.courtUsage.length }} payments)</td>
+          <td class="amt">{{ reportData.totals.courtUsage | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <h5 class="subsection-heading">B. Membership Fees</h5>
+    <p class="empty" *ngIf="membershipGroups.length === 0">No transactions in this period.</p>
+    <table class="detail-table" *ngIf="membershipGroups.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Member</th>
+          <th>Description</th>
+          <th>Method / Reference</th>
+          <th class="amt">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let group of membershipGroups">
+          <tr class="month-row"><td colspan="5">{{ group.label }}</td></tr>
+          <tr *ngFor="let item of group.items">
+            <td class="nowrap">{{ item.date | date:'MMM d, y' }}</td>
+            <td>
+              {{ item.payer }}
+              <span class="muted" *ngIf="item.paidBy">(paid by {{ item.paidBy }})</span>
+            </td>
+            <td>{{ item.description }}</td>
+            <td>
+              {{ methodLabel(item.paymentMethod) }}
+              <div class="muted" *ngIf="item.referenceNumber">Ref: {{ item.referenceNumber }}</div>
+            </td>
+            <td class="amt">{{ item.amount | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+          <tr class="subtotal-row">
+            <td colspan="4">Subtotal — {{ group.label }} ({{ group.items.length }} payments)</td>
+            <td class="amt">{{ group.subtotal | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="4">TOTAL — MEMBERSHIP FEES ({{ reportData.membership.length }} payments)</td>
+          <td class="amt">{{ reportData.totals.membership | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <ng-container *ngIf="otherCollectionGroups.length > 0">
+      <h5 class="subsection-heading">C. Other Collections (Assigned Fees)</h5>
+      <table class="detail-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Member</th>
+            <th>Description</th>
+            <th>Method / Reference</th>
+            <th class="amt">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let group of otherCollectionGroups">
+            <tr class="month-row"><td colspan="5">{{ group.label }}</td></tr>
+            <tr *ngFor="let item of group.items">
+              <td class="nowrap">{{ item.date | date:'MMM d, y' }}</td>
+              <td>
+                {{ item.payer }}
+                <span class="muted" *ngIf="item.paidBy">(paid by {{ item.paidBy }})</span>
+              </td>
+              <td>{{ item.description }}</td>
+              <td>
+                {{ methodLabel(item.paymentMethod) }}
+                <div class="muted" *ngIf="item.referenceNumber">Ref: {{ item.referenceNumber }}</div>
+              </td>
+              <td class="amt">{{ item.amount | currency:'PHP':'₱':'1.2-2' }}</td>
+            </tr>
+            <tr class="subtotal-row">
+              <td colspan="4">Subtotal — {{ group.label }} ({{ group.items.length }} payments)</td>
+              <td class="amt">{{ group.subtotal | currency:'PHP':'₱':'1.2-2' }}</td>
+            </tr>
+          </ng-container>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="4">TOTAL — OTHER COLLECTIONS ({{ reportData.otherCollections.length }} payments)</td>
+            <td class="amt">{{ reportData.totals.otherCollections | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </ng-container>
+
+    <!-- Disbursements -->
+    <h4 class="section-heading">III. Disbursements (Expenses)</h4>
+    <p class="empty" *ngIf="disbursementGroups.length === 0">No disbursements in this period.</p>
+    <table class="detail-table" *ngIf="disbursementGroups.length > 0">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Category</th>
+          <th>Details</th>
+          <th class="amt">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let group of disbursementGroups">
+          <tr class="month-row"><td colspan="4">{{ group.label }}</td></tr>
+          <tr *ngFor="let item of group.items">
+            <td class="nowrap">{{ item.date | date:'MMM d, y' }}</td>
+            <td>{{ item.category }}</td>
+            <td>{{ item.details }}</td>
+            <td class="amt">{{ item.amount | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+          <tr class="subtotal-row">
+            <td colspan="3">Subtotal — {{ group.label }} ({{ group.items.length }} items)</td>
+            <td class="amt">{{ group.subtotal | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="3">TOTAL DISBURSEMENTS ({{ reportData.disbursements.length }} items)</td>
+          <td class="amt">{{ reportData.totals.disbursements | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <ng-container *ngIf="disbursementsByCategory.length > 0">
+      <h5 class="subsection-heading">Disbursements by Category</h5>
+      <table class="detail-table category-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="amt">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of disbursementsByCategory">
+            <td>{{ row.category }}</td>
+            <td class="amt">{{ row.amount | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td>TOTAL</td>
+            <td class="amt">{{ reportData.totals.disbursements | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </ng-container>
+
+    <div class="signature-block">
+      <div class="signature">
+        <div class="signature-line">Prepared by — Treasurer</div>
+      </div>
+      <div class="signature">
+        <div class="signature-line">Reviewed by — Auditor</div>
+      </div>
+      <div class="signature">
+        <div class="signature-line">Approved by — President</div>
+      </div>
+    </div>
+
+    <footer class="doc-footer">
+      Source: RT2 Tennis Club reservation system database. Court usage receipts follow the official
+      statement filters: recorded payments, non-coin methods, excluding membership fees.
+    </footer>
+
+    </mat-tab>
+    <mat-tab label="Member Totals — Court Usage">
+
+    <h4 class="section-heading">II. Collections (Receipts) — By Member</h4>
+
+    <h5 class="subsection-heading">A. Tennis Court Usage Receipts by Member</h5>
+    <p class="empty" *ngIf="courtUsageByMember.length === 0">No court usage receipts in this period.</p>
+    <ng-container
+      *ngIf="courtUsageByMember.length > 0"
+      [ngTemplateOutlet]="matrixTable"
+      [ngTemplateOutletContext]="{
+        rows: courtUsageByMember,
+        monthLabels: memberMonthLabels,
+        columnTotals: memberMonthColumnTotals,
+        labelHeader: 'Member',
+        totalLabel: 'TOTAL (' + courtUsageByMember.length + ' members)',
+        totalCount: reportData.courtUsage.length,
+        totalAmount: reportData.totals.courtUsage
+      }">
+    </ng-container>
+
+    <h5 class="subsection-heading">B. Membership Fees by Member</h5>
+    <p class="empty" *ngIf="membershipByMember.length === 0">No transactions in this period.</p>
+    <ng-container
+      *ngIf="membershipByMember.length > 0"
+      [ngTemplateOutlet]="matrixTable"
+      [ngTemplateOutletContext]="{
+        rows: membershipByMember,
+        monthLabels: membershipMonthLabels,
+        columnTotals: membershipMonthColumnTotals,
+        labelHeader: 'Member',
+        totalLabel: 'TOTAL (' + membershipByMember.length + ' members)',
+        totalCount: reportData.membership.length,
+        totalAmount: reportData.totals.membership
+      }">
+    </ng-container>
+
+    <ng-container *ngIf="otherCollectionsByMember.length > 0">
+      <h5 class="subsection-heading">C. Other Collections (Assigned Fees) by Member</h5>
+      <ng-container
+        [ngTemplateOutlet]="matrixTable"
+        [ngTemplateOutletContext]="{
+          rows: otherCollectionsByMember,
+          monthLabels: otherCollectionMonthLabels,
+          columnTotals: otherCollectionMonthColumnTotals,
+          labelHeader: 'Member',
+          totalLabel: 'TOTAL (' + otherCollectionsByMember.length + ' members)',
+          totalCount: reportData.otherCollections.length,
+          totalAmount: reportData.totals.otherCollections
+        }">
+      </ng-container>
+    </ng-container>
+
+    <p class="note" *ngIf="memberMonthLabels.length > 0 || membershipMonthLabels.length > 0">
+      Monthly amounts are in ₱; "—" means no recorded payment that month.
+    </p>
+
+    <h4 class="section-heading">III. Disbursements (Expenses) — By Category</h4>
+    <p class="empty" *ngIf="disbursementsByCategoryMonthly.length === 0">No disbursements in this period.</p>
+    <ng-container
+      *ngIf="disbursementsByCategoryMonthly.length > 0"
+      [ngTemplateOutlet]="matrixTable"
+      [ngTemplateOutletContext]="{
+        rows: disbursementsByCategoryMonthly,
+        monthLabels: disbursementMonthLabels,
+        columnTotals: disbursementMonthColumnTotals,
+        labelHeader: 'Category',
+        totalLabel: 'TOTAL (' + disbursementsByCategoryMonthly.length + ' categories)',
+        totalCount: reportData.disbursements.length,
+        totalAmount: reportData.totals.disbursements
+      }">
+    </ng-container>
+
+    <ng-container *ngIf="disbursementsByCategory.length > 0">
+      <h5 class="subsection-heading">Disbursements by Category</h5>
+      <table class="detail-table category-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th class="amt">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of disbursementsByCategory">
+            <td>{{ row.category }}</td>
+            <td class="amt">{{ row.amount | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td>TOTAL</td>
+            <td class="amt">{{ reportData.totals.disbursements | currency:'PHP':'₱':'1.2-2' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </ng-container>
+
+    <footer class="doc-footer">
+      Aggregates of recorded collections per member and disbursements per category for the selected
+      period. Uses the same filters as the Detailed Statement: recorded payments, non-coin methods.
+    </footer>
+
+    </mat-tab>
+    </mat-tab-group>
+  </div>
+</div>
+
+<!-- Shared month-by-month matrix: rows keyed by either "payer" (members) or "category" (expenses) -->
+<ng-template #matrixTable
+  let-rows="rows"
+  let-monthLabels="monthLabels"
+  let-columnTotals="columnTotals"
+  let-labelHeader="labelHeader"
+  let-totalLabel="totalLabel"
+  let-totalCount="totalCount"
+  let-totalAmount="totalAmount">
+  <div class="table-scroll">
+    <table class="detail-table member-totals-table">
+      <thead>
+        <tr>
+          <th class="rank">#</th>
+          <th>{{ labelHeader }}</th>
+          <th class="amt month-col" *ngFor="let month of monthLabels">{{ month }}</th>
+          <th class="amt">Payments</th>
+          <th class="amt">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let i = index">
+          <td class="rank">{{ i + 1 }}</td>
+          <td class="nowrap">{{ row.payer || row.category }}</td>
+          <td class="amt month-col" *ngFor="let amount of row.monthTotals">
+            <ng-container *ngIf="amount > 0">{{ amount | number:'1.2-2' }}</ng-container>
+            <span class="muted" *ngIf="amount === 0">—</span>
+          </td>
+          <td class="amt">{{ row.count }}</td>
+          <td class="amt">{{ row.total | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="2">{{ totalLabel }}</td>
+          <td class="amt month-col" *ngFor="let total of columnTotals">{{ total | number:'1.2-2' }}</td>
+          <td class="amt">{{ totalCount }}</td>
+          <td class="amt">{{ totalAmount | currency:'PHP':'₱':'1.2-2' }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</ng-template>

@@ -9,6 +9,7 @@ import {
   getCourtUsageFromSheet,
   getFinancialReport,
   getFundBalanceRollup,
+  getCollectionsDisbursementsReport,
   export2025FinancialReportHTML,
   forceRefreshFinancialReport,
   forceRefreshCourtUsageReport,
@@ -137,6 +138,18 @@ router.get(
   authenticateToken,
   requireFinancialAccess,
   getFinancialReport
+);
+
+/**
+ * @route GET /api/reports/collections-disbursements
+ * @desc Get detailed collections & disbursements line items for a date range
+ * @access Private (Treasurer/Admin/SuperAdmin)
+ */
+router.get(
+  '/collections-disbursements',
+  authenticateToken,
+  requireFinancialAccess,
+  getCollectionsDisbursementsReport
 );
 
 /**

@@ -22,6 +22,7 @@ import { AdminSuggestionsComponent } from './components/admin-suggestions/admin-
 import { AdminAnalyticsComponent } from './components/admin-analytics/admin-analytics.component';
 import { CourtUsageReportComponent } from './components/court-usage-report/court-usage-report.component';
 import { FinancialReportComponent } from './components/financial-report/financial-report.component';
+import { CollectionsDisbursementsReportComponent } from './components/collections-disbursements-report/collections-disbursements-report.component';
 import { ExpenseReportComponent } from './components/expense-report/expense-report.component';
 import { AdminMemberManagementComponent } from './components/admin-member-management/admin-member-management.component';
 import { ProfileComponent } from './components/profile/profile.component';
@@ -176,6 +177,12 @@ export const routes: Routes = [
   {
     path: 'admin/financial-report',
     component: FinancialReportComponent,
+    canActivate: [authGuard, treasurerGuard]
+  },
+  // Collections & Disbursements Report (Treasurer/Admin/SuperAdmin)
+  {
+    path: 'admin/collections-disbursements',
+    component: CollectionsDisbursementsReportComponent,
     canActivate: [authGuard, treasurerGuard]
   },
   // Expense Report (Admin only)

@@ -578,6 +578,31 @@ import { environment } from '../../../environments/environment';
                 </button>
               </mat-card-actions>
             </mat-card>
+
+            <!-- Collections & Disbursements Report -->
+            <mat-card class="action-card financial-card" data-icon="receipt_long" data-title="Collections & Disbursements" (click)="navigateTo('/admin/collections-disbursements')">
+              <!-- Mobile Icon -->
+              <div class="mobile-card-icon">
+                <mat-icon>receipt_long</mat-icon>
+              </div>
+              <div class="mobile-card-title">Collections &amp; Disbursements</div>
+
+              <!-- Desktop Content -->
+              <mat-card-header>
+                <mat-icon mat-card-avatar class="action-icon financial-icon">receipt_long</mat-icon>
+                <mat-card-title>Collections &amp; Disbursements</mat-card-title>
+                <mat-card-subtitle>Printable detailed statement</mat-card-subtitle>
+              </mat-card-header>
+              <mat-card-content>
+                <p>Detailed line-item collections and disbursements for any date range, print-ready.</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-raised-button class="financial-btn" (click)="navigateTo('/admin/collections-disbursements')">
+                  <mat-icon>receipt_long</mat-icon>
+                  View Report
+                </button>
+              </mat-card-actions>
+            </mat-card>
           </div>
         </div>
 

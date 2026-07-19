@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { query } from 'express-validator';
+import { Types } from 'mongoose';
 import User from '../models/User';
 import Reservation from '../models/Reservation';
 import Payment from '../models/Payment';
@@ -1512,6 +1513,167 @@ export const getFundBalanceRollup = asyncHandler(async (req: AuthenticatedReques
     return res.status(500).json({
       success: false,
       message: 'Failed to compute fund balance rollup',
+      error: error.message
+    });
+  }
+});
+
+// Detailed Collections & Disbursements report for an arbitrary date range.
+// Uses the same source filters as getFundBalanceRollup/getFinancialReport so
+// totals reconcile with the official Financial Statement.
+export const getCollectionsDisbursementsReport = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const now = new Date();
+    const start = startDate
+      ? new Date(`${startDate}T00:00:00.000Z`)
+      : new Date(Date.UTC(now.getFullYear(), 0, 1));
+    const end = endDate ? new Date(`${endDate}T23:59:59.999Z`) : now;
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date range'
+      });
+    }
+
+    const courtUsageFilter = (range: any) => ({
+      status: 'record',
+      paymentMethod: { $ne: 'coins' },
+      paymentType: { $ne: 'membership_fee' },
+      'metadata.isAssignedExpense': { $ne: true },
+      paymentDate: range
+    });
+    const membershipFilter = (range: any) => ({
+      paymentType: 'membership_fee',
+      paymentDate: range
+    });
+    const assignedFilter = (range: any) => ({
+      status: 'record',
+      paymentMethod: { $ne: 'coins' },
+      'metadata.isAssignedExpense': true,
+      paymentDate: range
+    });
+
+    const range = { $gte: start, $lte: end };
+    const [courtUsagePayments, membershipPayments, assignedPayments, expenses] = await Promise.all([
+      Payment.find(courtUsageFilter(range)).sort({ paymentDate: 1 }).lean(),
+      Payment.find(membershipFilter(range)).sort({ paymentDate: 1 }).lean(),
+      Payment.find(assignedFilter(range)).sort({ paymentDate: 1 }).lean(),
+      Expense.find({ date: range }).sort({ date: 1 }).lean()
+    ]);
+
+    // Resolve payer names in one batch
+    const allPayments = [...courtUsagePayments, ...membershipPayments, ...assignedPayments];
+    const userIds = [...new Set(
+      allPayments
+        .flatMap((p: any) => [p.userId, p.paidBy])
+        .filter((id: any) => id && Types.ObjectId.isValid(String(id)))
+        .map((id: any) => String(id))
+    )];
+    const userDocs = await User.find({ _id: { $in: userIds } }).select('fullName username').lean();
+    const userMap = new Map(userDocs.map((u: any) => [String(u._id), u.fullName || u.username]));
+
+    const toLineItem = (p: any) => ({
+      date: p.paymentDate,
+      payer: userMap.get(String(p.userId)) || 'Unknown member',
+      paidBy: p.paidBy && String(p.paidBy) !== String(p.userId)
+        ? userMap.get(String(p.paidBy)) || undefined
+        : undefined,
+      description: p.description,
+      paymentMethod: p.paymentMethod,
+      referenceNumber: p.referenceNumber || p.transactionId || '',
+      amount: p.amount
+    });
+
+    const courtUsage = courtUsagePayments.map(toLineItem);
+    const membership = membershipPayments.map(toLineItem);
+    const otherCollections = assignedPayments.map(toLineItem);
+    const disbursements = expenses.map((e: any) => ({
+      date: e.date,
+      category: e.category,
+      details: e.details,
+      amount: e.amount
+    }));
+
+    const sum = (items: Array<{ amount: number }>) => items.reduce((s, i) => s + i.amount, 0);
+    const totals = {
+      courtUsage: sum(courtUsage),
+      membership: sum(membership),
+      otherCollections: sum(otherCollections),
+      collections: 0,
+      disbursements: sum(disbursements),
+      net: 0
+    };
+    totals.collections = totals.courtUsage + totals.membership + totals.otherCollections;
+    totals.net = totals.collections - totals.disbursements;
+
+    // Live snapshot of prepaid member credits, included in the ending balance so it
+    // reconciles with the Financial Statement's "Credit Balances" receipts line
+    const creditBalanceResult = await User.aggregate([
+      { $group: { _id: null, totalCredits: { $sum: '$creditBalance' } } }
+    ]);
+    const creditBalances = creditBalanceResult.length > 0 ? creditBalanceResult[0].totalCredits : 0;
+
+    // Beginning balance rolled forward from the official statement's beginning
+    // balance to the requested start date (credit balances are only added at the end,
+    // matching getFundBalanceRollup which folds them into the current month)
+    let balances: { beginning: number; ending: number } | null = null;
+    const dataPath = path.join(__dirname, '../../data/financial-report.json');
+    if (fs.existsSync(dataPath)) {
+      const financialData = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      const beginningYear = parseInt(
+        financialData.beginningBalance.date.match(/\d{4}/)?.[0] || String(now.getFullYear())
+      );
+      const beginningDate = new Date(Date.UTC(beginningYear, 0, 1));
+
+      if (start >= beginningDate) {
+        let beginning = financialData.beginningBalance.amount;
+        if (start > beginningDate) {
+          const priorRange = { $gte: beginningDate, $lt: start };
+          const [priorCourt, priorMembership, priorAssigned, priorExpenses] = await Promise.all([
+            Payment.aggregate([{ $match: courtUsageFilter(priorRange) }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+            Payment.aggregate([{ $match: membershipFilter(priorRange) }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+            Payment.aggregate([{ $match: assignedFilter(priorRange) }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+            Expense.aggregate([{ $match: { date: priorRange } }, { $group: { _id: null, total: { $sum: '$amount' } } }])
+          ]);
+          const agg = (r: any[]) => (r.length > 0 ? r[0].total : 0);
+          beginning += agg(priorCourt) + agg(priorMembership) + agg(priorAssigned) - agg(priorExpenses);
+        }
+        balances = { beginning, ending: beginning + totals.net + creditBalances };
+      }
+    }
+
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        clubName: 'RICH TOWN 2 TENNIS CLUB',
+        location: 'Rich Town 2 Subdivision, City of San Fernando, Pampanga',
+        period: { startDate: start.toISOString(), endDate: end.toISOString() },
+        courtUsage,
+        membership,
+        otherCollections,
+        disbursements,
+        totals,
+        creditBalances,
+        balances,
+        generatedAt: new Date().toISOString()
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error generating collections & disbursements report:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate collections & disbursements report',
       error: error.message
     });
   }

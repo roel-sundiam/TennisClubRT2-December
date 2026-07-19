@@ -1,0 +1,335 @@
+.report-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+// Controls
+.controls-card {
+  margin-bottom: 20px;
+  padding: 16px;
+}
+
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.controls-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  mat-icon {
+    color: #2e7d32;
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+}
+
+.date-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    gap: 4px;
+  }
+
+  input[type='date'] {
+    padding: 8px 10px;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    font-size: 14px;
+    min-height: 40px;
+  }
+
+  button {
+    min-height: 44px;
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 0;
+  color: #555;
+}
+
+// Tabs
+.report-tabs {
+  ::ng-deep .mat-mdc-tab-header {
+    margin-bottom: 16px;
+  }
+
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    overflow: visible;
+  }
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.member-totals-table {
+  width: 100%;
+
+  .month-col {
+    white-space: nowrap;
+    width: auto;
+    min-width: 72px;
+  }
+
+  .amt {
+    width: auto;
+  }
+}
+
+.rank {
+  width: 40px;
+  text-align: right;
+  color: #555;
+}
+
+// Printable document
+.document {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 32px;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.doc-header {
+  text-align: center;
+  border-bottom: 3px double #1a1a1a;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+
+  .club-name {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+
+  .club-location {
+    margin: 2px 0;
+    font-size: 13px;
+  }
+
+  .doc-title {
+    margin: 10px 0 2px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .doc-period {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .doc-generated {
+    font-size: 11px;
+    color: #555;
+    margin-top: 6px;
+  }
+}
+
+.section-heading {
+  font-size: 16px;
+  border-bottom: 2px solid #1a1a1a;
+  padding-bottom: 4px;
+  margin: 28px 0 10px;
+  font-weight: 700;
+}
+
+.subsection-heading {
+  font-size: 14px;
+  margin: 18px 0 6px;
+  font-weight: 700;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+
+  th,
+  td {
+    border: 1px solid #999;
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  thead th {
+    background: #e8e8e8;
+    font-size: 12px;
+  }
+}
+
+.category-table {
+  width: 60%;
+  min-width: 320px;
+}
+
+.amt {
+  text-align: right;
+  white-space: nowrap;
+  width: 110px;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.indent {
+  padding-left: 24px;
+}
+
+.muted {
+  color: #666;
+  font-size: 11px;
+}
+
+.month-row td {
+  background: #f0f0f0;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.subtotal-row td {
+  background: #f7f7f7;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.total-row td {
+  background: #dcdcdc;
+  font-weight: 700;
+  border-top: 2px solid #1a1a1a;
+}
+
+.summary-table {
+  td {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+
+  .grand-row td {
+    font-weight: 700;
+    background: #dcdcdc;
+  }
+
+  .balance-row td {
+    font-weight: 700;
+    background: #efefef;
+  }
+}
+
+.note,
+.empty {
+  font-size: 12px;
+  color: #444;
+  font-style: italic;
+  margin: 4px 0 8px;
+}
+
+.signature-block {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  margin-top: 50px;
+
+  .signature {
+    flex: 1;
+    text-align: center;
+  }
+
+  .signature-line {
+    border-top: 1px solid #1a1a1a;
+    margin-top: 40px;
+    padding-top: 4px;
+    font-size: 12px;
+  }
+}
+
+.doc-footer {
+  margin-top: 30px;
+  font-size: 11px;
+  color: #555;
+  border-top: 1px solid #999;
+  padding-top: 8px;
+}
+
+@media (max-width: 700px) {
+  .document {
+    padding: 16px;
+    overflow-x: auto;
+  }
+
+  .signature-block {
+    flex-direction: column;
+    gap: 24px;
+  }
+}
+
+@media print {
+  .report-page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .report-tabs ::ng-deep .mat-mdc-tab-header {
+    display: none !important;
+  }
+
+  .table-scroll {
+    overflow: visible;
+  }
+
+  .document {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    font-size: 11px;
+  }
+
+  .section-heading,
+  .subsection-heading {
+    page-break-after: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+
+  .signature-block {
+    page-break-inside: avoid;
+  }
+}

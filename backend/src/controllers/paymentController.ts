@@ -194,6 +194,12 @@ async function subtractFromCourtUsageReport(payment: any): Promise<void> {
       return;
     }
 
+    // Membership fees are not court usage — skip
+    if (payment.paymentType === 'membership_fee') {
+      console.log('📊 Skipping court usage report subtraction for membership fee');
+      return;
+    }
+
     console.log('📊 Subtracting from court usage report for unrecorded payment...');
 
     // Get user information to find member name
@@ -277,6 +283,12 @@ async function updateCourtUsageReport(payment: any): Promise<void> {
     // Assigned expenses (tournament entry fees, etc.) are not court usage — skip
     if (payment.metadata?.isAssignedExpense === true) {
       console.log('📊 Skipping court usage report update for assigned expense');
+      return;
+    }
+
+    // Membership fees are not court usage — skip
+    if (payment.paymentType === 'membership_fee') {
+      console.log('📊 Skipping court usage report update for membership fee');
       return;
     }
 

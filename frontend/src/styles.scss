@@ -729,3 +729,32 @@ app-reservations {
   }
 }
 
+
+/* Global print rules: hide app chrome so report pages print cleanly */
+@media print {
+  app-toolbar,
+  app-impersonation-banner,
+  app-update-banner,
+  app-payment-alerts,
+  app-pwa-install-prompt,
+  app-chat-window,
+  app-activity-notification,
+  .no-print {
+    display: none !important;
+  }
+
+  html, body {
+    background: white !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-layout,
+  .page-container {
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    display: block !important;
+  }
+}
