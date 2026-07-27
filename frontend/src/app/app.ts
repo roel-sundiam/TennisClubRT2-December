@@ -5,8 +5,6 @@ import { PWANotificationService } from './services/pwa-notification.service';
 import { WebSocketService } from './services/websocket.service';
 import { AppUpdateService } from './services/app-update.service';
 import { SessionMonitorService } from './services/session-monitor.service';
-import { ActivityMonitorService } from './services/activity-monitor.service';
-import { AuthService } from './services/auth.service';
 import { LayoutComponent } from './shared/layout/layout.component';
 
 @Component({
@@ -23,9 +21,7 @@ export class App implements OnInit {
     private pwaNotificationService: PWANotificationService,
     private webSocketService: WebSocketService,
     private appUpdateService: AppUpdateService,
-    private sessionMonitorService: SessionMonitorService,
-    private activityMonitorService: ActivityMonitorService,
-    private authService: AuthService
+    private sessionMonitorService: SessionMonitorService
   ) {
     console.log('🚀 App component constructor called');
     // Services will be initialized automatically
@@ -47,17 +43,5 @@ export class App implements OnInit {
     console.log('🚀 App component ngOnInit called');
     console.log('🚀 Current URL:', window.location.href);
     console.log('📊 Analytics session ID:', this.analyticsService.getCurrentSession());
-
-    // Initialize activity tracking for ALL users
-    this.activityMonitorService.initializeTracking();
-    console.log('📊 Activity monitoring initialized for page tracking');
-
-    // Initialize admin notifications (only for admins)
-    this.authService.currentUser$.subscribe(user => {
-      if (user && this.authService.isAdmin()) {
-        console.log('👮 Initializing admin activity notifications for:', user.fullName);
-        this.activityMonitorService.initializeAdminNotifications();
-      }
-    });
   }
 }

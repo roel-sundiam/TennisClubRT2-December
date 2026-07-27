@@ -1,83 +1,477 @@
+:host {
+  display: block;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(37, 99, 235, 0.09), transparent 28rem),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  color: #172033;
+}
 .report-page {
-  max-width: 1000px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 32px 24px 64px;
 }
 
-// Controls
-.controls-card {
-  margin-bottom: 20px;
-  padding: 16px;
-}
-
-.controls-row {
+// Page heading
+.page-hero {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
-.controls-title {
+.hero-copy {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
+}
+
+.hero-icon {
+  display: grid;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  color: #fff;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #1e3a8a, #2563eb);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.24);
 
   mat-icon {
-    color: #2e7d32;
-    font-size: 28px;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
+    font-size: 30px;
   }
+}
 
-  h1 {
+.eyebrow,
+.step-label,
+.document-label {
+  margin: 0 0 5px;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.page-hero h1 {
+  margin: 0;
+  color: #172033;
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.hero-description {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.hero-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 999px;
+  background: #f0fdf4;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.13);
+}
+
+// Date controls
+.controls-card {
+  margin-bottom: 28px;
+  padding: 22px 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 35px rgba(30, 41, 59, 0.07);
+}
+
+.controls-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+
+  h2 {
     margin: 0;
-    font-size: 1.4rem;
-    font-weight: 600;
+    color: #1e293b;
+    font-size: 18px;
+    font-weight: 700;
   }
+}
+
+.period-preview {
+  padding: 7px 11px;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .date-form {
   display: flex;
-  flex-wrap: wrap;
   align-items: flex-end;
   gap: 12px;
 
-  label {
+  > label {
     display: flex;
     flex-direction: column;
+    gap: 7px;
+    color: #475569;
     font-size: 12px;
-    font-weight: 600;
-    color: #555;
-    gap: 4px;
+    font-weight: 700;
+  }
+}
+
+.date-input {
+  display: flex;
+  align-items: center;
+  width: 190px;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus-within {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   }
 
-  input[type='date'] {
-    padding: 8px 10px;
-    border: 1px solid #bbb;
-    border-radius: 6px;
-    font-size: 14px;
-    min-height: 40px;
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 9px;
+    color: #64748b;
+    font-size: 18px;
   }
+
+  input {
+    width: 100%;
+    min-width: 0;
+    color: #172033;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
+
+.date-separator {
+  align-self: center;
+  margin-top: 19px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
 
   button {
-    min-height: 44px;
+    min-height: 48px;
+    border-radius: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
   }
+
+  mat-icon,
+  mat-spinner {
+    margin-right: 4px;
+  }
+}
+
+.generate-button {
+  color: #fff !important;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+  box-shadow: 0 7px 16px rgba(37, 99, 235, 0.2);
 }
 
 .loading-container {
   display: flex;
+  min-height: 320px;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  font-weight: 600;
+}
+
+// Screen report / printable document
+.document {
+  padding: 42px 46px;
+  color: #1e293b;
+  border: 1px solid #dbe3ed;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(30, 41, 59, 0.09);
+  font-size: 13px;
+}
+
+.doc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 30px;
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.doc-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.doc-mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  color: #fff;
+  border-radius: 12px;
+  background: #1e3a8a;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.club-name {
+  margin: 0;
+  color: #172033;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.club-location {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.doc-heading {
+  max-width: 560px;
+  text-align: right;
+}
+
+.document-label {
+  margin-bottom: 6px;
+}
+
+.doc-title {
+  margin: 0;
+  color: #172033;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.doc-period {
+  margin-top: 7px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.doc-generated {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  padding: 48px 0;
-  color: #555;
+  margin-bottom: 30px;
+}
+
+.kpi-card {
+  position: relative;
+  min-height: 104px;
+  padding: 17px;
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fbff;
+
+  &::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    background: #2563eb;
+    content: '';
+  }
+
+  &.disbursements {
+    border-color: #fee2e2;
+    background: #fffafa;
+
+    &::before {
+      background: #ef4444;
+    }
+  }
+
+  &.net {
+    border-color: #d1fae5;
+    background: #f6fffb;
+
+    &::before {
+      background: #10b981;
+    }
+  }
+
+  &.net.negative {
+    border-color: #fed7aa;
+    background: #fffaf5;
+
+    &::before {
+      background: #f97316;
+    }
+  }
+
+  &.balance {
+    border-color: #e9d5ff;
+    background: #fcfaff;
+
+    &::before {
+      background: #7c3aed;
+    }
+  }
+
+  .kpi-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    display: block;
+    color: #172033;
+    font-size: clamp(16px, 1.7vw, 21px);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  small {
+    display: block;
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 10px;
+  }
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 30px 0 11px;
+  color: #172033;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+
+  span {
+    display: inline-grid;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 5px;
+    place-items: center;
+    color: #fff;
+    border-radius: 7px;
+    background: #1e3a8a;
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+
+  &::after {
+    height: 1px;
+    flex: 1;
+    background: #dbe3ed;
+    content: '';
+  }
+}
+
+.subsection-heading {
+  margin: 21px 0 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 // Tabs
 .report-tabs {
+  margin-top: 24px;
+
   ::ng-deep .mat-mdc-tab-header {
-    margin-bottom: 16px;
+    position: sticky;
+    top: 72px;
+    z-index: 5;
+    margin: 0 -46px 20px;
+    padding: 0 46px;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+  }
+
+  ::ng-deep .mat-mdc-tab {
+    min-width: 180px;
+    height: 52px;
+  }
+
+  ::ng-deep .mdc-tab__text-label {
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  ::ng-deep .mdc-tab--active .mdc-tab__text-label {
+    color: #1d4ed8;
+  }
+
+  ::ng-deep .mdc-tab-indicator__content--underline {
+    border-color: #2563eb;
+    border-top-width: 3px;
   }
 
   ::ng-deep .mat-mdc-tab-body-wrapper {
@@ -87,15 +481,82 @@
 
 .table-scroll {
   overflow-x: auto;
+  border-radius: 9px;
+}
+
+table {
+  width: 100%;
+  margin-bottom: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+
+  th,
+  td {
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  th:first-child,
+  td:first-child {
+    border-left: 1px solid #e2e8f0;
+  }
+
+  thead th {
+    color: #475569;
+    border-top: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  thead th:first-child {
+    border-top-left-radius: 7px;
+  }
+
+  thead th:last-child {
+    border-top-right-radius: 7px;
+  }
+
+  tbody tr:not(.month-row):not(.subtotal-row):hover td {
+    background: #f8fbff;
+  }
+}
+
+.summary-table {
+  td {
+    padding: 9px 12px;
+    font-size: 12px;
+  }
+
+  .grand-row td {
+    color: #1e3a8a;
+    background: #eff6ff;
+    font-weight: 800;
+  }
+
+  .balance-row td {
+    background: #f8fafc;
+    font-weight: 800;
+  }
+}
+
+.category-table {
+  width: 62%;
+  min-width: 340px;
 }
 
 .member-totals-table {
   width: 100%;
 
   .month-col {
-    white-space: nowrap;
     width: auto;
-    min-width: 72px;
+    min-width: 76px;
+    white-space: nowrap;
   }
 
   .amt {
@@ -103,100 +564,11 @@
   }
 }
 
-.rank {
-  width: 40px;
-  text-align: right;
-  color: #555;
-}
-
-// Printable document
-.document {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 32px;
-  font-size: 14px;
-  color: #1a1a1a;
-}
-
-.doc-header {
-  text-align: center;
-  border-bottom: 3px double #1a1a1a;
-  padding-bottom: 12px;
-  margin-bottom: 20px;
-
-  .club-name {
-    margin: 0;
-    font-size: 22px;
-    letter-spacing: 1px;
-    font-weight: 700;
-  }
-
-  .club-location {
-    margin: 2px 0;
-    font-size: 13px;
-  }
-
-  .doc-title {
-    margin: 10px 0 2px;
-    font-size: 16px;
-    font-weight: 600;
-  }
-
-  .doc-period {
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  .doc-generated {
-    font-size: 11px;
-    color: #555;
-    margin-top: 6px;
-  }
-}
-
-.section-heading {
-  font-size: 16px;
-  border-bottom: 2px solid #1a1a1a;
-  padding-bottom: 4px;
-  margin: 28px 0 10px;
-  font-weight: 700;
-}
-
-.subsection-heading {
-  font-size: 14px;
-  margin: 18px 0 6px;
-  font-weight: 700;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 8px;
-
-  th,
-  td {
-    border: 1px solid #999;
-    padding: 5px 8px;
-    text-align: left;
-    vertical-align: top;
-  }
-
-  thead th {
-    background: #e8e8e8;
-    font-size: 12px;
-  }
-}
-
-.category-table {
-  width: 60%;
-  min-width: 320px;
-}
-
 .amt {
-  text-align: right;
+  width: 116px;
+  text-align: right !important;
   white-space: nowrap;
-  width: 110px;
+  font-variant-numeric: tabular-nums;
 }
 
 .nowrap {
@@ -204,63 +576,72 @@ table {
 }
 
 .indent {
-  padding-left: 24px;
+  padding-left: 28px !important;
 }
 
 .muted {
-  color: #666;
-  font-size: 11px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.rank {
+  width: 42px;
+  color: #94a3b8;
+  text-align: right !important;
 }
 
 .month-row td {
-  background: #f0f0f0;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.5px;
+  padding: 7px 10px;
+  color: #1e3a8a;
+  background: #eaf2ff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .subtotal-row td {
-  background: #f7f7f7;
-  font-weight: 600;
-  font-style: italic;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
 }
 
 .total-row td {
-  background: #dcdcdc;
-  font-weight: 700;
-  border-top: 2px solid #1a1a1a;
+  color: #172033;
+  border-top: 2px solid #334155;
+  background: #e2e8f0;
+  font-weight: 800;
 }
 
-.summary-table {
-  td {
-    font-size: 14px;
-    padding: 6px 10px;
-  }
-
-  .grand-row td {
-    font-weight: 700;
-    background: #dcdcdc;
-  }
-
-  .balance-row td {
-    font-weight: 700;
-    background: #efefef;
-  }
+.note {
+  padding: 10px 12px;
+  margin: 8px 0;
+  color: #64748b;
+  border-left: 3px solid #93c5fd;
+  background: #f8fafc;
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1.55;
 }
 
-.note,
 .empty {
+  padding: 24px;
+  margin: 8px 0;
+  color: #64748b;
+  border: 1px dashed #cbd5e1;
+  border-radius: 9px;
+  background: #f8fafc;
   font-size: 12px;
-  color: #444;
-  font-style: italic;
-  margin: 4px 0 8px;
+  text-align: center;
 }
 
 .signature-block {
   display: flex;
   justify-content: space-between;
-  gap: 40px;
-  margin-top: 50px;
+  gap: 38px;
+  margin-top: 58px;
 
   .signature {
     flex: 1;
@@ -268,68 +649,409 @@ table {
   }
 
   .signature-line {
-    border-top: 1px solid #1a1a1a;
-    margin-top: 40px;
-    padding-top: 4px;
-    font-size: 12px;
+    padding-top: 6px;
+    border-top: 1px solid #64748b;
+    color: #475569;
+    font-size: 10px;
   }
 }
 
 .doc-footer {
+  padding-top: 10px;
   margin-top: 30px;
-  font-size: 11px;
-  color: #555;
-  border-top: 1px solid #999;
-  padding-top: 8px;
+  color: #94a3b8;
+  border-top: 1px solid #e2e8f0;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1024px) {
+  .date-form {
+    flex-wrap: wrap;
+  }
+
+  .form-actions {
+    width: 100%;
+    margin: 4px 0 0;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
+  .report-page {
+    padding: 20px 14px 40px;
+  }
+
+  .page-hero {
+    align-items: flex-start;
+  }
+
+  .hero-icon {
+    width: 50px;
+    height: 50px;
+    flex-basis: 50px;
+    border-radius: 15px;
+  }
+
+  .hero-description,
+  .hero-badge {
+    display: none;
+  }
+
+  .controls-card {
+    padding: 18px;
+  }
+
+  .controls-heading {
+    .period-preview {
+      display: none;
+    }
+  }
+
+  .date-form {
+    display: grid;
+    grid-template-columns: 1fr 20px 1fr;
+
+    > label {
+      min-width: 0;
+    }
+  }
+
+  .date-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 9px;
+
+    mat-icon {
+      display: none;
+    }
+  }
+
+  .form-actions {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+
+    .generate-button {
+      grid-column: 1 / -1;
+    }
+  }
+
   .document {
-    padding: 16px;
+    padding: 24px 18px;
     overflow-x: auto;
+    border-radius: 14px;
+  }
+
+  .doc-header {
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .doc-heading {
+    text-align: left;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kpi-card {
+    min-width: 145px;
+    padding: 14px;
+  }
+
+  .report-tabs {
+    min-width: 680px;
+
+    ::ng-deep .mat-mdc-tab-header {
+      position: static;
+      margin-right: -18px;
+      margin-left: -18px;
+      padding: 0 18px;
+    }
   }
 
   .signature-block {
     flex-direction: column;
-    gap: 24px;
+    gap: 36px;
   }
 }
 
-@media print {
-  .report-page {
-    max-width: none;
-    padding: 0;
-  }
+// Shared by browser print preview and the PDF exporter.
+@mixin expanded-report {
+  .report-tabs ::ng-deep {
+    .mat-mdc-tab-header {
+      display: none !important;
+    }
 
-  .report-tabs ::ng-deep .mat-mdc-tab-header {
-    display: none !important;
+    .mat-mdc-tab-body-wrapper {
+      position: static !important;
+      display: block !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow: visible !important;
+      transition: none !important;
+    }
+
+    .mat-mdc-tab-body {
+      position: static !important;
+      display: block !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      height: auto !important;
+      flex: none !important;
+      inset: auto !important;
+      overflow: visible !important;
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+      visibility: visible !important;
+    }
+
+    .mat-mdc-tab-body-content {
+      position: static !important;
+      display: block !important;
+      width: 100% !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow: visible !important;
+      transform: none !important;
+      transition: none !important;
+    }
+
+    .mat-mdc-tab-body + .mat-mdc-tab-body {
+      margin-top: 28px;
+      padding-top: 4px;
+      border-top: 1px dashed #94a3b8;
+    }
   }
 
   .table-scroll {
     overflow: visible;
   }
+}
 
-  .document {
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    font-size: 11px;
+.pdf-export-mode {
+  @include expanded-report;
+  width: 1500px !important;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@page {
+  size: A4 landscape;
+  margin: 11mm 10mm 13mm;
+}
+
+@media print {
+  :host {
+    background: #fff;
   }
 
-  .section-heading,
-  .subsection-heading {
+  .no-print {
+    display: none !important;
+  }
+
+  .report-page {
+    width: auto;
+    max-width: none;
+    padding: 0;
+  }
+
+  .document {
+    width: auto;
+    padding: 0;
+    overflow: visible;
+    color: #111827;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 8.5pt;
+  }
+
+  @include expanded-report;
+
+  // Print only the report tab the user selected. Printing both tabs caused the
+  // complete transaction ledger to be included behind the Member Totals report.
+  // Also remove Material's flex layout so the active report paginates normally.
+  .report-tabs {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin-top: 3mm;
+    overflow: visible !important;
+  }
+
+  .report-tabs ::ng-deep {
+    .mat-mdc-tab-body:not(.mat-mdc-tab-body-active) {
+      display: none !important;
+    }
+
+    .mat-mdc-tab-body-wrapper,
+    .mat-mdc-tab-body-active {
+      display: contents !important;
+    }
+
+    .mat-mdc-tab-body-content {
+      display: block !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow: visible !important;
+      break-before: auto !important;
+      break-after: auto !important;
+    }
+  }
+
+  .doc-header {
+    padding-bottom: 4mm;
+    margin-bottom: 4mm;
+  }
+
+  .doc-mark {
+    color: #fff !important;
+    background: #1e3a8a !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .doc-title {
+    font-size: 16pt;
+  }
+
+  .kpi-grid {
+    gap: 2.5mm;
+    margin-bottom: 6mm;
+    page-break-inside: avoid;
+  }
+
+  .kpi-card {
+    min-height: 20mm;
+    padding: 3.5mm;
+    background: #f8fafc !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+
+    strong {
+      font-size: 13pt;
+    }
+  }
+
+  .section-heading {
+    margin: 6mm 0 2mm;
     page-break-after: avoid;
+
+    span {
+      color: #fff !important;
+      background: #1e3a8a !important;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+
+  .subsection-heading {
+    margin: 4mm 0 1.5mm;
+    page-break-after: avoid;
+  }
+
+  table {
+    margin-bottom: 2mm;
+
+    th,
+    td {
+      padding: 1.4mm 2mm;
+    }
+
+    thead th,
+    .month-row td,
+    .subtotal-row td,
+    .total-row td,
+    .summary-table .grand-row td,
+    .summary-table .balance-row td {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+  }
+
+  // Member totals can contain a column for every month in the range. Keep the
+  // matrix inside the landscape sheet so Chromium does not create horizontal
+  // overflow pages (which look like blank pages in print preview).
+  .table-scroll {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .member-totals-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed;
+    font-size: 6.5pt;
+
+    th,
+    td {
+      width: auto !important;
+      min-width: 0 !important;
+      padding: 1mm 0.8mm;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+
+    .rank {
+      width: 6mm !important;
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+      width: 31mm !important;
+      white-space: normal;
+    }
+
+    .month-col {
+      width: auto !important;
+      min-width: 0 !important;
+      white-space: normal;
+    }
+
+    th:nth-last-child(2),
+    td:nth-last-child(2) {
+      width: 13mm !important;
+    }
+
+    th:last-child,
+    td:last-child {
+      width: 22mm !important;
+      white-space: nowrap;
+    }
   }
 
   thead {
     display: table-header-group;
   }
 
-  tr {
+  tfoot {
+    display: table-row-group;
+  }
+
+  .signature-block,
+  .doc-footer {
     page-break-inside: avoid;
   }
 
+  .report-tabs ::ng-deep .mat-mdc-tab-body + .mat-mdc-tab-body {
+    margin-top: 5mm;
+    padding-top: 0;
+    border-top: 0;
+    page-break-before: auto;
+    break-before: auto;
+  }
+
   .signature-block {
-    page-break-inside: avoid;
+    margin-top: 14mm;
   }
 }

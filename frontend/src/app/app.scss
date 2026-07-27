@@ -400,28 +400,6 @@
   }
 }
 
-/* Activity Monitor Notification Snackbar */
-::ng-deep .activity-snackbar {
-  background: #2196F3 !important;
-  color: white !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
-
-  .mat-mdc-snack-bar-label {
-    font-size: 16px !important;
-    color: white !important;
-  }
-
-  .mdc-snackbar__surface {
-    background: #2196F3 !important;
-  }
-
-  &::before {
-    content: '🔔 ';
-    font-size: 20px;
-  }
-}
-
 /* Accessibility Enhancements */
 @media (prefers-reduced-motion: reduce) {
   * {

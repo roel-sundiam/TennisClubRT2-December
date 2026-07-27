@@ -1,55 +1,117 @@
 <div class="report-page">
-
-  <!-- Controls (hidden when printing) -->
-  <mat-card class="controls-card no-print">
-    <div class="controls-row">
-      <div class="controls-title">
-        <mat-icon>receipt_long</mat-icon>
-        <h1>Collections &amp; Disbursements</h1>
+  <section class="page-hero no-print">
+    <div class="hero-copy">
+      <div class="hero-icon" aria-hidden="true">
+        <mat-icon>account_balance_wallet</mat-icon>
       </div>
-      <form [formGroup]="dateRangeForm" class="date-form">
-        <label>
-          From
-          <input type="date" formControlName="startDate">
-        </label>
-        <label>
-          To
-          <input type="date" formControlName="endDate">
-        </label>
-        <button mat-raised-button color="primary" type="button" (click)="loadReport()" [disabled]="loading">
-          <mat-icon>refresh</mat-icon>
-          Generate
-        </button>
-        <button mat-raised-button color="accent" type="button" (click)="print()" [disabled]="loading || !reportData">
-          <mat-icon>print</mat-icon>
-          Print
-        </button>
-        <button mat-raised-button type="button" (click)="saveAsPdf()" [disabled]="loading || !reportData || generatingPdf">
-          <mat-spinner *ngIf="generatingPdf" diameter="18"></mat-spinner>
-          <mat-icon *ngIf="!generatingPdf">picture_as_pdf</mat-icon>
-          {{ generatingPdf ? 'Generating…' : 'Save as PDF' }}
-        </button>
-      </form>
+      <div>
+        <p class="eyebrow">Financial reporting</p>
+        <h1>Collections &amp; Disbursements</h1>
+        <p class="hero-description">
+          Review club cash flow, inspect every transaction, and prepare an audit-ready statement.
+        </p>
+      </div>
     </div>
+    <div class="hero-badge" *ngIf="reportData && !loading">
+      <span class="status-dot"></span>
+      Report ready
+    </div>
+  </section>
+
+  <!-- Report controls (hidden when printing) -->
+  <mat-card class="controls-card no-print">
+    <div class="controls-heading">
+      <div>
+        <span class="step-label">Report period</span>
+        <h2>Choose a date range</h2>
+      </div>
+      <span class="period-preview" *ngIf="reportData && !loading">{{ periodLabel }}</span>
+    </div>
+
+    <form [formGroup]="dateRangeForm" class="date-form">
+      <label>
+        <span>Start date</span>
+        <div class="date-input">
+          <mat-icon aria-hidden="true">calendar_today</mat-icon>
+          <input type="date" formControlName="startDate">
+        </div>
+      </label>
+      <span class="date-separator" aria-hidden="true">to</span>
+      <label>
+        <span>End date</span>
+        <div class="date-input">
+          <mat-icon aria-hidden="true">event</mat-icon>
+          <input type="date" formControlName="endDate">
+        </div>
+      </label>
+
+      <div class="form-actions">
+        <button mat-flat-button class="generate-button" type="button" (click)="loadReport()" [disabled]="loading">
+          <mat-spinner *ngIf="loading" diameter="18"></mat-spinner>
+          <mat-icon *ngIf="!loading">autorenew</mat-icon>
+          {{ loading ? 'Generating…' : 'Generate report' }}
+        </button>
+        <button mat-stroked-button type="button" (click)="print()" [disabled]="loading || !reportData">
+          <mat-icon>print</mat-icon>
+          Print preview
+        </button>
+        <button mat-stroked-button type="button" (click)="saveAsPdf()" [disabled]="loading || !reportData || generatingPdf">
+          <mat-spinner *ngIf="generatingPdf" diameter="18"></mat-spinner>
+          <mat-icon *ngIf="!generatingPdf">download</mat-icon>
+          {{ generatingPdf ? 'Preparing PDF…' : 'Download PDF' }}
+        </button>
+      </div>
+    </form>
   </mat-card>
 
   <div class="loading-container no-print" *ngIf="loading">
     <mat-spinner diameter="48"></mat-spinner>
-    <p>Generating report…</p>
+    <p>Preparing your financial report…</p>
   </div>
 
   <!-- Printable document: header and summary are shared across both tabs -->
   <div class="document" #printableDocument *ngIf="reportData && !loading">
     <header class="doc-header">
-      <h2 class="club-name">{{ reportData.clubName }}</h2>
-      <div class="club-location">{{ reportData.location }}</div>
-      <h3 class="doc-title">Detailed Statement of Collections and Disbursements</h3>
-      <div class="doc-period">For the period {{ periodLabel }}</div>
-      <div class="doc-generated">Generated {{ reportData.generatedAt | date:'MMMM d, y, h:mm a' }}</div>
+      <div class="doc-brand">
+        <div class="doc-mark" aria-hidden="true">RT2</div>
+        <div class="doc-club">
+          <h2 class="club-name">{{ reportData.clubName }}</h2>
+          <div class="club-location">{{ reportData.location }}</div>
+        </div>
+      </div>
+      <div class="doc-heading">
+        <div class="document-label">Official financial report</div>
+        <h3 class="doc-title">Statement of Collections &amp; Disbursements</h3>
+        <div class="doc-period">{{ periodLabel }}</div>
+        <div class="doc-generated">Prepared {{ reportData.generatedAt | date:'MMMM d, y · h:mm a' }}</div>
+      </div>
     </header>
 
+    <section class="kpi-grid" aria-label="Report overview">
+      <div class="kpi-card collections">
+        <span class="kpi-label">Total collections</span>
+        <strong>{{ reportData.totals.collections | currency:'PHP':'₱':'1.2-2' }}</strong>
+        <small>{{ reportData.courtUsage.length + reportData.membership.length + reportData.otherCollections.length }} recorded payments</small>
+      </div>
+      <div class="kpi-card disbursements">
+        <span class="kpi-label">Total disbursements</span>
+        <strong>{{ reportData.totals.disbursements | currency:'PHP':'₱':'1.2-2' }}</strong>
+        <small>{{ reportData.disbursements.length }} expense items</small>
+      </div>
+      <div class="kpi-card net" [class.negative]="reportData.totals.net < 0">
+        <span class="kpi-label">Net {{ reportData.totals.net >= 0 ? 'increase' : 'decrease' }}</span>
+        <strong>{{ reportData.totals.net | currency:'PHP':'₱':'1.2-2' }}</strong>
+        <small>Collections less disbursements</small>
+      </div>
+      <div class="kpi-card balance" *ngIf="reportData.balances">
+        <span class="kpi-label">Ending fund balance</span>
+        <strong>{{ reportData.balances.ending | currency:'PHP':'₱':'1.2-2' }}</strong>
+        <small>As of {{ reportData.period.endDate | date:'MMM d, y' }}</small>
+      </div>
+    </section>
+
     <!-- Summary -->
-    <h4 class="section-heading">I. Summary</h4>
+    <h4 class="section-heading"><span>I</span> Financial Summary</h4>
     <table class="summary-table">
       <tbody>
         <tr class="balance-row" *ngIf="reportData.balances">
@@ -96,11 +158,15 @@
       Financial Statement's "Credit Balances" receipts line.
     </p>
 
-    <mat-tab-group class="report-tabs" animationDuration="0ms">
+    <mat-tab-group
+      class="report-tabs"
+      animationDuration="0ms"
+      [preserveContent]="true"
+      [(selectedIndex)]="selectedReportTab">
     <mat-tab label="Detailed Statement">
 
     <!-- Collections -->
-    <h4 class="section-heading">II. Collections (Receipts)</h4>
+    <h4 class="section-heading"><span>II</span> Collections (Receipts)</h4>
 
     <h5 class="subsection-heading">A. Tennis Court Usage Receipts</h5>
     <p class="empty" *ngIf="courtUsageGroups.length === 0">No transactions in this period.</p>
@@ -230,7 +296,7 @@
     </ng-container>
 
     <!-- Disbursements -->
-    <h4 class="section-heading">III. Disbursements (Expenses)</h4>
+    <h4 class="section-heading"><span>III</span> Disbursements (Expenses)</h4>
     <p class="empty" *ngIf="disbursementGroups.length === 0">No disbursements in this period.</p>
     <table class="detail-table" *ngIf="disbursementGroups.length > 0">
       <thead>
@@ -308,7 +374,7 @@
     </mat-tab>
     <mat-tab label="Member Totals — Court Usage">
 
-    <h4 class="section-heading">II. Collections (Receipts) — By Member</h4>
+    <h4 class="section-heading"><span>II</span> Collections (Receipts) — By Member</h4>
 
     <h5 class="subsection-heading">A. Tennis Court Usage Receipts by Member</h5>
     <p class="empty" *ngIf="courtUsageByMember.length === 0">No court usage receipts in this period.</p>
@@ -362,7 +428,7 @@
       Monthly amounts are in ₱; "—" means no recorded payment that month.
     </p>
 
-    <h4 class="section-heading">III. Disbursements (Expenses) — By Category</h4>
+    <h4 class="section-heading"><span>III</span> Disbursements (Expenses) — By Category</h4>
     <p class="empty" *ngIf="disbursementsByCategoryMonthly.length === 0">No disbursements in this period.</p>
     <ng-container
       *ngIf="disbursementsByCategoryMonthly.length > 0"

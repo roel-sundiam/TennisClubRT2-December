@@ -86,33 +86,6 @@ export interface ChatUserStatusEvent {
   timestamp: string;
 }
 
-export interface ActivityMonitorEvent {
-  type: 'page_navigation';
-  data: {
-    userId: string;
-    username: string;
-    fullName: string;
-    role: string;
-    page: string;
-    path: string;
-    timestamp: string;
-  };
-}
-
-export interface UserActivityEvent {
-  type: 'user_activity';
-  data: {
-    userId: string;
-    username: string;
-    fullName: string;
-    role: string;
-    action: string;
-    component: string;
-    details?: any;
-    timestamp: string;
-  };
-}
-
 export interface AnnouncementEvent {
   _id: string;
   title: string;
@@ -215,68 +188,7 @@ export class WebSocketService {
         // Store user data on socket for later use
         (socket as any).userData = userData;
 
-        // Auto-join admin_monitor room if user is admin/superadmin/treasurer
-        if (userData.role && ['admin', 'superadmin', 'treasurer'].includes(userData.role)) {
-          socket.join('admin_monitor');
-          console.log('👮 Admin user auto-joined admin_monitor room:', userData.username);
-        }
-
         socket.emit('chat_authenticated', { success: true });
-      });
-
-      // Handle admin subscription to activity monitor
-      socket.on('subscribe_activity_monitor', () => {
-        const userData = (socket as any).userData;
-        if (userData && userData.role && ['admin', 'superadmin', 'treasurer'].includes(userData.role)) {
-          socket.join('admin_monitor');
-          console.log('📊 Admin subscribed to activity monitor:', userData.username);
-          socket.emit('subscription_confirmed', { type: 'activity_monitor' });
-        } else {
-          console.warn('⚠️  Non-admin attempted to subscribe to activity monitor');
-        }
-      });
-
-      // Handle page navigation events from all users (authenticated and anonymous for public pages)
-      socket.on('page_navigation', (navData: ActivityMonitorEvent) => {
-        // Allow anonymous navigation for public pages (register, login)
-        const publicPages = ['Registration', 'Login'];
-        const isPublicPage = publicPages.includes(navData.data.page || '');
-        const isAnonymous = navData.data.userId === 'anonymous';
-
-        if (!(socket as any).userData && !isAnonymous) {
-          console.warn('⚠️  Unauthenticated user attempted page navigation event for non-public page');
-          return;
-        }
-
-        // Broadcast to all admins in the admin_monitor room (excluding sender)
-        socket.to('admin_monitor').emit('activity_broadcast', {
-          type: 'member_navigation',
-          data: navData.data,
-          timestamp: new Date().toISOString()
-        });
-
-        // Log anonymous visits to public pages
-        if (isAnonymous && isPublicPage) {
-          console.log(`👤 Anonymous user visited ${navData.data.page}`);
-        }
-      });
-
-      // Handle user activity events from all authenticated users
-      socket.on('user_activity', (activityData: UserActivityEvent) => {
-        if (!(socket as any).userData) {
-          console.warn('⚠️  Unauthenticated user attempted user activity event');
-          return;
-        }
-
-        // Broadcast to all admins in the admin_monitor room (excluding sender)
-        socket.to('admin_monitor').emit('activity_broadcast', {
-          type: 'member_activity',
-          data: activityData.data,
-          timestamp: new Date().toISOString()
-        });
-
-        // Log for debugging
-        console.log(`🎯 ${activityData.data.fullName} performed ${activityData.data.action} on ${activityData.data.component}`);
       });
 
       // Handle joining chat rooms

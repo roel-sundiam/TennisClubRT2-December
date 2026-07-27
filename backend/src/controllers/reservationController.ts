@@ -125,17 +125,18 @@ export const getReservations = asyncHandler(async (req: AuthenticatedRequest, re
     };
   }
   
-  if (req.query.dateFrom && req.query.dateTo) {
-    const fromDate = new Date(req.query.dateFrom as string);
-    const toDate = new Date(req.query.dateTo as string);
-    toDate.setHours(23, 59, 59, 999);
-    
-    filter.date = {
-      $gte: fromDate,
-      $lte: toDate
-    };
+  if (req.query.dateFrom || req.query.dateTo) {
+    filter.date = {};
+    if (req.query.dateFrom) {
+      filter.date.$gte = new Date(req.query.dateFrom as string);
+    }
+    if (req.query.dateTo) {
+      const toDate = new Date(req.query.dateTo as string);
+      toDate.setHours(23, 59, 59, 999);
+      filter.date.$lte = toDate;
+    }
   }
-  
+
   if (req.query.status) {
     filter.status = req.query.status;
   }

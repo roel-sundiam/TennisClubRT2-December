@@ -50,21 +50,24 @@ export class WebSocketService implements OnDestroy {
   constructor(private authService: AuthService) {
     console.log('🔌 WebSocketService constructor called');
 
-    // Always connect WebSocket (for both authenticated and anonymous users)
-    this.connect();
+    // Only connect once a user is authenticated - an unconditional connection
+    // for anonymous visitors keeps the Render instance awake continuously
+    // and burns through free instance hours.
+    if (this.authService.isAuthenticated()) {
+      this.connect();
+    }
 
     // Handle authentication state changes
     this.authService.currentUser$.subscribe(user => {
       console.log('🔌 WebSocketService: User auth state changed:', !!user);
       if (user) {
         console.log('🔌 WebSocketService: User authenticated');
-        // WebSocket already connected, just ensure it's active
         if (!this.socket?.connected) {
           this.connect();
         }
       } else {
-        console.log('🔌 WebSocketService: User logged out, but keeping WebSocket connected for anonymous tracking');
-        // Keep connection active for anonymous tracking
+        console.log('🔌 WebSocketService: User logged out, disconnecting WebSocket');
+        this.disconnect();
       }
     });
   }
@@ -301,30 +304,6 @@ export class WebSocketService implements OnDestroy {
   subscribeToCourtUsageUpdates(): void {
     if (this.socket?.connected) {
       this.socket.emit('subscribe_court_usage_updates');
-    }
-  }
-
-  /**
-   * Subscribe to activity monitor (admin only)
-   */
-  subscribeToActivityMonitor(): void {
-    if (this.socket?.connected) {
-      this.socket.emit('subscribe_activity_monitor');
-    }
-  }
-
-  /**
-   * Authenticate user for chat and activity monitoring
-   */
-  authenticateUser(userId: string, username: string, fullName: string, role: string): void {
-    if (this.socket?.connected) {
-      console.log('💬 Authenticating user for WebSocket:', username);
-      this.socket.emit('chat_authenticate', {
-        userId,
-        username,
-        fullName,
-        role
-      });
     }
   }
 

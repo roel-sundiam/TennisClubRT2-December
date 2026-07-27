@@ -19,7 +19,6 @@ interface CollectionLineItem {
   referenceNumber: string;
   amount: number;
 }
-
 interface DisbursementLineItem {
   date: string;
   category: string;
@@ -102,6 +101,7 @@ export class CollectionsDisbursementsReportComponent implements OnInit {
 
   loading = false;
   generatingPdf = false;
+  selectedReportTab = 0;
   reportData: CollectionsDisbursementsData | null = null;
 
   courtUsageGroups: MonthGroup<CollectionLineItem>[] = [];
@@ -192,18 +192,17 @@ export class CollectionsDisbursementsReportComponent implements OnInit {
     if (!this.reportData || !this.printableDocument || this.generatingPdf) return;
 
     this.generatingPdf = true;
+    await this.prepareAllTabsForExport();
     const element = this.printableDocument.nativeElement;
+    element.classList.add('pdf-export-mode');
 
-    // The Member Totals matrix scrolls horizontally on screen (.table-scroll), so only the
-    // visible columns would be captured. Force it to its full natural width before rendering,
-    // then restore it afterward so the on-screen layout is untouched.
+    // Expand the tab bodies and horizontal matrices so the PDF contains the complete report,
+    // not only the tab and columns currently visible on screen.
     const scrollers = Array.from(element.querySelectorAll<HTMLElement>('.table-scroll'));
     const previousScrollerOverflow = scrollers.map(el => el.style.overflow);
-    const previousElementWidth = element.style.width;
     scrollers.forEach(el => { el.style.overflow = 'visible'; });
-    element.style.width = 'max-content';
 
-    // Let the browser reflow with the unclipped, natural-width layout before measuring it.
+    // Let the browser reflow with the expanded print layout before measuring it.
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
     try {
@@ -232,7 +231,7 @@ export class CollectionsDisbursementsReportComponent implements OnInit {
       this.snackBar.open('Failed to generate PDF. Please try Print instead.', 'Close', { duration: 4000 });
     } finally {
       scrollers.forEach((el, i) => { el.style.overflow = previousScrollerOverflow[i]; });
-      element.style.width = previousElementWidth;
+      element.classList.remove('pdf-export-mode');
       this.generatingPdf = false;
     }
   }
@@ -262,6 +261,19 @@ export class CollectionsDisbursementsReportComponent implements OnInit {
     return `${y}-${m}-${d}`;
   }
 
+  /**
+   * Material only attaches a tab body after it has been opened. Briefly visiting the
+   * totals tab once, with preserveContent enabled, keeps both bodies available to
+   * browser print and the PDF renderer.
+   */
+  private async prepareAllTabsForExport(): Promise<void> {
+    const activeTab = this.selectedReportTab;
+    this.selectedReportTab = 1;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    this.selectedReportTab = activeTab;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
+
   private buildViewModel(data: CollectionsDisbursementsData): void {
     this.courtUsageGroups = this.groupByMonth(data.courtUsage);
     this.membershipGroups = this.groupByMonth(data.membership);
@@ -283,7 +295,7 @@ export class CollectionsDisbursementsReportComponent implements OnInit {
 
     const membershipMatrix = this.buildMemberMatrix(data.membership);
     this.membershipMonthLabels = membershipMatrix.monthLabels;
-    this.membershipByMember = membershipMatrix.rows;
+    this.membershipByMember = membershipMatrix.rows.filter(row => row.total !== 0);
     this.membershipMonthColumnTotals = membershipMatrix.columnTotals;
 
     const otherCollectionsMatrix = this.buildMemberMatrix(data.otherCollections);

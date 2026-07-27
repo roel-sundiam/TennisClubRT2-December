@@ -1567,10 +1567,15 @@ click "Try Again" below to reconnect.
       this.loading = true;
     }
 
-    // Use the general reservations endpoint with showAll=true to get all reservations
-    // Set high limit to fetch all reservations (default is 10)
+    // Use the general reservations endpoint with showAll=true to get all reservations.
+    // Scoped to yesterday-onward so the shared endpoint's hard limit (currently 1000) doesn't
+    // truncate upcoming reservations once the total collection grows past it — this tab only
+    // ever displays current/future reservations anyway (see the client-side filter below).
     const timestamp = new Date().getTime();
-    this.http.get<any>(`${this.apiUrl}/reservations?showAll=true&limit=1000&_t=${timestamp}`).subscribe({
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const dateFrom = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    this.http.get<any>(`${this.apiUrl}/reservations?showAll=true&dateFrom=${dateFrom}&limit=1000&_t=${timestamp}`).subscribe({
       next: (response) => {
         const reservations = response.data || [];
         console.log('🔍 Raw reservations received:', reservations.length);

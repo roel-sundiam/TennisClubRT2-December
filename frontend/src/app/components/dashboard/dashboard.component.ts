@@ -10,7 +10,6 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { AuthService, User } from '../../services/auth.service';
 import { AnalyticsService } from '../../services/analytics.service';
-import { ActivityMonitorService } from '../../services/activity-monitor.service';
 import { WebSocketService, OpenPlayNotificationEvent } from '../../services/websocket.service';
 import { NotificationService } from '../../services/notification.service';
 import { PWANotificationService } from '../../services/pwa-notification.service';
@@ -1143,11 +1142,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   databaseName: string = 'Loading...';
   unreadFeedbackCount: number = 0;
   private feedbackCountInterval: any;
+  private visibilityChangeHandler = (): void => {
+    if (document.hidden) {
+      this.stopFeedbackCountPolling();
+    } else if (this.isAdmin) {
+      this.fetchUnreadFeedbackCount();
+      this.startFeedbackCountPolling();
+    }
+  };
 
   constructor(
     public authService: AuthService,
     private analyticsService: AnalyticsService,
-    private activityMonitorService: ActivityMonitorService,
     public router: Router,
     private dialog: MatDialog,
     private http: HttpClient,
@@ -1182,10 +1188,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Fetch unread feedback count for admins
     if (this.isAdmin) {
       this.fetchUnreadFeedbackCount();
-      // Refresh count every 30 seconds
-      this.feedbackCountInterval = setInterval(() => {
-        this.fetchUnreadFeedbackCount();
-      }, 30000);
+      // Refresh count every 30 seconds, but only while the tab is visible -
+      // avoids polling the backend (and keeping the Render instance awake)
+      // while an admin leaves this tab open in the background.
+      this.startFeedbackCountPolling();
+      document.addEventListener('visibilitychange', this.visibilityChangeHandler);
     }
 
     // Set up WebSocket listeners for real-time open play notifications
@@ -1209,6 +1216,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.databaseName = 'Error';
       }
     });
+  }
+
+  private startFeedbackCountPolling(): void {
+    this.stopFeedbackCountPolling();
+    this.feedbackCountInterval = setInterval(() => {
+      this.fetchUnreadFeedbackCount();
+    }, 30000);
+  }
+
+  private stopFeedbackCountPolling(): void {
+    if (this.feedbackCountInterval) {
+      clearInterval(this.feedbackCountInterval);
+      this.feedbackCountInterval = null;
+    }
   }
 
   private fetchUnreadFeedbackCount(): void {
@@ -1387,13 +1408,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       action: 'view_details'
     });
 
-    // Emit real-time activity for admin monitoring
-    this.activityMonitorService.emitUserActivity(
-      'View Ball Machine Details',
-      'Dashboard',
-      { cardType: 'ball_machine_rental' }
-    );
-
     this.dialog.open(TennisBallMachineDialogComponent, {
       width: '500px',
       maxWidth: '90vw',
@@ -1415,17 +1429,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       cardSection: 'developer_contact'
     });
 
-    // 2. MEMBER ACTIVITY - Emit real-time event for admin monitoring
-    this.activityMonitorService.emitUserActivity(
-      'View Developer Resources',
-      'Dashboard',
-      {
-        cardType: 'developer_resources',
-        section: 'developer_contact'
-      }
-    );
-
-    // 3. Open the dialog
+    // 2. Open the dialog
     this.dialog.open(DeveloperContactDialogComponent, {
       width: '600px',
       maxWidth: '90vw',
@@ -1514,8 +1518,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.subscriptions = [];
 
     // Clear feedback count interval
-    if (this.feedbackCountInterval) {
-      clearInterval(this.feedbackCountInterval);
-    }
+    this.stopFeedbackCountPolling();
+    document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
   }
 }
