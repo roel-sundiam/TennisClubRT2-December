@@ -60,6 +60,7 @@ export const handleMulterError = (err: any, req: Request, res: Response, next: N
     const isInterrupted = /unexpected end of (form|file)|request aborted/i.test(err.message || '');
     return res.status(400).json({
       success: false,
+      code: isInterrupted ? 'UPLOAD_INTERRUPTED' : undefined,
       error: isInterrupted
         ? 'Your upload was interrupted, possibly due to a weak connection. Please try again.'
         : err.message

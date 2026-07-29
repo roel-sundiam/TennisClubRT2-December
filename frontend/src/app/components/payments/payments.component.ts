@@ -1531,8 +1531,8 @@ export class PaymentsComponent implements OnInit {
   }
 
 
-  processPayment(paymentId: string, silent = false, includeFile = true, onDone?: (success: boolean, error?: any) => void): void {
-    console.log('🔍 processPayment called for:', paymentId, 'silent:', silent, 'includeFile:', includeFile);
+  processPayment(paymentId: string, silent = false, includeFile = true, onDone?: (success: boolean, error?: any) => void, isRetry = false): void {
+    console.log('🔍 processPayment called for:', paymentId, 'silent:', silent, 'includeFile:', includeFile, 'isRetry:', isRetry);
     this.processing.push(paymentId);
 
     const formData = new FormData();
@@ -1565,6 +1565,15 @@ export class PaymentsComponent implements OnInit {
       error: (error) => {
         console.error('🔍 processPayment ERROR for:', paymentId, 'error:', error);
         this.processing = this.processing.filter(id => id !== paymentId);
+
+        // If the upload was interrupted mid-transfer (common on flaky mobile connections),
+        // automatically retry once before surfacing an error.
+        if (!isRetry && error?.error?.code === 'UPLOAD_INTERRUPTED') {
+          console.log('🔍 Upload interrupted, retrying processPayment once for:', paymentId);
+          this.processPayment(paymentId, silent, includeFile, onDone, true);
+          return;
+        }
+
         const message = error.error?.error || 'Failed to process payment';
         if (!onDone) {
           this.showError('Process Failed', message);
@@ -2129,10 +2138,69 @@ export class PaymentsComponent implements OnInit {
       return;
     }
     setError(null);
-    setFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setPreview(e.target?.result as string);
-    reader.readAsDataURL(file);
+
+    this.compressImage(file).then((processedFile) => {
+      setFile(processedFile);
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target?.result as string);
+      reader.readAsDataURL(processedFile);
+    }).catch((err) => {
+      console.warn('⚠️ Image compression failed, using original file:', err);
+      setFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target?.result as string);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Shrinks large mobile camera photos before upload so they transfer faster and
+  // are less likely to be interrupted mid-transfer on a slow/unstable mobile connection.
+  private compressImage(file: File, maxDimension = 1600, quality = 0.8): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+
+        const { width, height } = img;
+        const alreadySmall = width <= maxDimension && height <= maxDimension && file.size <= 800 * 1024;
+        if (alreadySmall) {
+          resolve(file);
+          return;
+        }
+
+        const scale = Math.min(1, maxDimension / Math.max(width, height));
+        const targetWidth = Math.round(width * scale);
+        const targetHeight = Math.round(height * scale);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas not supported'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Image compression produced no output'));
+            return;
+          }
+          const dot = file.name.lastIndexOf('.');
+          const baseName = dot >= 0 ? file.name.slice(0, dot) : file.name;
+          resolve(new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' }));
+        }, 'image/jpeg', quality);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Failed to load image for compression'));
+      };
+
+      img.src = objectUrl;
+    });
   }
 
   onProofFileSelected(event: Event): void {
@@ -2514,30 +2582,19 @@ export class PaymentsComponent implements OnInit {
     console.log('💰 FRONTEND: Payment ID:', paymentId);
 
     this.http.put<any>(requestUrl, updateData).subscribe({
-      next: (response) => {
+      next: () => {
         // Open Play payments: update payment method and mark as completed
         // Then admin will verify and record it in Active Payments tab
-        this.processing.push(paymentId);
-
-        const openPlayProofFormData = new FormData();
-        if (this.proofOfPaymentFile) {
-          openPlayProofFormData.append('proofOfPayment', this.proofOfPaymentFile);
-        }
-
-        this.http.put<any>(`${this.apiUrl}/payments/${paymentId}/process`, openPlayProofFormData).subscribe({
-          next: (processResponse) => {
-            this.processing = this.processing.filter(id => id !== paymentId);
-            this.loading = false;
+        this.processPayment(paymentId, true, true, (success, error) => {
+          this.loading = false;
+          if (success) {
             this.showSuccess('Payment Method Selected', 'Payment method has been recorded. An admin will verify and record the payment.');
-            this.resetForm();
-            this.loadPendingPayments(true);
-          },
-          error: (processError) => {
-            this.processing = this.processing.filter(id => id !== paymentId);
-            this.loading = false;
-            console.error('Failed to process payment:', processError);
-            this.showError('Payment Processing Failed', 'Failed to mark payment as completed');
+          } else {
+            const reason = error?.error?.error || error?.message || 'unknown error';
+            this.showError('Payment Processing Failed', `Failed to mark payment as completed: ${reason}`);
           }
+          this.resetForm();
+          this.loadPendingPayments(true);
         });
       },
       error: (error) => {
@@ -2579,30 +2636,19 @@ export class PaymentsComponent implements OnInit {
     console.log('💰 FRONTEND: Update data:', updateData);
 
     this.http.put<any>(requestUrl, updateData).subscribe({
-      next: (response) => {
+      next: () => {
         // Manual court usage payments: update payment method and mark as completed
         // Then admin will verify and record it in Active Payments tab
-        this.processing.push(paymentId);
-
-        const manualUpdateProofFormData = new FormData();
-        if (this.proofOfPaymentFile) {
-          manualUpdateProofFormData.append('proofOfPayment', this.proofOfPaymentFile);
-        }
-
-        this.http.put<any>(`${this.apiUrl}/payments/${paymentId}/process`, manualUpdateProofFormData).subscribe({
-          next: (processResponse) => {
-            this.processing = this.processing.filter(id => id !== paymentId);
-            this.loading = false;
+        this.processPayment(paymentId, true, true, (success, error) => {
+          this.loading = false;
+          if (success) {
             this.showSuccess('Payment Method Selected', 'Payment method has been recorded. An admin will verify and record the payment.');
-            this.resetForm();
-            this.loadPendingPayments(true);
-          },
-          error: (processError) => {
-            this.processing = this.processing.filter(id => id !== paymentId);
-            this.loading = false;
-            console.error('Failed to process payment:', processError);
-            this.showError('Payment Processing Failed', 'Failed to mark payment as completed');
+          } else {
+            const reason = error?.error?.error || error?.message || 'unknown error';
+            this.showError('Payment Processing Failed', `Failed to mark payment as completed: ${reason}`);
           }
+          this.resetForm();
+          this.loadPendingPayments(true);
         });
       },
       error: (error) => {
