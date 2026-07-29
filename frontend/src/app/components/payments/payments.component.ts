@@ -1376,15 +1376,18 @@ export class PaymentsComponent implements OnInit {
       updateData.customAmount = formValue.courtFee;
       
       this.http.put<any>(`${this.apiUrl}/payments/${existingPaymentId}`, updateData).subscribe({
-        next: (response) => {
-          this.loading = false;
-
+        next: () => {
           // Auto-complete all payments regardless of payment method
-          this.processPayment(existingPaymentId, true);
-          this.showSuccess('Payment Completed', 'Payment has been processed and completed successfully');
-
-          this.resetForm();
-          this.loadPendingPayments(true);
+          this.processPayment(existingPaymentId, true, true, (success) => {
+            this.loading = false;
+            if (success) {
+              this.showSuccess('Payment Completed', 'Payment has been processed and completed successfully');
+            } else {
+              this.showError('Payment Recorded', 'Your payment was saved, but we could not finalize it. Please check your connection and try again from Pending Payments.');
+            }
+            this.resetForm();
+            this.loadPendingPayments(true);
+          });
         },
         error: (error) => {
           this.loading = false;
@@ -1457,33 +1460,58 @@ export class PaymentsComponent implements OnInit {
           const count = payments.length;
 
           console.log('🔍 About to auto-process', count, 'payments');
-          // Auto-process only pending payments
-          payments.forEach((payment: any, idx: number) => {
-            console.log(`🔍 Payment ${idx + 1}: status=${payment.status}, id=${payment._id}`);
-            if (payment.status === 'pending') {
-              console.log(`🔍 Processing payment ${idx + 1}:`, payment._id);
-              this.processPayment(payment._id, true);
-            } else {
-              console.log(`🔍 Skipping payment ${idx + 1} - already ${payment.status}`);
-            }
-          });
+          const pendingIds = payments.filter((p: any) => p.status === 'pending').map((p: any) => p._id);
 
-          this.showSuccess('Payments Completed',
-            `Successfully created ${count} payment(s) for ₱${totalAmount.toFixed(2)}`);
+          if (pendingIds.length === 0) {
+            this.showSuccess('Payments Completed',
+              `Successfully created ${count} payment(s) for ₱${totalAmount.toFixed(2)}`);
+            this.resetForm();
+            this.loadPendingPayments(true);
+          } else {
+            let remaining = pendingIds.length;
+            let anyFailed = false;
+            pendingIds.forEach((paymentId: string) => {
+              // File was already uploaded and attached when the payment was created, so don't resend it
+              this.processPayment(paymentId, true, false, (success) => {
+                if (!success) {
+                  anyFailed = true;
+                }
+                remaining--;
+                if (remaining === 0) {
+                  if (anyFailed) {
+                    this.showError('Payments Recorded', 'Payments were saved, but some could not be finalized. Please check Pending Payments.');
+                  } else {
+                    this.showSuccess('Payments Completed',
+                      `Successfully created ${count} payment(s) for ₱${totalAmount.toFixed(2)}`);
+                  }
+                  this.resetForm();
+                  this.loadPendingPayments(true);
+                }
+              });
+            });
+          }
         } else {
           // Single payment - auto-process only if pending
           console.log('🔍 Single payment status:', response.data.status);
           if (response.data.status === 'pending') {
             console.log('🔍 About to auto-process single payment:', response.data._id);
-            this.processPayment(response.data._id, true);
+            // File was already uploaded and attached when the payment was created, so don't resend it
+            this.processPayment(response.data._id, true, false, (success) => {
+              if (success) {
+                this.showSuccess('Payment Completed', 'Payment has been processed and completed successfully');
+              } else {
+                this.showError('Payment Recorded', 'Your payment and proof were saved, but we could not finalize it. Please check your connection and try again from Pending Payments.');
+              }
+              this.resetForm();
+              this.loadPendingPayments(true);
+            });
           } else {
             console.log('🔍 Skipping process - payment already', response.data.status);
+            this.showSuccess('Payment Completed', 'Payment has been processed and completed successfully');
+            this.resetForm();
+            this.loadPendingPayments(true);
           }
-          this.showSuccess('Payment Completed', 'Payment has been processed and completed successfully');
         }
-
-        this.resetForm();
-        this.loadPendingPayments(true);
       },
       error: (error) => {
         this.loading = false;
@@ -1497,12 +1525,12 @@ export class PaymentsComponent implements OnInit {
   }
 
 
-  processPayment(paymentId: string, silent = false): void {
-    console.log('🔍 processPayment called for:', paymentId, 'silent:', silent);
+  processPayment(paymentId: string, silent = false, includeFile = true, onDone?: (success: boolean, error?: any) => void): void {
+    console.log('🔍 processPayment called for:', paymentId, 'silent:', silent, 'includeFile:', includeFile);
     this.processing.push(paymentId);
 
     const formData = new FormData();
-    if (this.proofOfPaymentFile) {
+    if (includeFile && this.proofOfPaymentFile) {
       formData.append('proofOfPayment', this.proofOfPaymentFile);
     }
 
@@ -1525,12 +1553,17 @@ export class PaymentsComponent implements OnInit {
           // Still refresh payment history even if pending payments refresh fails
           this.loadPaymentHistory(true);
         });
+
+        onDone?.(true);
       },
       error: (error) => {
         console.error('🔍 processPayment ERROR for:', paymentId, 'error:', error);
         this.processing = this.processing.filter(id => id !== paymentId);
         const message = error.error?.error || 'Failed to process payment';
-        this.showError('Process Failed', message);
+        if (!onDone) {
+          this.showError('Process Failed', message);
+        }
+        onDone?.(false, error);
       }
     });
   }

@@ -57,9 +57,12 @@ export const handleMulterError = (err: any, req: Request, res: Response, next: N
 
   if (err) {
     console.error('❌ Upload error (not Multer):', err.message);
+    const isInterrupted = /unexpected end of (form|file)|request aborted/i.test(err.message || '');
     return res.status(400).json({
       success: false,
-      error: err.message
+      error: isInterrupted
+        ? 'Your upload was interrupted, possibly due to a weak connection. Please try again.'
+        : err.message
     });
   }
 
