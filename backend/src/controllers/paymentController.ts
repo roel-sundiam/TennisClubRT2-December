@@ -744,7 +744,7 @@ export const createPayment = asyncHandler(async (req: AuthenticatedRequest, res:
 
   const payment = new Payment(paymentData);
 
-  if (req.file) {
+  if (req.file && paymentMethod !== 'cash') {
     await attachProofOfPayment(payment, req.file, req.user._id.toString());
   }
 
@@ -1034,7 +1034,7 @@ export const processPayment = asyncHandler(async (req: AuthenticatedRequest, res
     // Start a transaction-like operation by updating payment first
     const originalStatus = payment.status;
 
-    if (req.file) {
+    if (req.file && payment.paymentMethod !== 'cash') {
       await attachProofOfPayment(payment, req.file, req.user!._id.toString());
     }
 

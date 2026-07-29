@@ -1378,7 +1378,7 @@ export class PaymentsComponent implements OnInit {
       this.http.put<any>(`${this.apiUrl}/payments/${existingPaymentId}`, updateData).subscribe({
         next: () => {
           // Auto-complete all payments regardless of payment method
-          this.processPayment(existingPaymentId, true, true, (success, error) => {
+          this.processPayment(existingPaymentId, true, formValue.paymentMethod !== 'cash', (success, error) => {
             this.loading = false;
             if (success) {
               this.showSuccess('Payment Completed', 'Payment has been processed and completed successfully');
@@ -1425,7 +1425,7 @@ export class PaymentsComponent implements OnInit {
         createFormData.append(key, paymentData[key]);
       }
     });
-    if (this.proofOfPaymentFile) {
+    if (paymentData.paymentMethod !== 'cash' && this.proofOfPaymentFile) {
       createFormData.append('proofOfPayment', this.proofOfPaymentFile);
     }
 
@@ -2585,7 +2585,7 @@ export class PaymentsComponent implements OnInit {
       next: () => {
         // Open Play payments: update payment method and mark as completed
         // Then admin will verify and record it in Active Payments tab
-        this.processPayment(paymentId, true, true, (success, error) => {
+        this.processPayment(paymentId, true, paymentMethod !== 'cash', (success, error) => {
           this.loading = false;
           if (success) {
             this.showSuccess('Payment Method Selected', 'Payment method has been recorded. An admin will verify and record the payment.');
@@ -2639,7 +2639,7 @@ export class PaymentsComponent implements OnInit {
       next: () => {
         // Manual court usage payments: update payment method and mark as completed
         // Then admin will verify and record it in Active Payments tab
-        this.processPayment(paymentId, true, true, (success, error) => {
+        this.processPayment(paymentId, true, paymentMethod !== 'cash', (success, error) => {
           this.loading = false;
           if (success) {
             this.showSuccess('Payment Method Selected', 'Payment method has been recorded. An admin will verify and record the payment.');
@@ -3413,7 +3413,7 @@ export class PaymentsComponent implements OnInit {
     if (manualPaymentData.notes) {
       manualFormData.append('notes', manualPaymentData.notes);
     }
-    if (this.manualProofOfPaymentFile) {
+    if (manualPaymentData.paymentMethod !== 'cash' && this.manualProofOfPaymentFile) {
       manualFormData.append('proofOfPayment', this.manualProofOfPaymentFile);
     }
 
