@@ -1378,12 +1378,13 @@ export class PaymentsComponent implements OnInit {
       this.http.put<any>(`${this.apiUrl}/payments/${existingPaymentId}`, updateData).subscribe({
         next: () => {
           // Auto-complete all payments regardless of payment method
-          this.processPayment(existingPaymentId, true, true, (success) => {
+          this.processPayment(existingPaymentId, true, true, (success, error) => {
             this.loading = false;
             if (success) {
               this.showSuccess('Payment Completed', 'Payment has been processed and completed successfully');
             } else {
-              this.showError('Payment Recorded', 'Your payment was saved, but we could not finalize it. Please check your connection and try again from Pending Payments.');
+              const reason = error?.error?.error || error?.message || 'unknown error';
+              this.showError('Payment Recorded', `Your payment was saved, but we could not finalize it: ${reason}. Please try again from Pending Payments.`);
             }
             this.resetForm();
             this.loadPendingPayments(true);
@@ -1470,16 +1471,20 @@ export class PaymentsComponent implements OnInit {
           } else {
             let remaining = pendingIds.length;
             let anyFailed = false;
+            let firstFailureReason = '';
             pendingIds.forEach((paymentId: string) => {
               // File was already uploaded and attached when the payment was created, so don't resend it
-              this.processPayment(paymentId, true, false, (success) => {
+              this.processPayment(paymentId, true, false, (success, error) => {
                 if (!success) {
                   anyFailed = true;
+                  if (!firstFailureReason) {
+                    firstFailureReason = error?.error?.error || error?.message || 'unknown error';
+                  }
                 }
                 remaining--;
                 if (remaining === 0) {
                   if (anyFailed) {
-                    this.showError('Payments Recorded', 'Payments were saved, but some could not be finalized. Please check Pending Payments.');
+                    this.showError('Payments Recorded', `Payments were saved, but some could not be finalized: ${firstFailureReason}. Please check Pending Payments.`);
                   } else {
                     this.showSuccess('Payments Completed',
                       `Successfully created ${count} payment(s) for ₱${totalAmount.toFixed(2)}`);
@@ -1496,11 +1501,12 @@ export class PaymentsComponent implements OnInit {
           if (response.data.status === 'pending') {
             console.log('🔍 About to auto-process single payment:', response.data._id);
             // File was already uploaded and attached when the payment was created, so don't resend it
-            this.processPayment(response.data._id, true, false, (success) => {
+            this.processPayment(response.data._id, true, false, (success, error) => {
               if (success) {
                 this.showSuccess('Payment Completed', 'Payment has been processed and completed successfully');
               } else {
-                this.showError('Payment Recorded', 'Your payment and proof were saved, but we could not finalize it. Please check your connection and try again from Pending Payments.');
+                const reason = error?.error?.error || error?.message || 'unknown error';
+                this.showError('Payment Recorded', `Your payment and proof were saved, but we could not finalize it: ${reason}. Please try again from Pending Payments.`);
               }
               this.resetForm();
               this.loadPendingPayments(true);
